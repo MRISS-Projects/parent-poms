@@ -272,11 +272,11 @@ editor. Change the file so that it ends with the following content:
 
 1. At the package explorer, right click the mouse and choose **Import**.
 
-   ![Importing Maven Projects](images/maven-import-1.png "Importing Maven Projects")
+   ![Importing Maven Projects](../resources/images/maven-import-1.png "Importing Maven Projects")
 
 2. Select `Maven -> Existent Maven Projects`
 
-   ![Importing Maven Projects](images/maven-import-2.png "Importing Maven Projects")
+   ![Importing Maven Projects](../resources/images/maven-import-2.png "Importing Maven Projects")
 
 3. Click **Browse** button and go to the root folder of the project you
    want to mount the project. Select the folder.
@@ -290,9 +290,9 @@ editor. Change the file so that it ends with the following content:
        packages for each dependency. You can check the importing progress by 
        selecting the **Maven Console** at the **Console View**.
 
-   ![Importing Maven Projects](images/maven-import-5.png "Importing Maven Projects")
+   ![Importing Maven Projects](../resources/images/maven-import-5.png "Importing Maven Projects")
 
-   ![Importing Maven Projects](images/maven_console.png "Importing Maven Projects")
+   ![Importing Maven Projects](../resources/images/maven_console.png "Importing Maven Projects")
 
 ### Observing Sources Download
 
@@ -330,7 +330,7 @@ Usually, there are several maven modules for just a single project. In order
 to improve the way you navigate through the sources or projects, you can use
 **working sets**.
 
-![Creating Working Sets](images/creating-working-sets.png "Creating Working Sets") 
+![Creating Working Sets](../resources/images/creating-working-sets.png "Creating Working Sets") 
 
 ### Updating Maven Projects 
 
