@@ -166,7 +166,7 @@
 
 ##### Get and Install xulrunner
 
-1. Get xulrunner binary from {{{http://ftp.mozilla.org/pub/mozilla.org/xulrunner/releases/24.0/runtimes/}http://ftp.mozilla.org/pub/mozilla.org/xulrunner/releases/24.0/runtimes/}}.
+1. Get `xulrunner` binary from http://ftp.mozilla.org/pub/mozilla.org/xulrunner/releases/24.0/runtimes/.
 
 2. Extract the contents to a folder inside user home, and memorize the absolute path to that folder.
 
