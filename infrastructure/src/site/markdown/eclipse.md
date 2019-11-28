@@ -4,9 +4,9 @@
 
 ## Installing
 
-1. Download "Eclipse IDE for Java EE Developers" 32 or 64 bits, depending
+1. Download "Eclipse IDE for Enterprise Java Developers" 32 or 64 bits, depending
    of the platform (windows or linux). Recommended version is 
-   https://www.eclipse.org/downloads/download.php?file=/technology/epp/downloads/release/2019-09/R/eclipse-jee-2019-09-R-win32-x86_64.zip.
+   https://www.eclipse.org/downloads/packages/.
 
 2. Unzip the downloaded file on any folder in your file system.
 
