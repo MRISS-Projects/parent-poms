@@ -131,6 +131,14 @@
 
 4. Install it. If **Installed** button appears, it is because it is already installed.
 
+5. Install Graphviz
+
+   a. Get the package according with the platform at https://www.graphviz.org/download/.
+
+   b. Follow the installer instructions.
+
+   c. Restart eclipse if needed.
+
 ### Window Builder
 
 1. `Help -> Install New Software...`
