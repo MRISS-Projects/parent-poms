@@ -264,11 +264,21 @@ editor. Change the file so that it ends with the following content:
    
    b. Indentation size: 4
 
-7. Window -> Show View -> Other... -> Maven -> Maven Repositories
+7. Windows -> Preferences -> Java -> Code Style -> Formatter
 
-8. Window -> Show View -> Other... -> PlantUML -> [Select All Tree Views]
+   a. Edit: Change the name and:
+   
+      a.1. set Indentation -> Tab Policy -> Spaces only
+      
+      a.2. set Indentation size to 4.
+      
+      a.3. set Tab size to 4.
+   
+8. Window -> Show View -> Other... -> Maven -> Maven Repositories
 
-9. Window -> Show View -> Other... -> MyLyn -> Builds
+9. Window -> Show View -> Other... -> PlantUML -> [Select All Tree Views]
+
+10. Window -> Show View -> Other... -> MyLyn -> Builds
 
    a. Click with right button at the builds view and choose "Add Build Server...".
 
