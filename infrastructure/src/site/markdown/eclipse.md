@@ -257,12 +257,18 @@ editor. Change the file so that it ends with the following content:
    a. Set "Text file encoding" to "UTF-8"
 
    b. Set "New text file line delimiter" to "Unix"
+   
+6. Window -> Preferences -> XML -> XML Files -> Editor
 
-6. Window -> Show View -> Other... -> Maven -> Maven Repositories
+   a. Indent using spaces.
+   
+   b. Indentation size: 4
 
-7. Window -> Show View -> Other... -> PlantUML -> [Select All Tree Views]
+7. Window -> Show View -> Other... -> Maven -> Maven Repositories
 
-8. Window -> Show View -> Other... -> MyLyn -> Builds
+8. Window -> Show View -> Other... -> PlantUML -> [Select All Tree Views]
+
+9. Window -> Show View -> Other... -> MyLyn -> Builds
 
    a. Click with right button at the builds view and choose "Add Build Server...".
 
