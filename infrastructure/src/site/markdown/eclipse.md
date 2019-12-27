@@ -268,11 +268,11 @@ editor. Change the file so that it ends with the following content:
 
    a. Edit: Change the name and:
    
-      i. set Indentation -> Tab Policy -> Spaces only
+       i. set Indentation -> Tab Policy -> Spaces only
       
-      ii. set Indentation size to 4.
+       ii. set Indentation size to 4.
       
-      iii. set Tab size to 4.
+       iii. set Tab size to 4.
    
 8. Window -> Show View -> Other... -> Maven -> Maven Repositories
 
