@@ -280,15 +280,15 @@ editor. Change the file so that it ends with the following content:
 
 10. Window -> Show View -> Other... -> MyLyn -> Builds
 
-   a. Click with right button at the builds view and choose "Add Build Server...".
+    a. Click with right button at the builds view and choose "Add Build Server...".
 
-   b. Select Hudson/Jenkins and click **Next**.
+    b. Select Hudson/Jenkins and click **Next**.
 
-   c. At the **Server** field, enter jenkins server address. Fullfil credentials
-      if needed.
+    c. At the **Server** field, enter jenkins server address. Fullfil credentials
+       if needed.
 
-   d. Click **Validate**  button. The list of builds should be fulfilled. Press
-      **Select All** and click **Next** or **Finish**.
+    d. Click **Validate**  button. The list of builds should be fulfilled. Press
+       **Select All** and click **Next** or **Finish**.
 
 ## Importing Projects Using Maven
 
