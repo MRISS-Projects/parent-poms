@@ -98,6 +98,17 @@
 
 4. Install it. If **Installed** button appears, it is because it is already installed.
 
+### Windows Batch Files Editor
+
+1. Install it using market place. Open eclipse, go to 
+   `Help -> Eclipse Market Place` using eclipse menus.
+
+2. Write **windows batch files** at the **Find** field and click **Go**.
+
+3. Look the results for **Batch Editor 1.0.1** only.
+
+4. Install it. If **Installed** button appears, it is because it is already installed.
+
 ### YAML Editor
 
 1. Install it using market place. Open eclipse, go to 
