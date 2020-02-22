@@ -1,0 +1,26 @@
+<project name="${project.name}">
+	<version position="right" />
+	<publishDate position="right" format="yyyy-MM-dd - hh:mm:ss" />
+	 <poweredBy>
+	    <logo name="Maven" href="http://maven.apache.org/"
+	          img="images/logos/build-by-maven-black.png"/>
+    </poweredBy>	
+	<bannerLeft>
+		<name>${project.name}</name>
+		<src>${logo.image}</src>
+		<href>${main.server}/site/${release.type}</href>
+	</bannerLeft>		
+	<skin>
+		<groupId>${skin.groupId}</groupId>
+		<artifactId>${skin.artifactId}</artifactId>
+		<version>${skin.version}</version>
+	</skin>
+	<body>
+		<breadcrumbs>
+			<item name="Parent POMs" href="index.html" />
+		</breadcrumbs>			
+		<menu ref="parent" />
+		<menu ref="modules" />
+		<menu ref="reports" />
+	</body>
+</project>

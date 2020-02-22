@@ -1,0 +1,322 @@
+            ------
+            ${artifactId} Vision
+            ------
+            AUTHOR
+            ------
+            DATE
+           
+${artifactId} VISION - Version ${version}
+
+[images/under-construction.jpg]
+
+* PDF Version
+
+ {{{./pdf/vision-html.pdf}PDF Version}}
+
+* Revision History
+
+*----*------*------*------*
+|| Date || Version || Description || Author |
+*----*------*------*------*
+| 17/06/2010 | 1.0.0 | Initial revision |  |
+*----*------*------*------*
+
+* Table of Contents
+
+%{toc|section=1|fromDepth=2|toDepth=3}
+
+* Introduction
+
+**  Purpose
+
+**  Scope
+
+**  Definitions, Acronyms, and Abbreviations
+
+**  References
+
+ *	Ref1:  {{{http://maven.apache.org/}http://maven.apache.org/}}. 
+ 
+ *	Ref2: {{{http://eclipse.org/}http://eclipse.org/}}.
+      
+**  Overview
+
+ This document will present basically the following information:
+
+  [[1]] Positioning.
+
+  [[2]] Stakeholders.
+
+  [[3]] Product Overview.
+
+  [[4]] Product Features.
+
+  [[5]] Product Requirements.
+  
+* Positioning
+
+** Business Opportunity
+
+** Problem Statement
+
+*----+------+
+|| The problem of |  |
+*----+------+
+|| affects |  |
+*----+------+
+|| the impact of which is |  |
+*----+------+
+|| a successful solution would be |  |
+*----+------+
+
+** Product Position Statement
+ 
+*----+------+
+|| For | roles |
+*----+------+
+|| Who | needs... |
+*----+------+
+|| The ${artifactId} | is a ... |
+*----+------+
+|| That |  |
+*----+------+
+|| Unlike |  |
+*----+------+
+|| Our product |  |
+*----+------+
+
+---------------
+ 
+ 
+ 
+---------------
+  
+ The main goal for PRODUCT is....
+ 
+* Stakeholder and User Descriptions
+
+** Market Demographics
+
+ * <<What is your organization�s reputation in these markets?>>
+ 
+ * <<What would you like it to be?>>
+ 
+ * <<How does this product or service support your goals?>>
+
+** Stakeholder Summary
+
+*----+------+------+
+|| Name || Description || Responsibilities |
+*----+------+------+
+| | | |
+*----+------+------+
+
+** User Summary
+
+*----+------+------+------+
+|| Name || Description || Responsibilities || Statkeholder |
+*----+------+------+------+
+|    |      |      |      |
+*----+------+------+------+
+
+** User Environment
+
+ <<Number of people involved in completing the task?>>
+  
+ <<Is this changing?>>
+ 
+ <<How long is a task cycle?>>
+  
+ <<Amount of time spent in each activity?>>
+  
+ <<Is this changing?>>
+ 
+ <<Which systems platforms are in use today?>>
+  
+ <<Future platforms?>>
+ 
+ <<What other applications are in use?>>
+  
+ <<Does your application need to integrate with them?>>
+ 
+** Stakeholder Profiles
+
+*** Stakeholder1 Profile
+
+*----+------+
+|| Representative |  |
+*----+------+
+|| Description |  |
+*----+------+
+|| Type |  |
+*----+------+
+|| Responsibilities |  |
+*----+------+
+|| Success Criteria |  |
+*----+------+
+|| Involvement |  |
+*----+------+
+|| Deliverables |  |
+*----+------+
+|| Comments / Issues |  |
+*----+------+
+
+** User Profiles
+
+*** User Profile 1
+
+*----+------+
+|| Representative | STAKEHOLDER1 |
+*----+------+
+|| Description |  |
+*----+------+
+|| Type |  |
+*----+------+
+|| Responsibilities |  |
+*----+------+
+|| Success Criteria |  |
+*----+------+
+|| Involvement |  |
+*----+------+
+|| Deliverables |  |
+*----+------+
+|| Comments / Issues |  |
+*----+------+
+
+*** User Profile 2
+
+*----+------+
+|| Representative | STAKEHOLDER1 |
+*----+------+
+|| Description |  |
+*----+------+
+|| Type |  |
+*----+------+
+|| Responsibilities |  |
+*----+------+
+|| Success Criteria |  |
+*----+------+
+|| Involvement |  |
+*----+------+
+|| Deliverables |  |
+*----+------+
+|| Comments / Issues |  |
+*----+------+
+
+*** User Profile 3
+
+*----+------+
+|| Representative | STAKEHOLDER1 |
+*----+------+
+|| Description |  |
+*----+------+
+|| Type |  |
+*----+------+
+|| Responsibilities |  |
+*----+------+
+|| Success Criteria |  |
+*----+------+
+|| Involvement |  |
+*----+------+
+|| Deliverables |  |
+*----+------+
+|| Comments / Issues |  |
+*----+------+
+
+*** User Profile 4
+
+*----+------+------+------+------+
+|| Need || Priority || Concerns || Current Solution || Proposed Solutions |
+*----+------+------+------+------+
+|  |  |  |  |  |
+*----+------+------+------+------+
+|  |  |  |  |  |
+*----+------+------+------+------+
+
+* Product Overview
+
+** Product Perspective
+
+** Summary of Capabilities
+
+*----+------+
+|| Customer Benefit || Supporting Features |
+*----+------+
+|  |  |
+*----+------+
+
+** Licensing and Installation
+
+ TBD.
+ 
+* Product Features
+
+ TBD.
+
+** Feature 1
+
+ TBD.
+
+** Feature 2
+
+ TBD.
+ 
+** Feature 3
+
+ TBD.
+
+** Feature 4
+
+ TBD.
+ 
+* Constraints
+ 
+ TBD.
+ 
+* Quality Ranges
+ 
+ TBD.
+ 
+* Precedence and Priority
+
+ TBD.
+
+* Other Product Requirements
+
+** Applicable Standards
+
+ TBD.
+
+** System Requirements
+
+ TBD.
+
+** Performance Requirements
+
+ TBD.
+
+** Environmental Requirements
+
+ TBD.
+ 
+* Documentation Requirements
+
+** User Manual
+
+ TBD.
+
+** Online Help
+
+ TBD.
+ 
+** Installation Guides, Configuration and Read Me File
+
+ TBD.
+ 
+** Labeling and Packaging
+
+ TBD.
+ 
+* A. Feature Attributes.
+
+ TBD.

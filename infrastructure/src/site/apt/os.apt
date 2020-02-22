@@ -1,0 +1,47 @@
+
+Operating System Configuration
+
+* Table of Contents
+
+%{toc|section=1|fromDepth=2|toDepth=3}
+
+* Proxy Configuration
+
+** Generic Proxy Server
+
+** Windows
+
+ No proxy configuration is needed.
+ 
+** Linux
+
+ Using linux 14.04, press at the "System Settings" button at the main 
+ applications bar. 
+ 
+[images/Ubuntu-Settings.jpg] System Settings
+ 
+ Select "Network".
+  
+[images/Ubuntu-Network.png] System Settings
+ 
+ Select "Network Proxy". Set Method to Manual, and fill the HTTP and HTTPS 
+ proxy information with the address mentioned above. Click "Apply system wide".
+ 
+[images/Ubuntu-Proxy-Settings.jpg] System Settings
+ 
+ Inside the browsers, then you can set them to use the global system settings.
+ You can ignore proxy settings for <<localhost>>.
+ 
+** Testing the connection
+
+ Test the proxy configuration trying to access the following sites in your 
+ web browser:
+
+* Digital Certificate
+ 
+** Testing the connection
+
+ {{{}}
+ 
+ If you can't access the link above, you still need to import a digital certificate
+ class B into your web browser.

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<!-- http://maven.apache.org/doxia/references/fml-format.html -->
+
+<faqs title="Frequently Asked Questions" toplink="false">
+
+  <part id="maven">
+    <title>Maven</title>
+    <faq id="maven-ssl">
+      <question>
+        How to configure Maven to operate with SSL?
+      </question>
+      <answer>
+        <p>
+	        <ol>
+	        	<li>Access the site https://[MAVEN_HTTPS_BASED_REPOSITORY] and 
+	        	confirm the security exception to install the certificate.</li>
+	        	<li>Using firefox, go to the certificate list (Edit -> Preferences -> Advanced -> Encryption -> View Certificates). Look for Company ->
+	        	   mriss.dyndns-at-home.com at the "Autorities" tab.</li>
+	        	<li>Export the certificate using to a PEM file</li>
+	        	<li>Open a command prompt and type the following command. The command will ask you a password. Keep the password in your mind.
+	        	<source>openssl pkcs12 -export -in [your-pem-file-here] -out [your-output-pkcs12-file-here] -name "My Certificate" -nokeys</source>
+	        	</li>
+	        	<li>Enter the following command. Again, a password will be required. You can use the same one as above. When asked about
+	        	trus in the trust store, answer yes.
+	        	<source>keytool -v -alias mavensrv -import -file [path-to-your-pem-file-here] -keystore trust.jks</source>
+	        	</li>
+	        	<li>Edit MAVEN_OPTS variable in your .profile to have the following content.
+	        	<source>-Djavax.net.ssl.trustStore=[your-path-to-trustjks]/trust.jks -Djavax.net.ssl.trustStoreType=jks -Djavax.net.ssl.trustStorePassword=[your-password] -Djavax.net.ssl.keyStore=[the-path-to-your-output-pkcs12-file-here] -Djavax.net.ssl.keyStoreType=pkcs12 -Djavax.net.ssl.keyStorePassword=[your-password]</source>
+	        	</li>        	
+	        </ol>        
+        </p>
+        <p>
+        Reference: <a href="http://maven.apache.org/guides/mini/guide-repository-ssl.html">http://maven.apache.org/guides/mini/guide-repository-ssl.html</a>.
+        </p>
+      </answer>
+    </faq>
+  </part>
+   <part id="subversion">
+    <title>Subversion</title>
+    <faq id="subversion-configure">
+      <question>
+        How to recursively ignore standards paths (target, .settings, .classpath, .project)?
+      </question>
+      <answer>
+        <p>
+	        <ol>
+	        	<li>Edit file $HOME/.subversion/config. Search for section [miscellany].</li>
+	        	<li>Add entry: 
+	        	<source>global-ignores = target .settings .classpath .project</source> 
+	        	</li>
+	        	<li>In the same file, search for section [auto-props]. Add entries:
+	        	<source>
+target = svn:ignore
+.eclipse = svn:ignore
+.classpath = svn:ignore
+.settings = svn:ignore
+	        	</source>
+	        	</li>
+	        	<li>Save file. Two steps above (editing config file) need to be executed just once per box/server.</li>
+	        	<li>Open a command prompt, go to the parent of folder to add and type: 
+	        	<source>svn add [your_new_folder]</source> 
+	        	This will recursively add all files and folders under your_new_folder, but will ignore those set in the configuration file.
+	        	</li>
+	        	<li>Go to the recently added folder and type: 
+	        	<source>svn -R propset svn:ignore 'target</source>
+	        	</li>
+	        	<li>Hit Enter. This will force a new line input in the same shell command line. Svn propset command with svn:ignore requires each ignored folder/file to be separated by a new line.</li>
+	        	<li>In the rest of the line type the other folders to be ignored, using a new line on each new folder/file, close the single quote, and add a dot, to represent the current directory:
+	        	<source>
+.settings
+.classpath
+.project' .
+	        	</source>
+	        	</li>  
+	        	<li>
+	        	Hit Enter. All folders will recursively have the svn:ignore set to the right values. To confirm the settings, go to .svn folder and execute: 
+	        	<source>cat dir-prop-base</source>
+	        	or 
+	        	<source>cat dir-prop</source>
+	        	The svn:ignore property values should be those folders set in the svn propset command.
+	        	</li>
+	        </ol>        
+        </p>
+        <p>
+        Reference: <a href="http://svnbook.red-bean.com/en/1.7/svn.ref.svn.c.propset.html">http://svnbook.red-bean.com/en/1.7/svn.ref.svn.c.propset.html</a>.
+        </p>
+        <p>
+        Reference: <a href="http://svnbook.red-bean.com/en/1.7/svn.ref.properties.html#svn.ref.properties.versioned-props">http://svnbook.red-bean.com/en/1.7/svn.ref.properties.html#svn.ref.properties.versioned-props</a>.
+        </p>        
+      </answer>
+    </faq>
+    <faq id="standard-configuration">
+      <question>
+      Standard Subversion Configuration
+      </question>
+      <answer>
+      </answer>
+    </faq>
+  </part>
+   
+</faqs>
