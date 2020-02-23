@@ -60,24 +60,3 @@ mvn -N -DgenerateBackupPoms=false versions:update-child-modules
 mvn -N -DgenerateBackupPoms=false -DnewVersion=$2 versions:set
 mvn -N -Dmessage="New parent pom version $2" scm:checkin
 
-cd ../products
-mvn -N -DgenerateBackupPoms=false versions:update-parent
-mvn -N -DgenerateBackupPoms=false -DnewVersion=$1 versions:set
-mvn -N -Prelease-deployment deploy
-mvn -N -Prelease-deployment -Dsite.deployment.personal.main=$3 site-deploy
-for dir in `ls`
-do
-  if [ -d "$dir" ]; then
-     echo "Entering directory $dir..."
-     cd $dir
-     if [ -e "pom.xml" ]; then
-	echo "Entered product dir $dir. Running maven to update parent section..."
-	mvn -N -DgenerateBackupPoms=false versions:update-parent
-     fi
-     cd ..
-  fi
-done
-mvn -N -DgenerateBackupPoms=false -DnewVersion=$2 versions:set
-mvn -N -Dmessage="New parent pom version $2" scm:checkin
-
-
