@@ -13,7 +13,7 @@
     <!-- <dependencies> -->
     <!-- </dependencies> -->
     <parent>
-        <groupId>com.mriss-mriss-parent.infrastructure</groupId>
+        <groupId>com.mriss.mriss-parent.infrastructure</groupId>
         <artifactId>maven-archetypes</artifactId>
         <version>3.0.0-SNAPSHOT</version>
     </parent>
