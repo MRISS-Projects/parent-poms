@@ -91,7 +91,7 @@
         <versions.plugin.version>2.8.1</versions.plugin.version>
         <scm.plugin.version>1.11.2</scm.plugin.version>
         <wagon.plugin.version>2.0.0</wagon.plugin.version>
-        <castor.plugin.version>2.5</castor.plugin.version>
+        <castor.plugin.version>2.1</castor.plugin.version>
         <maven.failsafe.plugin.version>3.0.0-M5</maven.failsafe.plugin.version>
         <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
         <maven.gwt.plugin.version>2.9.0</maven.gwt.plugin.version>
@@ -500,6 +500,7 @@
                 <configuration>
                     <includeOpenIssues>false</includeOpenIssues>
                     <failOnError>false</failOnError>
+                    <runOnlyAtExecutionRoot>true</runOnlyAtExecutionRoot>
                 </configuration>
             </plugin>
             <plugin>
@@ -509,6 +510,29 @@
                 <configuration>
                     <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
                     <dependencyDetailsEnabled>false</dependencyDetailsEnabled>
+                    <pluginManagementExcludes>
+                        <pluginManagementExclude>org.apache.maven.plugins:maven-changes-plugin</pluginManagementExclude>
+                    </pluginManagementExcludes>
+                    <pluginRepositories>
+                        <pluginRepository>
+                            <id>plugin-management-maven-repo-plugins</id>
+                            <url>file:///mnt/data/.m2/repository</url>
+                            <releases>
+                                <updatePolicy>always</updatePolicy>
+                                <enabled>true</enabled>
+                            </releases>
+                        </pluginRepository>
+                    </pluginRepositories>
+                    <remoteRepositories>
+                        <remoteRepository>
+                            <id>plugin-management-maven-repo</id>
+                            <url>https://raw.githubusercontent.com/MRISS-Projects/maven-repo/master</url>
+                            <releases>
+                                <updatePolicy>always</updatePolicy>
+                                <enabled>true</enabled>
+                            </releases>
+                        </remoteRepository>
+                    </remoteRepositories>
                 </configuration>
             </plugin>
             <plugin>
@@ -586,7 +610,7 @@
     </repositories>
     <pluginRepositories>
         <pluginRepository>
-            <id>MRISS-Projects-maven-repo</id>
+            <id>MRISS-Projects-maven-repo-plugins</id>
             <url>https://raw.githubusercontent.com/MRISS-Projects/maven-repo/master</url>
             <releases>
                 <enabled>true</enabled>
