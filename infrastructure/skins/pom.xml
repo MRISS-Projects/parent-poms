@@ -16,8 +16,11 @@
         <version>3.0.0-SNAPSHOT</version>
     </parent>
     <!-- <dependencyManagement>...</dependencyManagement> -->
-    <!-- <modules> -->
-    <!-- </modules> -->
+    <modules>
+        <module>company-skin</module>
+        <module>product-module-skin</module>
+        <module>producs-skin</module>
+    </modules>
     <properties>
         <group.id.path>${project.parent.artifactId}/${project.artifactId}</group.id.path>
         <jenkins.view>Skins</jenkins.view>

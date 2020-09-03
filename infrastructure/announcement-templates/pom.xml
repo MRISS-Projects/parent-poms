@@ -16,8 +16,9 @@
         <version>3.0.0-SNAPSHOT</version>
     </parent>
     <!-- <dependencyManagement>...</dependencyManagement> -->
-    <!-- <modules> -->
-    <!-- </modules> -->
+    <modules>
+        <module>default-announcement-template</module>
+    </modules>
     <properties>
         <group.id.path>${project.parent.artifactId}/${project.artifactId}</group.id.path>
         <jenkins.view>${project.parent.artifactId}</jenkins.view>
