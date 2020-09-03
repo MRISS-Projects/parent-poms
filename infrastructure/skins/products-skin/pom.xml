@@ -1,49 +1,51 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-	<!-- The Basics -->
-	<groupId>br.com.marg.infrastructure.skins</groupId>
-	<artifactId>products-skin</artifactId>
-	<version>1.0.1-SNAPSHOT</version>
-	<packaging>jar</packaging>
-	<!--  <dependencies>...</dependencies>-->
-	<parent>
-		<groupId>br.com.marg.infrastructure</groupId>
-		<artifactId>skins</artifactId>
-		<version>1.0.3</version>
-	</parent>
-	<!--  <dependencyManagement>...</dependencyManagement>-->
-	<!--  <modules>...</modules>-->
-	 <properties>
-	 	<trac.release.history.number>11</trac.release.history.number>
-	 	<group.id.path>infrastructure/${project.parent.artifactId}/${project.artifactId}</group.id.path>
-	 </properties>
+    <!-- The Basics -->
+    <groupId>br.com.marg.infrastructure.skins</groupId>
+    <artifactId>products-skin</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <!-- <dependencies>...</dependencies> -->
+    <parent>
+        <groupId>com.mriss.mriss-parent.infrastructure</groupId>
+        <artifactId>skins</artifactId>
+        <version>3.0.0-SNAPSHOT</version>
+    </parent>
+    <!-- <dependencyManagement>...</dependencyManagement> -->
+    <!-- <modules>...</modules> -->
+    <properties>
+        <trac.release.history.number>11</trac.release.history.number>
+        <group.id.path>infrastructure/${project.parent.artifactId}/${project.artifactId}</group.id.path>
+    </properties>
 
 
-	<!-- Build Settings -->
-	<!--  <build>...</build>-->
-	<!--  <reporting>...</reporting>-->
+    <!-- Build Settings -->
+    <!-- <build>...</build> -->
+    <!-- <reporting>...</reporting> -->
 
-	<!-- More Project Information -->
-	<name>MARG Skin for Products</name>
-	<description>
+    <!-- More Project Information -->
+    <name>MARG Skin for Products</name>
+    <description>
 		Skin following the MARG standards for products.
 	</description>
-	<!--  <url>...</url>-->
-	<!--  <inceptionYear>...</inceptionYear>-->
-	<!--  <licenses>...</licenses>-->
-	<!--  <organization>...</organization>-->
-	<!--  <developers>...</developers>-->
-	<!--  <contributors>...</contributors>-->
+    <!-- <url>...</url> -->
+    <!-- <inceptionYear>...</inceptionYear> -->
+    <!-- <licenses>...</licenses> -->
+    <!-- <organization>...</organization> -->
+    <!-- <developers>...</developers> -->
+    <!-- <contributors>...</contributors> -->
 
-	<!-- Environment Settings -->
-	<!--  <issueManagement>...</issueManagement>-->
-	<!--  <ciManagement>...</ciManagement>-->
-	<!--  <mailingLists>...</mailingLists>-->
-	<!--  <scm>...</scm>-->
-	<!--  <prerequisites>...</prerequisites>-->
-	<!--  <repositories>...</repositories>-->
-	<!--  <pluginRepositories>...</pluginRepositories>-->
-	<!--  <distributionManagement>...</distributionManagement>-->
-	<!--  <profiles>...</profiles>-->
+    <!-- Environment Settings -->
+    <!-- <issueManagement>...</issueManagement> -->
+    <!-- <ciManagement>...</ciManagement> -->
+    <!-- <mailingLists>...</mailingLists> -->
+    <!-- <scm>...</scm> -->
+    <!-- <prerequisites>...</prerequisites> -->
+    <!-- <repositories>...</repositories> -->
+    <!-- <pluginRepositories>...</pluginRepositories> -->
+    <!-- <distributionManagement>...</distributionManagement> -->
+    <!-- <profiles>...</profiles> -->
 </project>

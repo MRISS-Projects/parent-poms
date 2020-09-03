@@ -19,7 +19,7 @@
     <modules>
         <module>company-skin</module>
         <module>product-module-skin</module>
-        <module>producs-skin</module>
+        <module>products-skin</module>
     </modules>
     <properties>
         <group.id.path>${project.parent.artifactId}/${project.artifactId}</group.id.path>
