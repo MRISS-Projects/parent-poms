@@ -1,24 +1,21 @@
+<?xml version="1.0" ?>
 <project name="${project.name}">
-	<version position="right" />
-	<publishDate position="right" format="yyyy-MM-dd - hh:mm:ss" />
-	<bannerLeft>
-		<name>${project.name}</name>
-		<src>${logo.image}</src>
-		<href>${main.server}/site/${release.type}</href>
-	</bannerLeft>		
-	<skin>
-		<groupId>${skin.groupId}</groupId>
-		<artifactId>${skin.artifactId}</artifactId>
-		<version>${skin.version}</version>
-	</skin>
-	<body>
-		<menu name="Overview">
-	      	<item name="Introduction" href="index.html" />
-	      	<item name="Usage" href="usage.html" />
-	      	<item name="FAQ" href="faq.html" />
-	    </menu>		
-		<menu ref="parent" />
-		<menu ref="modules" />
-		<menu ref="reports" />
-	</body>
+    <version position="right" />
+    <publishDate position="right"
+        format="yyyy-MM-dd - hh:mm:ss" />
+    <skin>
+        <groupId>${skin.groupId}</groupId>
+        <artifactId>${skin.artifactId}</artifactId>
+        <version>${skin.version}</version>
+    </skin>
+    <body>
+        <menu name="Overview">
+            <item name="Introduction" href="index.html" />
+            <item name="Usage" href="usage.html" />
+            <item name="FAQ" href="faq.html" />
+        </menu>
+        <menu ref="parent" />
+        <menu ref="modules" />
+        <menu ref="reports" />
+    </body>
 </project>

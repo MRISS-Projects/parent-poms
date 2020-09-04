@@ -1,12 +1,8 @@
 <?xml version="1.0" ?>
 <project name="${project.name}">
     <version position="right" />
-    <publishDate position="right" format="yyyy-MM-dd - hh:mm:ss" />
-    <bannerLeft>
-        <name>${project.name}</name>
-        <src>${logo.image}</src>
-        <href>${main.server}/site/${release.type}</href>
-    </bannerLeft>
+    <publishDate position="right"
+        format="yyyy-MM-dd - hh:mm:ss" />
     <skin>
         <groupId>${skin.groupId}</groupId>
         <artifactId>${skin.artifactId}</artifactId>
@@ -26,8 +22,10 @@
             <item name="FAQ" href="faq.html" />
         </menu>
         <menu name="Documentation">
-            <item name="Writing Projects Documenation" href="writing-projects-documentation.html" />
-            <item name="Releases History" href="releases-history.html" />
+            <item name="Writing Projects Documenation"
+                href="writing-projects-documentation.html" />
+            <item name="Releases History"
+                href="releases-history.html" />
         </menu>
         <menu ref="reports" />
     </body>

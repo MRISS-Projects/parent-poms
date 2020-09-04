@@ -52,8 +52,8 @@
 
         <java.version>11</java.version>
 
-        <sites.server>${main.server}</sites.server>
-        <sites.url>${sites.server}/sites</sites.url>
+        <sites.server>https://mriss-projects.github.io/parent-poms</sites.server>
+        <sites.url>${sites.server}</sites.url>
         <site.deployment>${site.deployment.personal.main}</site.deployment>
 
         <release.type>snapshots</release.type>
@@ -105,7 +105,7 @@
         <skin.artifactId>maven-fluido-skin</skin.artifactId>
         <skin.groupId>org.apache.maven.skins</skin.groupId>
 
-        <logo.image>images/logo.gif</logo.image>
+        <logo.image>images/logo.jpg</logo.image>
 
         <ant.version>1.10.8</ant.version>
         <castor.version>1.4.1</castor.version>
