@@ -2,7 +2,11 @@
 
 ## Version
 
-3.0.0-SNAPSHOT - 20200907-185526
+3.0.0-SNAPSHOT - 20200907-185943
+
+## Code Based Site
+
+Snapshots: https://mriss-projects.github.io/parent-poms/snapshots
 
 ## Release Notes
 
