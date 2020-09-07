@@ -637,6 +637,7 @@
             <properties>
                 <project.scm.id>github</project.scm.id>
                 <deploymentUrl>file://${project.build.directory}/maven-repo</deploymentUrl>
+                <project.build.version>${project.version} - ${timestamp}</project.build.version>
             </properties>
             <build>
                 <plugins>
@@ -675,7 +676,7 @@
                                     <goal>publish-scm</goal>
                                 </goals>
                                 <configuration>
-                                    <serverId>github</serverId>
+                                    <serverId>github.com</serverId>
                                     <scmBranch>gh-pages</scmBranch>
                                     <checkinComment>Publishing
                                         ${project.name} site
@@ -692,7 +693,7 @@
                                     <goal>publish-scm</goal>
                                 </goals>
                                 <configuration>
-                                    <serverId>github</serverId>
+                                    <serverId>github.com</serverId>
                                     <checkinComment>Publishing artifact
                                         for version ${project.version}</checkinComment>
                                     <pubScmUrl>scm:git:https://github.com/MRISS-Projects/maven-repo</pubScmUrl>
@@ -701,6 +702,90 @@
                                     <skipDeletedFiles>true</skipDeletedFiles>
                                     <tryUpdate>true</tryUpdate>
                                 </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-changes-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>generate-list-of-issues</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>github-text-list</goal>
+                                </goals>
+                                <configuration>
+                                    <includeOpenIssues>false</includeOpenIssues>
+                                    <onlyMilestoneIssues>true</onlyMilestoneIssues>
+                                    <columnNames>Id,Type,Summary,Assignee,Reporter,Updated</columnNames>
+                                    <failOnError>false</failOnError>
+                                    <githubAPIServerId>github.com</githubAPIServerId>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>buildnumber-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>create-time-stamp</id>
+                                <phase>process-resources</phase>
+                                <goals>
+                                    <goal>create-timestamp</goal>
+                                </goals>
+                                <inherited>false</inherited>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <timestampFormat>yyyyMMdd-HHmmss</timestampFormat>
+                            <timestampPropertyName>timestamp</timestampPropertyName>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy-readme-md</id>
+                                <phase>process-resources</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>.</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>src/site/markdown</directory>
+                                            <includes>
+                                                <include>README.md</include>
+                                            </includes>
+                                            <targetPath>.</targetPath>
+                                            <filtering>true</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                                <inherited>false</inherited>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-scm-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>commit-readme-md</id>
+                                <phase>process-resources</phase>
+                                <goals>
+                                    <goal>checkin</goal>
+                                </goals>
+                                <configuration>
+                                    <basedir>${basedir}</basedir>
+                                    <includes>README.md</includes>
+                                    <message>Auto-generated README.md [skip jenkins]</message>
+                                </configuration>
+                                <inherited>false</inherited>
                             </execution>
                         </executions>
                     </plugin>

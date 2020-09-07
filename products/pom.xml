@@ -138,8 +138,9 @@
                                     <checkinComment>Publishing artifact for version ${project.version}</checkinComment>
                                     <pubScmUrl>scm:git:https://github.com/MRISS-Projects/maven-repo</pubScmUrl>
                                     <content>${project.build.directory}/maven-repo</content>
-                                    <checkoutDirectory>${project.build.directory}/artifact-deploy-checkout</checkoutDirectory>
+                                    <checkoutDirectory>/tmp/artifact-deploy-checkout</checkoutDirectory>
                                     <skipDeletedFiles>true</skipDeletedFiles>
+                                    <tryUpdate>true</tryUpdate>
                                 </configuration>
                             </execution>
                         </executions>
