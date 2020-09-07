@@ -2,7 +2,7 @@
 
 ## Version
 
-3.0.0-SNAPSHOT - 20200907-185505
+3.0.0-SNAPSHOT - 20200907-185521
 
 ## Release Notes
 
