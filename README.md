@@ -1,3 +1,9 @@
-# Parent POMs Structure
+# Parent POMs Structure Project
 
-Structure of parent poms for maven oriented projects.
+## Version
+
+3.0.0-SNAPSHOT - 20200907-183257
+
+## Release Notes
+
+
