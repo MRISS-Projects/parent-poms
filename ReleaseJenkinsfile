@@ -1,0 +1,154 @@
+#!/usr/bin/env groovy
+
+def credentialsId = "GitHub"
+def repoAddressRoot = "github.com"
+def repoAddress = "${repoAddressRoot}/MRISS-Projects/parent-poms.git"
+def mavenConfigurationId = "default-maven-settings"
+def productPaths =  []
+
+pipeline {
+    agent any
+    tools {
+        maven 'Maven3'
+        jdk 'JDK-11'
+    }
+    options {
+        disableConcurrentBuilds()
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out main code...'
+                checkout changelog: false, poll: false, scm: [
+                    $class: 'GitSCM', 
+                    branches: [[name: "*/master"]],
+                    doGenerateSubmoduleConfigurations: false, 
+                    extensions: [[$class: 'LocalBranch', localBranch: "**"]],
+                    submoduleCfg: [], 
+                    userRemoteConfigs: [[credentialsId: "${credentialsId}", url: "https://${repoAddress}"]]
+                ]
+            }
+        }
+        stage('Read pom.xml Info') {
+            steps{
+                 echo 'Reading pom.xml information...'
+                 script {
+                     echo "Current Version Number: ${currentVersionNumber}"
+                     echo "Next Development Version: ${nextDevelopmentVersionNumber}"
+                     echo "Maven Artifact Id: ${mavenArtifactId}"
+                 }
+            }
+        }
+        stage('Ask User Confirmation and Present Suggestions') {
+            steps {
+                echo 'Asking user for release parameters...'
+                script {
+                    releaseParameters = input message: 'Define the following parameters before release:', parameters: [
+                        text(
+                            defaultValue: "${currentVersionNumber}", 
+                            description: '''Current version number (usually MAJOR.MINOR.0)''', 
+                            name: 'CURRENT_VERSION_NUMBER'
+                        ),
+                        text(
+                            defaultValue: "${nextDevelopmentVersionNumber}", 
+                            description: '''Next SNAPSHOT version (usually MAJOR.MINOR+1.0-SNAPSHOT)''', 
+                            name: 'NEXT_DEVELOPMENT_VERSION'
+                        ),
+                    ]
+                }
+            }
+        }
+        stage("Build and Deploy Maven Release") {
+            steps{
+                echo 'Execute Release Build Using Parameters...'
+                script {
+                    releaseParameters.each { println "paramName: $it.key = Value: $it.value" }
+                    env.NEXT_DEV_RELEASE = releaseParameters.get("NEXT_DEVELOPMENT_VERSION")
+                    env.CURRENT_VERSION = releaseParameters.get("CURRENT_VERSION_NUMBER")
+                    env.LIBS_NEXT_DEV_RELEASE = releaseParameters.get("LIBS_NEXT_DEVELOPMENT_VERSION")
+                    env.LIBS_CURRENT_VERSION = releaseParameters.get("LIBS_CURRENT_VERSION_NUMBER")
+                }
+                configFileProvider(
+                    [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                    sh "mvn -s $MAVEN_SETTINGS -B -N -Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEV_RELEASE -Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION release:clean"
+                    sh "mvn -s $MAVEN_SETTINGS -B -N -Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEV_RELEASE -Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION release:prepare"
+                    sh "mvn -s $MAVEN_SETTINGS -B -N release:perform"
+                    sh "cd target/checkout && mvn -s $MAVEN_SETTINGS -B -N -P deployment,release-deployment site-deploy"
+                }
+            }
+        }
+        stage('Update Dependent Repositories') {
+            steps {
+                script {
+                    echo 'Updating libs dependent repositories...'
+                    for (def key in productPaths.keySet()) {
+                        println "key = ${key}, value = ${productPaths[key]}"
+                        echo "Updating dependent repository: https://${repoAddressRoot}/${key}.git"
+                        sh "mkdir -p target/${key}"
+                        checkout changelog: false, poll: false, scm: [
+                            $class: 'GitSCM', 
+                            branches: [[name: "*/${libsBranch}"]],
+                            doGenerateSubmoduleConfigurations: false, 
+                            extensions: [[$class: 'LocalBranch', localBranch: "**"], [$class: 'RelativeTargetDirectory', relativeTargetDir: "target/${key}"]],
+                            submoduleCfg: [], 
+                            userRemoteConfigs: [[credentialsId: "${credentialsId}", url: "https://${repoAddressRoot}/${key}.git"]]
+                        ]
+                        echo "Updating lib repository: https://${repoAddressRoot}/${key}.git"
+                        configFileProvider(
+                            [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                            def parentFolderName = "${productPaths[key]}"
+                            if ("${key}".indexOf("general-apis") != -1 ) {
+                                if (parentFolderName && !parentFolderName.allWhitespace) {
+                                    sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/${parentFolderName}/pom.xml install"
+                                } else {
+                                    sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml install"
+                                }
+                            }
+                            if (parentFolderName && !parentFolderName.allWhitespace) {
+                                sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/${parentFolderName}/pom.xml -DparentVersion=$LIBS_CURRENT_VERSION versions:update-parent"
+                            } else {
+                                sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml -DparentVersion=$LIBS_CURRENT_VERSION versions:update-parent"
+                            }
+                            sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml -Dmessage=\"[Update Parent to $LIBS_CURRENT_VERSION]\" scm:checkin"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo 'Success'
+        }
+        failure {
+            echo 'Failure'
+        }
+    }
+}
+
+def releaseParameters
+
+def getCurrentVersionNumber() {
+    def pom = readMavenPom file: 'pom.xml'
+    return pom.version.replace("-SNAPSHOT", "")
+}
+
+def getNextDevelopmentVersionNumber() {
+    def pom = readMavenPom file: 'pom.xml'
+    def (major, minor, fix) = pom.version.replace("-SNAPSHOT", "").tokenize(".")
+    def newMinor = minor.toInteger()
+    def newFix = fix.toInteger()
+    if (newMinor >= 0  && newFix == 0)  {
+        newMinor++;
+    } else if (newMinor >= 0 && newFix > 0) {
+        newFix++;
+    }
+    def newDevVersion = major + "." + newMinor + "." + newFix + "-SNAPSHOT"
+    return newDevVersion
+}
+
+def getMavenArtifactId() {
+    def pom = readMavenPom file: 'pom.xml'
+    return pom.artifactId
+}
+
