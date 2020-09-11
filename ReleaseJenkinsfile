@@ -80,7 +80,7 @@ pipeline {
                     echo 'Updating libs dependent repositories...'
                     for (def key in productPaths.keySet()) {
                         println "key = ${key}, value = ${productPaths[key]}"
-                        if (!$key.isEmpty()) {
+                        if (!${key}.isEmpty()) {
                             echo "Updating dependent repository: https://${repoAddressRoot}/${key}.git"
                             sh "mkdir -p target/${key}"
                             checkout changelog: false, poll: false, scm: [
