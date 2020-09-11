@@ -155,6 +155,7 @@ def recursiveRelease(mavenSettings, pomPath, nextDevRelease, currentRelease) {
     sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DdryRun=true release:perform"
     //sh "cd target/checkout && mvn -s $mavenSettings -B -N -P deployment,release-deployment site-deploy"
     def modules = getModules("$pomPath/pom.xml")
+    println "modules: $modules"
     modules.each { $it
         println "Releasing Module: $it"
         println "Releasing Pom: $pomPath/$it"
