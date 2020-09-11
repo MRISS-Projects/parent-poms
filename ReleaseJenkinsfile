@@ -70,10 +70,7 @@ pipeline {
                 }
                 configFileProvider(
                     [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
-                    sh "mvn -s $MAVEN_SETTINGS -B -N -Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEV_RELEASE -Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION release:clean"
-                    sh "mvn -s $MAVEN_SETTINGS -B -N -Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEV_RELEASE -Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION release:prepare"
-                    sh "mvn -s $MAVEN_SETTINGS -B -N release:perform"
-                    sh "cd target/checkout && mvn -s $MAVEN_SETTINGS -B -N -P deployment,release-deployment site-deploy"
+                    recursiveRelease("$MAVEN_SETTINGS", ".", "$NEXT_DEV_RELEASE", "$CURRENT_VERSION")
                 }
             }
         }
@@ -152,3 +149,25 @@ def getMavenArtifactId() {
     return pom.artifactId
 }
 
+def recursiveRelease(mavenSettings, pomPath, nextDevRelease, currentRelease) {
+    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DdryRun=true -Dbuild.NEXT_DEVELOPMENT_VERSION=$nextDevRelease -Dbuild.CURRENT_VERSION_NUMBER=$currentRelease release:clean"
+    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DdryRun=true -Dbuild.NEXT_DEVELOPMENT_VERSION=$nextDevRelease -Dbuild.CURRENT_VERSION_NUMBER=$currentRelease release:prepare"
+    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DdryRun=true release:perform"
+    sh "cd target/checkout && mvn -s $mavenSettings -B -N -P deployment,release-deployment site-deploy"
+    def modules = getModules(pomfile)
+    modules.each { $it
+        println "Releasing Module: $it"
+        println "Releasing Pom: $pomPath/$it"
+        // Update release parent for $pomPath/$it/pom.xml
+        // if ($pomPath.indexOf("skins") == -1 && $pomPath.indexOf("announcement-templates") == -1 
+        //    && $pomPath.indexOf("maven-archetypes") == -1 && $pomPath.indexOf("maven-plugins") == -1) {
+        //    recursiveRelease(mavenSettings, $pomPath/$it, nextDevRelease, currentRelease)
+        // }
+        
+    }
+}
+
+def getModules(pomFile) {
+    def pom = readMavenPom file: "$pomFile"
+    return pom.modules
+}
