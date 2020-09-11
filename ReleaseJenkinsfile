@@ -23,7 +23,7 @@ pipeline {
                     $class: 'GitSCM', 
                     branches: [[name: "*/master"]],
                     doGenerateSubmoduleConfigurations: false, 
-                    extensions: [[$class: 'LocalBranch', localBranch: "**"]],
+                    extensions: [[$class: 'LocalBranch', localBranch: "**"], [$class: 'WipeWorkspace']],
                     submoduleCfg: [], 
                     userRemoteConfigs: [[credentialsId: "${credentialsId}", url: "https://${repoAddress}"]]
                 ]
@@ -71,6 +71,7 @@ pipeline {
                 configFileProvider(
                     [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
                     recursiveRelease("$MAVEN_SETTINGS", ".", "$NEXT_DEV_RELEASE", "$CURRENT_VERSION")
+                    //sh "mvn -s $MAVEN_SETTINGS -B scm:checkin"
                 }
             }
         }
@@ -152,21 +153,20 @@ def getMavenArtifactId() {
 }
 
 def recursiveRelease(mavenSettings, pomPath, nextDevRelease, currentRelease) {
-    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DdryRun=true -Dbuild.NEXT_DEVELOPMENT_VERSION=$nextDevRelease -Dbuild.CURRENT_VERSION_NUMBER=$currentRelease release:clean"
-    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -Darguments=-N -DdryRun=true -Dbuild.NEXT_DEVELOPMENT_VERSION=$nextDevRelease -Dbuild.CURRENT_VERSION_NUMBER=$currentRelease release:prepare"
-    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -Darguments=-N -DdryRun=true release:perform"
-    //sh "cd target/checkout && mvn -s $mavenSettings -B -N -P deployment,release-deployment site-deploy"
+    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DgenerateBackupPoms=false -DnewVersion=$currentRelease versions:set"
+    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -Pdeployment deploy"
+    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -Pdeployment,release-deployment site-deploy"
+    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DgenerateBackupPoms=false -DnewVersion=$nextDevRelease versions:set"
     def modules = getModules("$pomPath/pom.xml")
     println "modules: $modules"
     modules.each {
         println "Releasing Module: $it"
         println "Releasing Pom: $pomPath/$it"
-        // Update release parent for $pomPath/$it/pom.xml
-        // if ($pomPath.indexOf("skins") == -1 && $pomPath.indexOf("announcement-templates") == -1 
-        //    && $pomPath.indexOf("maven-archetypes") == -1 && $pomPath.indexOf("maven-plugins") == -1) {
-        //    recursiveRelease(mavenSettings, $pomPath/$it, nextDevRelease, currentRelease)
-        // }
-        
+        sh "mvn -s $mavenSettings -B -N -f $pomPath/$it/pom.xml -DgenerateBackupPoms=false versions:update-parent" 
+        if (!"$pomPath".endsWith("skins") && !"$pomPath".endsWith("announcement-templates")
+            && !"$pomPath".endsWith("maven-archetypes") && !"$pomPath".endsWith("maven-plugins")) {
+            recursiveRelease(mavenSettings, "$pomPath/$it", nextDevRelease, currentRelease)
+        }
     }
 }
 
