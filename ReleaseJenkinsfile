@@ -153,7 +153,7 @@ def recursiveRelease(mavenSettings, pomPath, nextDevRelease, currentRelease) {
     sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DdryRun=true -Dbuild.NEXT_DEVELOPMENT_VERSION=$nextDevRelease -Dbuild.CURRENT_VERSION_NUMBER=$currentRelease release:clean"
     sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DdryRun=true -Dbuild.NEXT_DEVELOPMENT_VERSION=$nextDevRelease -Dbuild.CURRENT_VERSION_NUMBER=$currentRelease release:prepare"
     sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DdryRun=true release:perform"
-    sh "cd target/checkout && mvn -s $mavenSettings -B -N -P deployment,release-deployment site-deploy"
+    //sh "cd target/checkout && mvn -s $mavenSettings -B -N -P deployment,release-deployment site-deploy"
     def modules = getModules(pomfile)
     modules.each { $it
         println "Releasing Module: $it"
