@@ -4,7 +4,7 @@ def credentialsId = "GitHub"
 def repoAddressRoot = "github.com"
 def repoAddress = "${repoAddressRoot}/MRISS-Projects/parent-poms.git"
 def mavenConfigurationId = "default-maven-settings"
-def productPaths =  []
+def productPaths =  ["": ""]
 
 pipeline {
     agent any
@@ -80,33 +80,35 @@ pipeline {
                     echo 'Updating libs dependent repositories...'
                     for (def key in productPaths.keySet()) {
                         println "key = ${key}, value = ${productPaths[key]}"
-                        echo "Updating dependent repository: https://${repoAddressRoot}/${key}.git"
-                        sh "mkdir -p target/${key}"
-                        checkout changelog: false, poll: false, scm: [
-                            $class: 'GitSCM', 
-                            branches: [[name: "*/${libsBranch}"]],
-                            doGenerateSubmoduleConfigurations: false, 
-                            extensions: [[$class: 'LocalBranch', localBranch: "**"], [$class: 'RelativeTargetDirectory', relativeTargetDir: "target/${key}"]],
-                            submoduleCfg: [], 
-                            userRemoteConfigs: [[credentialsId: "${credentialsId}", url: "https://${repoAddressRoot}/${key}.git"]]
-                        ]
-                        echo "Updating lib repository: https://${repoAddressRoot}/${key}.git"
-                        configFileProvider(
-                            [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
-                            def parentFolderName = "${productPaths[key]}"
-                            if ("${key}".indexOf("general-apis") != -1 ) {
-                                if (parentFolderName && !parentFolderName.allWhitespace) {
-                                    sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/${parentFolderName}/pom.xml install"
-                                } else {
-                                    sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml install"
+                        if (!$key.isEmpty()) {
+                            echo "Updating dependent repository: https://${repoAddressRoot}/${key}.git"
+                            sh "mkdir -p target/${key}"
+                            checkout changelog: false, poll: false, scm: [
+                                $class: 'GitSCM', 
+                                branches: [[name: "*/${libsBranch}"]],
+                                doGenerateSubmoduleConfigurations: false, 
+                                extensions: [[$class: 'LocalBranch', localBranch: "**"], [$class: 'RelativeTargetDirectory', relativeTargetDir: "target/${key}"]],
+                                submoduleCfg: [], 
+                                userRemoteConfigs: [[credentialsId: "${credentialsId}", url: "https://${repoAddressRoot}/${key}.git"]]
+                            ]
+                            echo "Updating lib repository: https://${repoAddressRoot}/${key}.git"
+                            configFileProvider(
+                                [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                                def parentFolderName = "${productPaths[key]}"
+                                if ("${key}".indexOf("general-apis") != -1 ) {
+                                    if (parentFolderName && !parentFolderName.allWhitespace) {
+                                        sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/${parentFolderName}/pom.xml install"
+                                    } else {
+                                        sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml install"
+                                    }
                                 }
+                                if (parentFolderName && !parentFolderName.allWhitespace) {
+                                    sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/${parentFolderName}/pom.xml -DparentVersion=$LIBS_CURRENT_VERSION versions:update-parent"
+                                } else {
+                                    sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml -DparentVersion=$LIBS_CURRENT_VERSION versions:update-parent"
+                                }
+                                sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml -Dmessage=\"[Update Parent to $LIBS_CURRENT_VERSION]\" scm:checkin"
                             }
-                            if (parentFolderName && !parentFolderName.allWhitespace) {
-                                sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/${parentFolderName}/pom.xml -DparentVersion=$LIBS_CURRENT_VERSION versions:update-parent"
-                            } else {
-                                sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml -DparentVersion=$LIBS_CURRENT_VERSION versions:update-parent"
-                            }
-                            sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml -Dmessage=\"[Update Parent to $LIBS_CURRENT_VERSION]\" scm:checkin"
                         }
                     }
                 }
