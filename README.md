@@ -2,7 +2,7 @@
 
 ## Version
 
-3.0.0
+3.1.1 - 20200912-024025
 
 ## Code Based Site
 
@@ -11,6 +11,12 @@ Snapshot: https://mriss-projects.github.io/parent-poms/snapshots
 Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
+
+### Version 3.1.1
+
+| # | Type | Summary | Assignee | Reporter | Updated |
+| - | ---- | ------- | -------- | -------- | ------- |
+| [6](https://github.com/MRISS-Projects/parent-poms/issues/6) | bug | Version in commit is null | mriss | mriss | 9/12/20 |
 
 ### Version 3.0.0
 
