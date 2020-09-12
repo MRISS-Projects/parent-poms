@@ -67,11 +67,12 @@ pipeline {
                     env.CURRENT_VERSION = releaseParameters.get("CURRENT_VERSION_NUMBER")
                     env.LIBS_NEXT_DEV_RELEASE = releaseParameters.get("LIBS_NEXT_DEVELOPMENT_VERSION")
                     env.LIBS_CURRENT_VERSION = releaseParameters.get("LIBS_CURRENT_VERSION_NUMBER")
+                    env.COMMIT_MESSAGE = "'Infrastructure poms release version $LIBS_CURRENT_VERSION'"
                 }
                 configFileProvider(
                     [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
                     recursiveRelease("$MAVEN_SETTINGS", ".", "$NEXT_DEV_RELEASE", "$CURRENT_VERSION")
-                    sh "mvn -s $MAVEN_SETTINGS -B scm:checkin"
+                    sh "mvn -s $MAVEN_SETTINGS -B -Dmessage=$COMMIT_MESSAGE scm:checkin"
                 }
             }
         }
