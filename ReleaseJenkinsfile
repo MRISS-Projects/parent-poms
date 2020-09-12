@@ -71,7 +71,7 @@ pipeline {
                 configFileProvider(
                     [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
                     recursiveRelease("$MAVEN_SETTINGS", ".", "$NEXT_DEV_RELEASE", "$CURRENT_VERSION")
-                    //sh "mvn -s $MAVEN_SETTINGS -B scm:checkin"
+                    sh "mvn -s $MAVEN_SETTINGS -B scm:checkin"
                 }
             }
         }
