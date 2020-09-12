@@ -7,6 +7,7 @@ ${project.build.version}
 ## Code Based Site
 
 Snapshot: https://mriss-projects.github.io/parent-poms/snapshots
+
 Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
