@@ -2,7 +2,7 @@
 
 ## Version
 
-3.0.0 - 20200912-012858
+3.0.0
 
 ## Code Based Site
 
