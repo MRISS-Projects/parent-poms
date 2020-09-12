@@ -27,8 +27,6 @@
         <menu name="Documentation">
             <item name="Writing Projects Documenation"
                 href="writing-projects-documentation.html" />
-            <item name="Releases History"
-                href="releases-history.html" />
         </menu>
         <menu ref="reports" />
     </body>

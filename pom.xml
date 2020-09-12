@@ -620,7 +620,7 @@
     <scm>
         <connection>scm:git:${source.code.server}/${source.project}.git</connection>
         <developerConnection>scm:git:${source.code.server}/${source.project}.git</developerConnection>
-        <url>${source.code.server}/${source.project}</url>
+        <url>${source.code.server}/${source.project}/tree/master</url>
         <tag>HEAD</tag>
     </scm>
     <repositories>

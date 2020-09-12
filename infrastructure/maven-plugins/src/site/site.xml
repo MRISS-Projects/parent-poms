@@ -14,10 +14,6 @@
         </breadcrumbs>    
         <menu ref="parent" />
         <menu ref="modules" />
-        <menu name="Documentation">
-            <item name="Releases History"
-                href="releases-history.html" />
-        </menu>
         <menu ref="reports" />
     </body>
 </project>
