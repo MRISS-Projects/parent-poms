@@ -2,7 +2,7 @@
 
 ## Version
 
-3.0.0-SNAPSHOT - 20200910-022703
+3.0.0
 
 ## Code Based Site
 
