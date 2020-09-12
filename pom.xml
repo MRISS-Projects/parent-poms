@@ -280,7 +280,8 @@
                         <allowTimestampedSnapshots>true</allowTimestampedSnapshots>
                         <preparationGoals>clean install</preparationGoals>
                         <goals>deploy</goals>
-                        <scmCommentPrefix>[maven-release-plugin][skip jenkins]</scmCommentPrefix>
+                        <scmCommentPrefix>[maven-release-plugin][skip
+                            jenkins]</scmCommentPrefix>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -512,6 +513,24 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-project-info-reports-plugin</artifactId>
                 <version>${project-info-reports.plugin.version}</version>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <report>ci-management</report>
+                            <report>dependency-convergence</report>
+                            <report>dependency-info</report>
+                            <report>dependency-management</report>
+                            <report>dependencies</report>
+                            <report>distribution-management</report>
+                            <report>issue-management</report>
+                            <report>plugin-management</report>
+                            <report>plugins</report>
+                            <report>scm</report>
+                            <report>summary</report>
+                            <report>team</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
                 <configuration>
                     <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
                     <dependencyDetailsEnabled>false</dependencyDetailsEnabled>
@@ -788,7 +807,8 @@
                                 <configuration>
                                     <basedir>${basedir}</basedir>
                                     <includes>README.md</includes>
-                                    <message>Auto-generated README.md [skip jenkins]</message>
+                                    <message>Auto-generated README.md
+                                        [skip jenkins]</message>
                                 </configuration>
                                 <inherited>false</inherited>
                             </execution>
