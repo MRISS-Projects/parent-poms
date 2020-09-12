@@ -71,6 +71,7 @@ pipeline {
                     [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
                     recursiveRelease("$MAVEN_SETTINGS", ".", "$NEXT_DEV_RELEASE", "$CURRENT_VERSION")
                     sh "mvn -s $MAVEN_SETTINGS -B -Dmessage=$COMMIT_MESSAGE scm:checkin"
+                    sh "mvn -s $MAVEN_SETTINGS -B -Dtag=$mavenArtifactId-$CURRENT_VERSION scm:tag"
                 }
             }
         }
@@ -118,7 +119,7 @@ pipeline {
     post {
         success {
             echo 'Success!'
-            build job: Infrastructure-Snapshot
+            build job: "Infrastructure-Snapshot"
         }
         failure {
             echo 'Failure!'
