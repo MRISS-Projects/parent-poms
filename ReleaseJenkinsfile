@@ -117,10 +117,11 @@ pipeline {
     }
     post {
         success {
-            echo 'Success'
+            echo 'Success!'
+            build job: Infrastructure-Snapshot
         }
         failure {
-            echo 'Failure'
+            echo 'Failure!'
         }
     }
 }
