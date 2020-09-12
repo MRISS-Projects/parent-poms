@@ -154,8 +154,8 @@ def getMavenArtifactId() {
 
 def recursiveRelease(mavenSettings, pomPath, nextDevRelease, currentRelease) {
     sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DgenerateBackupPoms=false -DnewVersion=$currentRelease versions:set"
-    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -Pdeployment deploy"
-    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -Pdeployment,release-deployment site-deploy"
+    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -P deployment deploy"
+    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -P deployment,release-deployment -Dsite.deployment.personal.main=file:///tmp/sites site-deploy"
     sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DgenerateBackupPoms=false -DnewVersion=$nextDevRelease versions:set"
     def modules = getModules("$pomPath/pom.xml")
     println "modules: $modules"
