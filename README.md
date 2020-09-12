@@ -2,7 +2,7 @@
 
 ## Version
 
-3.2.0
+3.3.0 - 20200912-223349
 
 ## Code Based Site
 
@@ -11,6 +11,12 @@ Snapshot: https://mriss-projects.github.io/parent-poms/snapshots
 Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
+
+### Version 3.3.0
+
+| # | Type | Summary | Assignee | Reporter | Updated |
+| - | ---- | ------- | -------- | -------- | ------- |
+| [9](https://github.com/MRISS-Projects/parent-poms/issues/9) | task | Change pipeline jenkins file to start a new snapshot right after a release. | mriss | mriss | 9/12/20 |
 
 ### Version 3.2.0
 
