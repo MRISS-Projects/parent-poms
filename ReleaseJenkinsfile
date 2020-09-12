@@ -65,10 +65,7 @@ pipeline {
                     releaseParameters.each { println "paramName: $it.key = Value: $it.value" }
                     env.NEXT_DEV_RELEASE = releaseParameters.get("NEXT_DEVELOPMENT_VERSION")
                     env.CURRENT_VERSION = releaseParameters.get("CURRENT_VERSION_NUMBER")
-                    env.LIBS_NEXT_DEV_RELEASE = releaseParameters.get("LIBS_NEXT_DEVELOPMENT_VERSION")
-                    env.LIBS_CURRENT_VERSION = releaseParameters.get("LIBS_CURRENT_VERSION_NUMBER")
-                    def releasedVersion = releaseParameters.get("LIBS_CURRENT_VERSION_NUMBER")
-                    env.COMMIT_MESSAGE = "'Infrastructure poms release version $releasedVersion'"
+                    env.COMMIT_MESSAGE = "'Infrastructure poms release version $CURRENT_VERSION'"
                 }
                 configFileProvider(
                     [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
