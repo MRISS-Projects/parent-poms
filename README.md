@@ -2,7 +2,7 @@
 
 ## Version
 
-3.0.0
+3.0.0 - 20200912-020517
 
 ## Code Based Site
 
@@ -12,10 +12,11 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
 
-### Version 3.0.0-SNAPSHOT
+### Version 3.0.0
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | - | ---- | ------- | -------- | -------- | ------- |
+| [2](https://github.com/MRISS-Projects/parent-poms/issues/2) | task | First release | mriss | mriss | 9/12/20 |
 | [3](https://github.com/MRISS-Projects/parent-poms/issues/3) | task | Configure Jenkins at Google Cloud | mriss | mriss | 9/8/20 |
 | [1](https://github.com/MRISS-Projects/parent-poms/issues/1) | task | Initialize standard structure. | mriss | mriss | 9/7/20 |
 
