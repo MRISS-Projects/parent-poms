@@ -119,7 +119,7 @@ pipeline {
     post {
         success {
             echo 'Success!'
-            build job: "Infrastructure-Snapshot"
+            build job: "Infrastructure-Snapshot", propagate: false
         }
         failure {
             echo 'Failure!'
