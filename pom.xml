@@ -115,7 +115,7 @@
         <gwt.version>2.9.0</gwt.version>
 
         <jenkins.view>${project.artifactId}</jenkins.view>
-        <jenkins.server>http://34.70.246.135/</jenkins.server>
+        <jenkins.server>http://34.70.246.135/jenkins</jenkins.server>
         <jenkins.build.number>dev</jenkins.build.number> <!-- This should be provided by jenkins builds, when building maven SNAPSHOTS 
             (not releases). If not, the default will be "dev" -->
 
