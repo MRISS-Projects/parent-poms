@@ -2,7 +2,7 @@
 
 ## Version
 
-3.4.0-SNAPSHOT - 20200914-220756
+3.3.1 - 20200914-222037
 
 ## Code Based Site
 
@@ -11,6 +11,12 @@ Snapshot: https://mriss-projects.github.io/parent-poms/snapshots
 Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
+
+### Version 3.3.1
+
+| # | Type | Summary | Assignee | Reporter | Updated |
+| - | ---- | ------- | -------- | -------- | ------- |
+| [10](https://github.com/MRISS-Projects/parent-poms/issues/10) | task | Change jenkins server address | mriss | mriss | 9/14/20 |
 
 ### Version 3.3.0
 
