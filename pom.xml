@@ -275,7 +275,7 @@
                     <version>${release.plugin.version}</version>
                     <configuration>
                         <arguments>-Dsite.deployment.personal.main=${site.deployment.personal.main}</arguments>
-                        <releaseProfiles>deployment,release-deployment</releaseProfiles>
+                        <releaseProfiles>deployment,release-deployment,product-release-deployment</releaseProfiles>
                         <tagNameFormat>@{project.artifactId}-@{project.version}</tagNameFormat>
                         <allowTimestampedSnapshots>true</allowTimestampedSnapshots>
                         <preparationGoals>clean install</preparationGoals>

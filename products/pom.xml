@@ -13,14 +13,13 @@
     <parent>
         <groupId>com.mriss</groupId>
         <artifactId>mriss-parent</artifactId>
-        <version>3.3.1</version>
+        <version>3.4.0-SNAPSHOT</version>
     </parent>
     <!-- <dependencyManagement>...</dependencyManagement> -->
 <!--     <modules> -->
 <!--     </modules> -->
     <properties>
-        <jenkins.view>${project.parent.artifactId}</jenkins.view>
-        <group.id.path>${project.artifactId}</group.id.path>
+        <jenkins.view>${project.artifactId}</jenkins.view>
     </properties>
 
 
@@ -50,116 +49,127 @@
     <!-- <distributionManagement>...</distributionManagement> -->
     <profiles>
         <profile>
-            <id>product-release-deployment</id>
+            <id>deployment</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
-            <properties>
-                <release.type>releases</release.type>
-                <project.scm.id>github</project.scm.id>
-                <deploymentUrl>file://${project.build.directory}/maven-repo</deploymentUrl>
-            </properties>
             <build>
                 <plugins>
                     <plugin>
-                        <artifactId>maven-clean-plugin</artifactId>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>buildnumber-maven-plugin</artifactId>
                         <executions>
                             <execution>
-                                <id>clean-site-temporary-folder</id>
-                                <phase>clean</phase>
+                                <id>create-time-stamp</id>
+                                <phase>process-resources</phase>
                                 <goals>
-                                    <goal>clean</goal>
-                                </goals>
-                                <configuration>
-                                    <filesets>
-                                        <fileset>
-                                            <directory>/tmp/sites</directory>
-                                            <includes>
-                                                <include>snapshots/**</include>
-                                                <include>releases/**</include>
-                                            </includes>
-                                        </fileset>
-                                    </filesets>
-                                </configuration>
-                                <inherited>false</inherited>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-site-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>attach-site-descriptor</id>
-                                <phase>install</phase>
-                                <goals>
-                                    <goal>attach-descriptor</goal>
+                                    <goal>create-timestamp</goal>
                                 </goals>
                             </execution>
                         </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-changes-plugin</artifactId>
-                        <version>${changes.plugin.version}</version>
                         <configuration>
-                            <onlyCurrentVersion>true</onlyCurrentVersion>
-                            <failOnError>false</failOnError>
+                            <timestampFormat>yyyyMMdd-HHmmss</timestampFormat>
+                            <timestampPropertyName>timestamp</timestampPropertyName>
                         </configuration>
                     </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-scm-publish-plugin</artifactId>
+                        <artifactId>maven-resources-plugin</artifactId>
                         <executions>
                             <execution>
-                                <id>publish-to-github</id>
-                                <phase>site-deploy</phase>
+                                <id>copy-readme-md</id>
+                                <phase>process-resources</phase>
                                 <goals>
-                                    <goal>publish-scm</goal>
+                                    <goal>copy-resources</goal>
                                 </goals>
                                 <configuration>
-                                    <serverId>github.com</serverId>
-                                    <scmBranch>gh-pages</scmBranch>
-                                    <checkinComment>Publishing ${project.name} site
-                                        ${project.version}</checkinComment>
-                                    <pubScmUrl>scm:git:${source.code.server}/${source.project}</pubScmUrl>
-                                    <content>/tmp/sites</content>
-                                    <skipDeletedFiles>true</skipDeletedFiles>
+                                    <outputDirectory>.</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>src/site/markdown</directory>
+                                            <includes>
+                                                <include>README.md</include>
+                                            </includes>
+                                            <targetPath>.</targetPath>
+                                            <filtering>true</filtering>
+                                        </resource>
+                                    </resources>
                                 </configuration>
                             </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-scm-plugin</artifactId>
+                        <executions>
                             <execution>
-                                <id>publish-artifact-to-github</id>
-                                <phase>deploy</phase>
+                                <id>commit-readme-md</id>
+                                <phase>process-resources</phase>
                                 <goals>
-                                    <goal>publish-scm</goal>
+                                    <goal>checkin</goal>
                                 </goals>
                                 <configuration>
-                                    <serverId>github.com</serverId>
-                                    <checkinComment>Publishing artifact for version ${project.version}</checkinComment>
-                                    <pubScmUrl>scm:git:https://github.com/MRISS-Projects/maven-repo</pubScmUrl>
-                                    <content>${project.build.directory}/maven-repo</content>
-                                    <checkoutDirectory>/tmp/artifact-deploy-checkout</checkoutDirectory>
-                                    <skipDeletedFiles>true</skipDeletedFiles>
-                                    <tryUpdate>true</tryUpdate>
+                                    <basedir>${basedir}</basedir>
+                                    <includes>README.md</includes>
+                                    <message>Auto-generated README.md
+                                        [skip jenkins]</message>
                                 </configuration>
                             </execution>
                         </executions>
                     </plugin>
                 </plugins>
             </build>
-            <reporting>
+        </profile>
+        <profile>
+            <id>product-release-deployment</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
                 <plugins>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-changes-plugin</artifactId>
-                        <version>${changes.plugin.version}</version>
-                        <configuration>
-                            <onlyCurrentVersion>true</onlyCurrentVersion>
-                            <failOnError>false</failOnError>
-                        </configuration>
+                        <artifactId>maven-pdf-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>pdf-generation</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>pdf</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/site/pdf</outputDirectory>
+                                    <workingDirectory>${project.build.directory}/site/pdf</workingDirectory>
+                                    <aggregate>false</aggregate>
+                                    <includeReports>false</includeReports>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>attach-readme</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>attach-artifact</goal>
+                                </goals>
+                                <configuration>
+                                    <artifacts>
+                                        <artifact>
+                                            <file>${basedir}/target/site/pdf/README.pdf</file>
+                                            <type>pdf</type>
+                                            <classifier>readme</classifier>
+                                        </artifact>
+                                    </artifacts>
+                                </configuration>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
-            </reporting>
+            </build>
         </profile>
     </profiles>
 </project>
