@@ -2,7 +2,7 @@
 
 def credentialsId = "GitHub"
 def repoAddressRoot = "github.com"
-def repoAddress = "${repoAddressRoot}/MRISS-Projects/$GIT_PROJECT.git"
+def repoAddress = "${repoAddressRoot}/MRISS-Projects/${GIT_PROJECT}.git"
 def mavenConfigurationId = "default-maven-settings"
 
 pipeline {
