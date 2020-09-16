@@ -20,7 +20,7 @@ pipeline {
                 echo 'Checking out main code...'
                 checkout changelog: false, poll: false, scm: [
                     $class: 'GitSCM', 
-                    branches: [[name: "*/${BRANCH_NAME}"]],
+                    branches: [[name: "${BRANCH_NAME}"]],
                     doGenerateSubmoduleConfigurations: false, 
                     extensions: [[$class: 'LocalBranch', localBranch: "**"], [$class: 'WipeWorkspace']],
                     submoduleCfg: [], 
