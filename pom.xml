@@ -282,6 +282,7 @@
                         <goals>deploy</goals>
                         <scmCommentPrefix>[maven-release-plugin][skip
                             jenkins]</scmCommentPrefix>
+                        <branchName>staging-${project.version}-RC</branchName>
                     </configuration>
                 </plugin>
                 <plugin>

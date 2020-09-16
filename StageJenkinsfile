@@ -1,0 +1,80 @@
+#!/usr/bin/env groovy
+
+def credentialsId = "GitHub"
+def repoAddressRoot = "github.com"
+def repoAddress = "${repoAddressRoot}/MRISS-Projects/$GIT_PROJECT.git"
+def mavenConfigurationId = "default-maven-settings"
+
+pipeline {
+    agent any
+    tools {
+        maven 'Maven3'
+        jdk 'JDK-11'
+    }
+    options {
+        disableConcurrentBuilds()
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out main code...'
+                checkout changelog: false, poll: false, scm: [
+                    $class: 'GitSCM', 
+                    branches: [[name: "*/DEVELOPMENT"]],
+                    doGenerateSubmoduleConfigurations: false, 
+                    extensions: [[$class: 'LocalBranch', localBranch: "**"], [$class: 'WipeWorkspace']],
+                    submoduleCfg: [], 
+                    userRemoteConfigs: [[credentialsId: "${credentialsId}", url: "https://${repoAddress}"]]
+                ]
+            }
+        }
+        stage('Read pom.xml Info') {
+            steps{
+                 echo 'Reading pom.xml information...'
+                 script {
+                     echo "Next Development Version: ${nextDevelopmentVersionNumber}"
+                     echo "Maven Artifact Id: ${mavenArtifactId}"
+                 }
+            }
+        }
+        stage("Create stating RC branch") {
+            steps{
+                echo 'Create stating RC branch...'
+                configFileProvider(
+                    [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                    echo "nextDevelopmentVersionNumber: ${nextDevelopmentVersionNumber}"
+                    sh "mvn -s $MAVEN_SETTINGS -U -B -DdevelopmentVersion=${nextDevelopmentVersionNumber} release:branch"
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo 'Success!'
+        }
+        failure {
+            echo 'Failure!'
+        }
+    }
+}
+
+def releaseParameters
+
+def getNextDevelopmentVersionNumber() {
+    def pom = readMavenPom file: 'pom.xml'
+    def (major, minor, fix) = pom.version.replace("-SNAPSHOT", "").tokenize(".")
+    def newMinor = minor.toInteger()
+    def newFix = fix.toInteger()
+    if (newMinor >= 0  && newFix == 0)  {
+        newMinor++;
+    } else if (newMinor >= 0 && newFix > 0) {
+        newFix++;
+    }
+    def newDevVersion = major + "." + newMinor + "." + newFix + "-SNAPSHOT"
+    return newDevVersion
+}
+
+def getMavenArtifactId() {
+    def pom = readMavenPom file: 'pom.xml'
+    return pom.artifactId
+}
