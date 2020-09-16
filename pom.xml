@@ -662,7 +662,7 @@
             <properties>
                 <project.scm.id>github</project.scm.id>
                 <deploymentUrl>file://${project.build.directory}/maven-repo</deploymentUrl>
-                <project.build.version>${project.version} -${jenkins.build.number} - ${timestamp}</project.build.version>
+                <project.build.version>${project.version} - ${jenkins.build.number} - ${timestamp}</project.build.version>
             </properties>
             <build>
                 <plugins>
