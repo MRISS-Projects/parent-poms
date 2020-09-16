@@ -20,7 +20,7 @@ pipeline {
                 echo 'Checking out main code...'
                 checkout changelog: false, poll: false, scm: [
                     $class: 'GitSCM', 
-                    branches: [[name: "*/DEVELOPMENT"]],
+                    branches: [[name: "*/${BRANCH_NAME}"]],
                     doGenerateSubmoduleConfigurations: false, 
                     extensions: [[$class: 'LocalBranch', localBranch: "**"], [$class: 'WipeWorkspace']],
                     submoduleCfg: [], 
@@ -33,8 +33,8 @@ pipeline {
                 echo 'Staging RC deployment...'
                 configFileProvider(
                     [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
-                    sh "mvn -s $MAVEN_SETTINGS -U -B -Djenkins.build.number=RC${BUILD_NUMBER} -Drelease.type=rcs clean deploy"
-                    sh "mvn -s $MAVEN_SETTINGS -U -B -Djenkins.build.number=RC${BUILD_NUMBER} -Drelease.type=rcs site-deploy"
+                    sh "mvn -s $MAVEN_SETTINGS -U -B -Djenkins.build.number=RC${BUILD_NUMBER} -Drelease.type=rcs -P deployment clean deploy"
+                    sh "mvn -s $MAVEN_SETTINGS -U -B -Djenkins.build.number=RC${BUILD_NUMBER} -Drelease.type=rcs -P deployment site-deploy"
                 }
             }
         }
