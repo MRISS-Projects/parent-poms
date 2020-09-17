@@ -18,11 +18,12 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo 'Checking out main code...'
+                def branchName = getBranchName("${BRANCH_NAME}")
                 checkout changelog: false, poll: false, scm: [
                     $class: 'GitSCM', 
-                    branches: [[name: "${BRANCH_NAME}"]],
+                    branches: [[name: "${branchName}"]],
                     doGenerateSubmoduleConfigurations: false, 
-                    extensions: [[$class: 'LocalBranch', localBranch: ""], [$class: 'WipeWorkspace']],
+                    extensions: [[$class: 'LocalBranch', localBranch: "${branchName}"], [$class: 'WipeWorkspace']],
                     submoduleCfg: [], 
                     userRemoteConfigs: [[credentialsId: "${credentialsId}", url: "https://${repoAddress}"]]
                 ]
@@ -68,4 +69,9 @@ def getNextDevelopmentVersionNumber() {
 def getMavenArtifactId() {
     def pom = readMavenPom file: 'pom.xml'
     return pom.artifactId
+}
+
+def getBranchName(branchName) {
+    def slashIndex = branchName.indexOf("/")
+    return branchName.subString(slashIndex+1)
 }
