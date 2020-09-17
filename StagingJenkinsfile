@@ -4,6 +4,7 @@ def credentialsId = "GitHub"
 def repoAddressRoot = "github.com"
 def repoAddress = "${repoAddressRoot}/MRISS-Projects/${GIT_PROJECT}.git"
 def mavenConfigurationId = "default-maven-settings"
+def branchName = getBranchName("${BRANCH_NAME}")
 
 pipeline {
     agent any
@@ -18,7 +19,6 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo 'Checking out main code...'
-                def branchName = getBranchName("${BRANCH_NAME}")
                 checkout changelog: false, poll: false, scm: [
                     $class: 'GitSCM', 
                     branches: [[name: "${branchName}"]],
