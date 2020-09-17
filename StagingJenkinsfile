@@ -22,7 +22,7 @@ pipeline {
                     $class: 'GitSCM', 
                     branches: [[name: "${BRANCH_NAME}"]],
                     doGenerateSubmoduleConfigurations: false, 
-                    extensions: [[$class: 'LocalBranch', localBranch: "${BRANCH_NAME}"], [$class: 'WipeWorkspace']],
+                    extensions: [[$class: 'LocalBranch', localBranch: ""], [$class: 'WipeWorkspace']],
                     submoduleCfg: [], 
                     userRemoteConfigs: [[credentialsId: "${credentialsId}", url: "https://${repoAddress}"]]
                 ]
