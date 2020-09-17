@@ -73,5 +73,5 @@ def getMavenArtifactId() {
 
 def getBranchName(branchName) {
     def slashIndex = branchName.indexOf("/")
-    return branchName.subString(slashIndex+1)
+    return branchName.substring(slashIndex+1)
 }
