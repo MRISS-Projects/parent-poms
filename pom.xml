@@ -276,7 +276,7 @@
                     <configuration>
                         <arguments>-Dsite.deployment.personal.main=${site.deployment.personal.main}</arguments>
                         <releaseProfiles>deployment,release-deployment,product-release-deployment</releaseProfiles>
-                        <tagNameFormat>@{project.artifactId}-@{project.version}</tagNameFormat>
+                        <tagNameFormat>v@{project.version}</tagNameFormat>
                         <allowTimestampedSnapshots>true</allowTimestampedSnapshots>
                         <preparationGoals>clean install</preparationGoals>
                         <goals>deploy</goals>

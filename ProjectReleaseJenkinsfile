@@ -1,0 +1,196 @@
+#!/usr/bin/env groovy
+
+def credentialsId = "GitHub"
+def repoAddressRoot = "github.com"
+def repoAddress = "${repoAddressRoot}/MRISS-Projects/${GIT_PROJECT}.git"
+def mavenConfigurationId = "default-maven-settings"
+def branchName = getBranchName("${BRANCH_NAME}")
+
+pipeline {
+    agent any
+    tools {
+        maven 'Maven3'
+        jdk 'JDK-11'
+    }
+    options {
+        disableConcurrentBuilds()
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                echo "Checking out the code: ${branchName}"
+                sh "pwd; rm -rf *; rm -rf .git; rm -rf .gitignore"
+                checkout changelog: false, poll: false, scm: [
+                    $class: 'GitSCM', 
+                    branches: [[name: "${branchName}"]],
+                    doGenerateSubmoduleConfigurations: false, 
+                    extensions: [[$class: 'LocalBranch', localBranch: "${branchName}"], [$class: 'WipeWorkspace']],
+                    submoduleCfg: [], 
+                    userRemoteConfigs: [[credentialsId: "${credentialsId}", url: "https://${repoAddress}"]]
+                ]
+            }
+        }
+        stage('Read pom.xml Info') {
+            steps{
+                 echo 'Reading pom.xml information...'
+                 script {
+                     echo "Current Version Number: ${currentVersionNumber}"
+                     echo "Next Development Version: ${nextDevelopmentVersionNumber}"
+                     echo "Name of the Hotfix Branch: ${hotFixBranch}"
+                     echo "Initial version at Hotfix Branch: ${initialVersionHotFix}"
+                     echo "Maven Artifact Id: ${mavenArtifactId}"
+                     echo "Release Branch: ${releaseBranch}"
+                 }
+            }
+        }
+        stage('Ask User Confirmation and Present Suggestions') {
+            steps {
+                echo 'Asking user for release parameters...'
+                script {
+                    releaseParameters = input message: 'Define the following parameters before release:', parameters: [
+                        text(
+                            defaultValue: "${currentVersionNumber}", 
+                            description: '''Current version number (usually MAJOR.MINOR.0)''', 
+                            name: 'CURRENT_VERSION_NUMBER'
+                        ),
+                        text(
+                            defaultValue: "${nextDevelopmentVersionNumber}", 
+                            description: '''Next SNAPSHOT version (usually MAJOR.MINOR+1.0-SNAPSHOT)''', 
+                            name: 'NEXT_DEVELOPMENT_VERSION'
+                        ),
+                        text(
+                            defaultValue: "${hotFixBranch}", 
+                            description: '''Hotfix branch name (usually MAJOR.MINOR.x)''', 
+                            name: 'HOTFIX_BRANCH'
+                        ),                    
+                        text(
+                            defaultValue: "${initialVersionHotFix}", 
+                            description: '''The initial SNAPSHOT version number for hotfix branch (usually MAJOR.MINOR.1-SNAPSHOT)''', 
+                            name: 'INITIAL_HOTFIX_VERSION'
+                        )
+                    ]
+                }
+            }
+        }
+        stage("Build and Deploy Maven Release") {
+            steps{
+                echo 'Execute Release Build Using Parameters...'
+                script {
+                    releaseParameters.each { println "paramName: $it.key = Value: $it.value" }
+                    env.NEXT_DEV_RELEASE = releaseParameters.get("NEXT_DEVELOPMENT_VERSION")
+                    env.CURRENT_VERSION = releaseParameters.get("CURRENT_VERSION_NUMBER")
+                }
+                configFileProvider(
+                    [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                    sh "mvn -gs $MAVEN_SETTINGS -B -Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEV_RELEASE -Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION release:clean"
+                    sh "mvn -gs $MAVEN_SETTINGS -B -Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEV_RELEASE -Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION release:prepare"
+                    sh "mvn -gs $MAVEN_SETTINGS -B release:perform"
+                }
+            }
+        }
+        stage("Creates Hotfix Branch") {
+            steps{
+                echo 'Creating Hotfix Branch...'
+                script {
+                    env.HOTFIX_BRANCH = releaseParameters.get("HOTFIX_BRANCH")
+                }
+                configFileProvider(
+                    [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                    sh "cd target/checkout; pwd; mvn -gs $MAVEN_SETTINGS -B -Dbranch=$HOTFIX_BRANCH scm:branch"
+                    sh "pwd; rm -rf target/checkout/*; mvn -gs $MAVEN_SETTINGS -B -DscmVersion=$HOTFIX_BRANCH -DscmVersionType=branch scm:checkout"
+                }
+            }
+        }
+        stage("Generates Version at Hotfix Branch") {
+            steps{
+                echo 'Generating Version Hotfix Branch...'
+                script {
+                    env.INITIAL_HOTFIX_VERSION = releaseParameters.get("INITIAL_HOTFIX_VERSION")
+                }
+                configFileProvider(
+                    [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                    sh "cd target/checkout; pwd; mvn -gs $MAVEN_SETTINGS -B -DprocessAllModules=true -DnewVersion=$INITIAL_HOTFIX_VERSION versions:set"
+                    sh "cd target/checkout; pwd; mvn -gs $MAVEN_SETTINGS -B -Dmessage=\"[maven-release-plugin]\" scm:checkin"
+                }
+            }
+        }
+        stage("Merges New Tag to Master Branch") {
+            steps{
+                echo 'Merging Newly Created Tag to Master Branch...'
+                sh "pwd; rm -rf target/checkout/*"
+                script {
+                    def currentTag = "v" + releaseParameters.get("CURRENT_VERSION_NUMBER")
+                    checkout changelog: false, poll: false, scm: [
+                        $class: 'GitSCM',
+                        branches: [[name: "master"]],
+                        doGenerateSubmoduleConfigurations: false,
+                        extensions: [[$class: 'LocalBranch', localBranch: "master"], [$class: 'RelativeTargetDirectory', relativeTargetDir: "target/checkout"]],
+                        submoduleCfg: [],
+                        noTags: false,
+                        userRemoteConfigs: [[credentialsId: "${credentialsId}", url: "https://${repoAddress}"]]
+                    ]
+                    // merge tag in currentTag into release branch
+                    sh([script: "cd target/checkout; git merge -s recursive -X theirs ${currentTag}; git status"])
+                    // push
+                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${credentialsId}",
+                        usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]) {
+                        sh "cd target/checkout; git push https://${repoUser}:$GIT_PASSWORD@${repoAddress} refs/heads/${releaseBranch}"
+                    }
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo 'Success'
+            script {
+                env.CURRENT_VERSION = releaseParameters.get("CURRENT_VERSION_NUMBER")
+            }
+            mail to: 'marcelo.riss@animati.com.br,gabriela@animati.com.br', subject: "${JOB_NAME} - Build # ${BUILD_NUMBER} - Main Release: ${CURRENT_VERSION} - Success!", body: "Hi,\n\nThe job ${JOB_NAME}, build # ${BUILD_NUMBER}, have sucessfuly generated a new release ${CURRENT_VERSION}.\n\nArtifact can be found at https://archiva.animati.com.br/#artifact/br.com.animati/${mavenArtifactId}/${CURRENT_VERSION}.\n\nCheck console output at ${BUILD_URL} to view the results.\n\nBest,\n\nAnimati Workstation Development Team."
+        }
+        failure {
+            echo 'Failure'
+            mail to: 'marcelo.riss@animati.com.br,gabriela@animati.com.br', subject: "${JOB_NAME} - Build # ${BUILD_NUMBER} - Main Release: ${CURRENT_VERSION} Failure!", body: "${JOB_NAME} - Build # ${BUILD_NUMBER} - Failure:\n\nCheck console output at ${BUILD_URL} to view the results.\n\nAnimati Workstation Development Team."
+        }
+    }
+}
+
+def releaseParameters
+
+def getCurrentVersionNumber() {
+    def pom = readMavenPom file: 'pom.xml'
+    return pom.version.replace("-SNAPSHOT", "")
+}
+
+def getNextDevelopmentVersionNumber() {
+    def pom = readMavenPom file: 'pom.xml'
+    def (major, minor, fix) = pom.version.replace("-SNAPSHOT", "").tokenize(".")
+    def newMinor = minor.toInteger() + 1
+    def newDevVersion = major + "." + newMinor + "." + fix + "-SNAPSHOT"
+    return newDevVersion
+}
+
+def getHotFixBranch() {
+    def pom = readMavenPom file: 'pom.xml'
+    def (major, minor, fix) = pom.version.replace("-SNAPSHOT", "").tokenize(".")
+    def hotFixBranch = major + "." + minor + ".x" 
+    return hotFixBranch
+}
+
+def getInitialVersionHotFix() {
+    def pom = readMavenPom file: 'pom.xml'
+    def (major, minor, fix) = pom.version.replace("-SNAPSHOT", "").tokenize(".")
+    def newFix = fix.toInteger() + 1
+    def newHotFixVersion = major + "." + minor + "." + newFix + "-SNAPSHOT"
+    return newHotFixVersion
+}
+
+def getMavenArtifactId() {
+    def pom = readMavenPom file: 'pom.xml'
+    return pom.artifactId
+}
+
+def getBranchName(branchName) {
+    def slashIndex = branchName.indexOf("/")
+    return branchName.substring(slashIndex+1)
+}
