@@ -53,8 +53,58 @@
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
+            <properties>
+                <doxia.skin.version>1.8</doxia.skin.version>
+                <doxia.tools.version>1.8</doxia.tools.version>
+            </properties>
             <build>
                 <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-changes-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>generate-list-of-issues</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>github-text-list</goal>
+                                </goals>
+                                <configuration>
+                                    <includeOpenIssues>false</includeOpenIssues>
+                                    <onlyMilestoneIssues>true</onlyMilestoneIssues>
+                                    <columnNames>Id,Type,Summary,Assignee,Reporter,Updated</columnNames>
+                                    <failOnError>false</failOnError>
+                                    <githubAPIServerId>github.com</githubAPIServerId>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy-readme-md</id>
+                                <phase>process-resources</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>.</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>src/site</directory>
+                                            <includes>
+                                                <include>markdown/**</include>
+                                            </includes>
+                                            <targetPath>${project.build.directory}/pdf-resources</targetPath>
+                                            <filtering>true</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-pdf-plugin</artifactId>
@@ -66,10 +116,12 @@
                                     <goal>pdf</goal>
                                 </goals>
                                 <configuration>
+                                    <siteDirectory>${project.build.directory}/pdf-resources</siteDirectory>
                                     <outputDirectory>${project.build.directory}/site/pdf</outputDirectory>
                                     <workingDirectory>${project.build.directory}/site/pdf</workingDirectory>
                                     <aggregate>false</aggregate>
                                     <includeReports>false</includeReports>
+                                    <implementation>itext</implementation>
                                 </configuration>
                             </execution>
                         </executions>
