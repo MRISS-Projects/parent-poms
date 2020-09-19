@@ -134,23 +134,21 @@ pipeline {
                     // push
                     withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${credentialsId}",
                         usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]) {
-                        sh "cd target/checkout; git push https://${repoUser}:$GIT_PASSWORD@${repoAddress} refs/heads/${releaseBranch}"
+                        sh "cd target/checkout; git push https://${GIT_USERNAME}:$GIT_PASSWORD@${repoAddress} refs/heads/${releaseBranch}"
                     }
                 }
             }
         }
-    }
-    post {
-        success {
-            echo 'Success'
-            script {
-                env.CURRENT_VERSION = releaseParameters.get("CURRENT_VERSION_NUMBER")
+        stage("Remove RC Branch") {
+            steps{
+                echo 'Removing RC Branch...'
+                script {
+                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${credentialsId}",
+                        usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]) {
+                        sh "git push https://${GIT_USERNAME}:$GIT_PASSWORD@${repoAddress} refs/heads/${releaseBranch}"
+                    }
+                }
             }
-            mail to: 'marcelo.riss@animati.com.br,gabriela@animati.com.br', subject: "${JOB_NAME} - Build # ${BUILD_NUMBER} - Main Release: ${CURRENT_VERSION} - Success!", body: "Hi,\n\nThe job ${JOB_NAME}, build # ${BUILD_NUMBER}, have sucessfuly generated a new release ${CURRENT_VERSION}.\n\nArtifact can be found at https://archiva.animati.com.br/#artifact/br.com.animati/${mavenArtifactId}/${CURRENT_VERSION}.\n\nCheck console output at ${BUILD_URL} to view the results.\n\nBest,\n\nAnimati Workstation Development Team."
-        }
-        failure {
-            echo 'Failure'
-            mail to: 'marcelo.riss@animati.com.br,gabriela@animati.com.br', subject: "${JOB_NAME} - Build # ${BUILD_NUMBER} - Main Release: ${CURRENT_VERSION} Failure!", body: "${JOB_NAME} - Build # ${BUILD_NUMBER} - Failure:\n\nCheck console output at ${BUILD_URL} to view the results.\n\nAnimati Workstation Development Team."
         }
     }
 }
