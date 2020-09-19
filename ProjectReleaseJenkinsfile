@@ -145,7 +145,7 @@ pipeline {
                 script {
                     withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${credentialsId}",
                         usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]) {
-                        sh "git push https://${GIT_USERNAME}:$GIT_PASSWORD@${repoAddress} refs/heads/${releaseBranch}"
+                        sh "git https://$GIT_USERNAME:$GIT_PASSWORD@${repoAddress} push origin --delete ${branchName}"
                     }
                 }
             }
