@@ -49,78 +49,6 @@
     <!-- <distributionManagement>...</distributionManagement> -->
     <profiles>
         <profile>
-            <id>deployment</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>buildnumber-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>create-time-stamp</id>
-                                <phase>process-resources</phase>
-                                <goals>
-                                    <goal>create-timestamp</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <timestampFormat>yyyyMMdd-HHmmss</timestampFormat>
-                            <timestampPropertyName>timestamp</timestampPropertyName>
-                        </configuration>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-resources-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>copy-readme-md</id>
-                                <phase>process-resources</phase>
-                                <goals>
-                                    <goal>copy-resources</goal>
-                                </goals>
-                                <configuration>
-                                    <outputDirectory>.</outputDirectory>
-                                    <resources>
-                                        <resource>
-                                            <directory>src/site/markdown</directory>
-                                            <includes>
-                                                <include>README.md</include>
-                                            </includes>
-                                            <targetPath>.</targetPath>
-                                            <filtering>true</filtering>
-                                        </resource>
-                                    </resources>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-scm-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>commit-readme-md</id>
-                                <phase>process-resources</phase>
-                                <goals>
-                                    <goal>checkin</goal>
-                                </goals>
-                                <configuration>
-                                    <basedir>${basedir}</basedir>
-                                    <includes>README.md</includes>
-                                    <message>Auto-generated README.md
-                                        [skip jenkins]</message>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
             <id>product-release-deployment</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
@@ -164,6 +92,29 @@
                                             <classifier>readme</classifier>
                                         </artifact>
                                     </artifacts>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-scm-publish-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>publish-artifact-to-github</id>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>publish-scm</goal>
+                                </goals>
+                                <configuration>
+                                    <serverId>github.com</serverId>
+                                    <checkinComment>Publishing artifact
+                                        for version ${project.version}</checkinComment>
+                                    <pubScmUrl>scm:git:https://github.com/MRISS-Projects/maven-repo</pubScmUrl>
+                                    <content>${project.build.directory}/maven-repo</content>
+                                    <checkoutDirectory>/tmp/artifact-deploy-checkout</checkoutDirectory>
+                                    <skipDeletedFiles>true</skipDeletedFiles>
+                                    <tryUpdate>true</tryUpdate>
                                 </configuration>
                             </execution>
                         </executions>
