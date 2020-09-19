@@ -83,7 +83,7 @@ pipeline {
                 configFileProvider(
                     [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
                     sh "mvn -gs $MAVEN_SETTINGS -B -Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEV_RELEASE -Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION release:clean"
-                    sh "mvn -gs $MAVEN_SETTINGS -B -Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEV_RELEASE -Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION release:prepare"
+                    sh "mvn -gs $MAVEN_SETTINGS -B -Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEV_RELEASE -Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION -Darguments='-Dproject.build.version=$CURRENT_VERSION -P deployment' release:prepare"
                     sh "mvn -gs $MAVEN_SETTINGS -B release:perform"
                 }
             }
@@ -114,7 +114,7 @@ pipeline {
                 }
             }
         }
-        stage("Merges New Tag to Master Branch") {
+        stage("Post Release: Merges New Tag to Master Branch and Deploy Web Site") {
             steps{
                 echo 'Merging Newly Created Tag to Master Branch...'
                 sh "pwd; rm -rf target/checkout/*"
@@ -134,7 +134,11 @@ pipeline {
                     // push
                     withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${credentialsId}",
                         usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]) {
-                        sh "cd target/checkout; git push https://${GIT_USERNAME}:$GIT_PASSWORD@${repoAddress} refs/heads/${branchName}"
+                        sh "cd target/checkout; git push https://${GIT_USERNAME}:$GIT_PASSWORD@${repoAddress} origin master"
+                    }
+                    configFileProvider(
+                        [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                        sh "cd target/checkout; pwd; mvn -gs $MAVEN_SETTINGS -B -Dsite.deployment.personal.main= file:///tmp/sites -P deployment,release-deployment syte-deploy"
                     }
                 }
             }

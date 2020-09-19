@@ -275,7 +275,7 @@
                     <version>${release.plugin.version}</version>
                     <configuration>
                         <arguments>-Dsite.deployment.personal.main=${site.deployment.personal.main}</arguments>
-                        <releaseProfiles>deployment,release-deployment,product-release-deployment</releaseProfiles>
+                        <releaseProfiles>release-deployment,product-release-deployment</releaseProfiles>
                         <tagNameFormat>v@{project.version}</tagNameFormat>
                         <allowTimestampedSnapshots>true</allowTimestampedSnapshots>
                         <preparationGoals>clean install</preparationGoals>
@@ -283,6 +283,8 @@
                         <scmCommentPrefix>[maven-release-plugin][skip
                             jenkins]</scmCommentPrefix>
                         <branchName>staging-${project.version}-RC</branchName>
+                        <developmentVersion>${build.NEXT_DEVELOPMENT_VERSION}</developmentVersion>
+                        <releaseVersion>${build.CURRENT_VERSION_NUMBER}</releaseVersion>
                     </configuration>
                 </plugin>
                 <plugin>
