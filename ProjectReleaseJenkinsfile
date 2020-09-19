@@ -39,7 +39,7 @@ pipeline {
                      echo "Name of the Hotfix Branch: ${hotFixBranch}"
                      echo "Initial version at Hotfix Branch: ${initialVersionHotFix}"
                      echo "Maven Artifact Id: ${mavenArtifactId}"
-                     echo "Release Branch: ${releaseBranch}"
+                     echo "Release Branch: ${branchName}"
                  }
             }
         }
@@ -134,7 +134,7 @@ pipeline {
                     // push
                     withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${credentialsId}",
                         usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]) {
-                        sh "cd target/checkout; git push https://${GIT_USERNAME}:$GIT_PASSWORD@${repoAddress} refs/heads/${releaseBranch}"
+                        sh "cd target/checkout; git push https://${GIT_USERNAME}:$GIT_PASSWORD@${repoAddress} refs/heads/${branchName}"
                     }
                 }
             }
