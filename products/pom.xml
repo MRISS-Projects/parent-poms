@@ -49,6 +49,42 @@
     <!-- <distributionManagement>...</distributionManagement> -->
     <profiles>
         <profile>
+            <id>deployment</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy-readme-md</id>
+                                <phase>process-resources</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>.</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>src/site/markdown</directory>
+                                            <includes>
+                                                <include>README.md</include>
+                                            </includes>
+                                            <targetPath>.</targetPath>
+                                            <filtering>true</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
             <id>product-release-deployment</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
