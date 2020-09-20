@@ -41,8 +41,12 @@
     <!-- <issueManagement>...</issueManagement> -->
     <!-- <ciManagement>...</ciManagement> -->
     <!-- <mailingLists>...</mailingLists> -->
-    <!-- <scm> -->
-    <!-- </scm> -->
+    <scm>
+        <connection>scm:git:${source.code.server}/${source.project}.git</connection>
+        <developerConnection>scm:git:${source.code.server}/${source.project}.git</developerConnection>
+        <url>${source.code.server}/${source.project}/tree/master</url>
+        <tag>HEAD</tag>
+    </scm>
     <!-- <prerequisites>...</prerequisites> -->
     <!-- <repositories>...</repositories> -->
     <!-- <pluginRepositories>...</pluginRepositories> -->
