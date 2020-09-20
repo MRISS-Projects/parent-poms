@@ -1,0 +1,102 @@
+#!/usr/bin/env groovy
+
+def credentialsId = "GitHub"
+def repoAddressRoot = "github.com"
+def repoAddress = "${repoAddressRoot}/MRISS-Projects/${GIT_PROJECT}.git"
+def mavenConfigurationId = "default-maven-settings"
+def branchName = getBranchName("${BRANCH_NAME}")
+
+pipeline {
+    agent any
+    tools {
+        maven 'Maven3'
+        jdk 'JDK-11'
+    }
+    options {
+        disableConcurrentBuilds()
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                echo "Checking out the code: ${branchName}"
+                sh "pwd; rm -rf *; rm -rf .git; rm -rf .gitignore"
+                checkout changelog: false, poll: false, scm: [
+                    $class: 'GitSCM', 
+                    branches: [[name: "${branchName}"]],
+                    doGenerateSubmoduleConfigurations: false, 
+                    extensions: [[$class: 'LocalBranch', localBranch: "${branchName}"], [$class: 'WipeWorkspace']],
+                    submoduleCfg: [], 
+                    userRemoteConfigs: [[credentialsId: "${credentialsId}", url: "https://${repoAddress}"]]
+                ]
+            }
+        }
+        stage('Read pom.xml Info') {
+            steps{
+                 echo 'Reading pom.xml information...'
+                 script {
+                    hotfixReleaseNumber = "${currentVersionNumber}"
+                    echo "Current Version Number: ${hotfixReleaseNumber}"
+                    hotFixMavenArtifactId = "${mavenArtifactId}"
+                    echo "Maven Artifact Id: ${hotFixMavenArtifactId}"
+                 }
+            }
+        }
+        stage("Build and Deploy Maven Release") {
+            steps{
+                echo 'Execute Release Build Using Default Release Values (increment last fix version number)...'
+                configFileProvider(
+                    [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                    
+                    sh "mvn -gs $MAVEN_SETTINGS -B release:clean"
+                    sh "mvn -gs $MAVEN_SETTINGS -B release:prepare"
+                    sh "mvn -gs $MAVEN_SETTINGS -B release:perform"
+                }
+            }
+        }
+        stage("Post Release") {
+            steps{
+                echo 'Merges New Tag to Master Branch, Deploy Web Site , Update README at master branch.'
+                sh "pwd; rm -rf target/checkout/*"
+                script {
+                    def currentTag = "v" + releaseParameters.get("CURRENT_VERSION_NUMBER")
+                    checkout changelog: false, poll: false, scm: [
+                        $class: 'GitSCM',
+                        branches: [[name: "master"]],
+                        doGenerateSubmoduleConfigurations: false,
+                        extensions: [[$class: 'LocalBranch', localBranch: "master"], [$class: 'RelativeTargetDirectory', relativeTargetDir: "target/checkout"]],
+                        submoduleCfg: [],
+                        noTags: false,
+                        userRemoteConfigs: [[credentialsId: "${credentialsId}", url: "https://${repoAddress}"]]
+                    ]
+                    // merge tag in currentTag into release branch
+                    sh([script: "cd target/checkout; git merge -s recursive -X theirs ${currentTag}; git status"])
+                    // push
+                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${credentialsId}",
+                        usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]) {
+                        sh "cd target/checkout; git push https://${GIT_USERNAME}:$GIT_PASSWORD@${repoAddress} master"
+                    }
+                    configFileProvider(
+                        [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                        sh "cd target/checkout; pwd; mvn -gs $MAVEN_SETTINGS -B -Dsite.deployment.personal.main=file:///tmp/sites -P deployment,release-deployment site-deploy"
+                        sh "cd target/checkout; pwd; mvn -gs $MAVEN_SETTINGS -B -P deployment,release-deployment process-resources"
+                    }
+                }
+            }
+        }
+    }
+}
+
+def getCurrentVersionNumber() {
+    def pom = readMavenPom file: 'pom.xml'
+    return pom.version.replace("-SNAPSHOT", "")
+}
+
+def getMavenArtifactId() {
+    def pom = readMavenPom file: 'pom.xml'
+    return pom.artifactId
+}
+
+def getBranchName(branchName) {
+    def slashIndex = branchName.indexOf("/")
+    return branchName.substring(slashIndex+1)
+}
