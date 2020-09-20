@@ -4,7 +4,7 @@ def credentialsId = "GitHub"
 def repoAddressRoot = "github.com"
 def repoAddress = "${repoAddressRoot}/MRISS-Projects/parent-poms.git"
 def mavenConfigurationId = "default-maven-settings"
-def productPaths =  ["": ""]
+def productPaths =  ["MRISS-Projects/mail-processor-service": ""]
 
 pipeline {
     agent any
@@ -96,20 +96,8 @@ pipeline {
                             echo "Updating lib repository: https://${repoAddressRoot}/${key}.git"
                             configFileProvider(
                                 [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
-                                def parentFolderName = "${productPaths[key]}"
-                                if ("${key}".indexOf("general-apis") != -1 ) {
-                                    if (parentFolderName && !parentFolderName.allWhitespace) {
-                                        sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/${parentFolderName}/pom.xml install"
-                                    } else {
-                                        sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml install"
-                                    }
-                                }
-                                if (parentFolderName && !parentFolderName.allWhitespace) {
-                                    sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/${parentFolderName}/pom.xml -DparentVersion=$LIBS_CURRENT_VERSION versions:update-parent"
-                                } else {
-                                    sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml -DparentVersion=$LIBS_CURRENT_VERSION versions:update-parent"
-                                }
-                                sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml -Dmessage=\"[Update Parent to $LIBS_CURRENT_VERSION]\" scm:checkin"
+                                sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml -DparentVersion=$CURRENT_VERSION_NUMBER versions:update-parent"
+                                sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml -Dmessage=\"[Update Parent to $CURRENT_VERSION_NUMBER]\" scm:checkin"
                             }
                         }
                     }
@@ -157,7 +145,7 @@ def getMavenArtifactId() {
 def recursiveRelease(mavenSettings, pomPath, nextDevRelease, currentRelease) {
     sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DgenerateBackupPoms=false -DnewVersion=$currentRelease versions:set"
     sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -P deployment deploy"
-    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -P deployment,release-deployment -Dsite.deployment.personal.main=file:///tmp/sites site-deploy"
+    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -P deployment,release-deployment -DconnectionUrl='scm:git:https://github.com/MRISS-Projects/parent-poms.git' -Dsite.deployment.personal.main=file:///tmp/sites site-deploy"
     sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DgenerateBackupPoms=false -DnewVersion=$nextDevRelease versions:set"
     def modules = getModules("$pomPath/pom.xml")
     println "modules: $modules"
