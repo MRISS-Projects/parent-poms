@@ -863,6 +863,7 @@
             <properties>
                 <release.type>releases</release.type>
                 <project.build.version>${project.version}</project.build.version>
+                <deploymentUrl>file://${project.build.directory}/maven-repo</deploymentUrl>
             </properties>
             <build>
                 <plugins>
