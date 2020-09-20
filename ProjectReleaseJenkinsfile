@@ -114,9 +114,9 @@ pipeline {
                 }
             }
         }
-        stage("Post Release: Merges New Tag to Master Branch, Deploy Web Site , Update readme") {
+        stage("Post Release") {
             steps{
-                echo 'Merging Newly Created Tag to Master Branch...'
+                echo 'Merges New Tag to Master Branch, Deploy Web Site , Update README at master branch.'
                 sh "pwd; rm -rf target/checkout/*"
                 script {
                     def currentTag = "v" + releaseParameters.get("CURRENT_VERSION_NUMBER")
@@ -150,7 +150,7 @@ pipeline {
                 script {
                     withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${credentialsId}",
                         usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]) {
-                        sh "git push https://$GIT_USERNAME:$GIT_PASSWORD@${repoAddress} origin --delete ${branchName}"
+                        sh "git push https://$GIT_USERNAME:$GIT_PASSWORD@${repoAddress} -delete ${branchName}"
                     }
                 }
             }
