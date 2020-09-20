@@ -69,7 +69,7 @@ pipeline {
                         userRemoteConfigs: [[credentialsId: "${credentialsId}", url: "https://${repoAddress}"]]
                     ]
                     // merge tag in currentTag into release branch
-                    sh([script: "cd target/checkout; git merge -s recursive -X theirs ${currentTag}; git status"])
+                    sh([script: "cd target/checkout; git merge -s recursive -X theirs --allow-unrelated-histories ${currentTag}; git status"])
                     // push
                     withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${credentialsId}",
                         usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]) {
