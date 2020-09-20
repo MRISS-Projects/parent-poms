@@ -81,6 +81,25 @@
                             </execution>
                         </executions>
                     </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-scm-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>commit-readme-md</id>
+                                <phase>process-resources</phase>
+                                <goals>
+                                    <goal>checkin</goal>
+                                </goals>
+                                <configuration>
+                                    <basedir>${basedir}</basedir>
+                                    <includes>README.md</includes>
+                                    <message>Auto-generated README.md
+                                        [skip jenkins]</message>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                 </plugins>
             </build>
         </profile>
