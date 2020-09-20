@@ -58,7 +58,7 @@ pipeline {
                 echo 'Merges New Tag to Master Branch, Deploy Web Site , Update README at master branch.'
                 sh "pwd; rm -rf target/checkout/*"
                 script {
-                    def currentTag = "v" + releaseParameters.get("CURRENT_VERSION_NUMBER")
+                    def currentTag = "v${currentVersionNumber}"
                     checkout changelog: false, poll: false, scm: [
                         $class: 'GitSCM',
                         branches: [[name: "master"]],
