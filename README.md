@@ -2,7 +2,7 @@
 
 ## Version
 
-3.4.0-SNAPSHOT - 17 - 20200920-030702
+3.4.0
 
 ## Code Based Site
 
@@ -11,6 +11,13 @@ Snapshot: https://mriss-projects.github.io/parent-poms/snapshots
 Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
+
+### Version 3.4.0
+
+| # | Type | Summary | Assignee | Reporter | Updated |
+| - | ---- | ------- | -------- | -------- | ------- |
+| [12](https://github.com/MRISS-Projects/parent-poms/issues/12) | task | Jenkins view for ciManagement needs to be static for product parent. | mriss | mriss | 9/20/20 |
+| [11](https://github.com/MRISS-Projects/parent-poms/issues/11) | task | Implement specific configurations for product deployment | mriss | mriss | 9/20/20 |
 
 ### Version 3.3.1
 
