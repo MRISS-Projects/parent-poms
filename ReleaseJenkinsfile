@@ -96,8 +96,8 @@ pipeline {
                             echo "Updating lib repository: https://${repoAddressRoot}/${key}.git"
                             configFileProvider(
                                 [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
-                                sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml -DparentVersion=$CURRENT_VERSION_NUMBER versions:update-parent"
-                                sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml -Dmessage=\"[Update Parent to $CURRENT_VERSION_NUMBER]\" scm:checkin"
+                                sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml -DparentVersion=$CURRENT_VERSION versions:update-parent"
+                                sh "mvn -gs $MAVEN_SETTINGS -B -f target/${key}/pom.xml -Dmessage=\"[Update Parent to $CURRENT_VERSION]\" scm:checkin"
                             }
                         }
                     }
