@@ -87,9 +87,9 @@ pipeline {
                             sh "mkdir -p target/${key}"
                             checkout changelog: false, poll: false, scm: [
                                 $class: 'GitSCM', 
-                                branches: [[name: "*/${libsBranch}"]],
+                                branches: [[name: "DEVELOPMENT"]],
                                 doGenerateSubmoduleConfigurations: false, 
-                                extensions: [[$class: 'LocalBranch', localBranch: "**"], [$class: 'RelativeTargetDirectory', relativeTargetDir: "target/${key}"]],
+                                extensions: [[$class: 'LocalBranch', localBranch: "DEVELOPMENT"], [$class: 'RelativeTargetDirectory', relativeTargetDir: "target/${key}"]],
                                 submoduleCfg: [], 
                                 userRemoteConfigs: [[credentialsId: "${credentialsId}", url: "https://${repoAddressRoot}/${key}.git"]]
                             ]
@@ -145,7 +145,7 @@ def getMavenArtifactId() {
 def recursiveRelease(mavenSettings, pomPath, nextDevRelease, currentRelease) {
     sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DgenerateBackupPoms=false -DnewVersion=$currentRelease versions:set"
     sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -P deployment deploy"
-    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -P deployment,release-deployment -DconnectionUrl='scm:git:https://github.com/MRISS-Projects/parent-poms.git' -Dsite.deployment.personal.main=file:///tmp/sites site-deploy"
+    sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -P deployment,release-deployment -Dsite.deployment.personal.main=file:///tmp/sites site-deploy"
     sh "mvn -s $mavenSettings -B -N -f $pomPath/pom.xml -DgenerateBackupPoms=false -DnewVersion=$nextDevRelease versions:set"
     def modules = getModules("$pomPath/pom.xml")
     println "modules: $modules"
