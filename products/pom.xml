@@ -121,7 +121,6 @@
                                     <workingDirectory>${project.build.directory}/site/pdf</workingDirectory>
                                     <aggregate>false</aggregate>
                                     <includeReports>false</includeReports>
-                                    <implementation>itext</implementation>
                                 </configuration>
                             </execution>
                         </executions>
