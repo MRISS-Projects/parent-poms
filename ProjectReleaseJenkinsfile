@@ -134,7 +134,7 @@ pipeline {
                     // push
                     withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${credentialsId}",
                         usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]) {
-                        sh "cd target/checkout; git push https://${GIT_USERNAME}:$GIT_PASSWORD@${repoAddress} origin master"
+                        sh "cd target/checkout; git push https://${GIT_USERNAME}:$GIT_PASSWORD@${repoAddress} master"
                     }
                     configFileProvider(
                         [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
