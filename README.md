@@ -2,7 +2,7 @@
 
 ## Version
 
-3.5.0-SNAPSHOT - 20 - 20200921-022342
+3.5.0 - dev - 20200921-030700
 
 ## Code Based Site
 
@@ -12,10 +12,12 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
 
-### Version 3.5.0-SNAPSHOT
+### Version 3.5.0
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | - | ---- | ------- | -------- | -------- | ------- |
+| [18](https://github.com/MRISS-Projects/parent-poms/issues/18) | task | Implement pom parent update for snapshots at release of parent poms. | mriss | mriss | 9/21/20 |
+| [17](https://github.com/MRISS-Projects/parent-poms/issues/17) | task | Check all [skip jenkins] push message at pom.xml files and jenkins scripts | mriss | mriss | 9/21/20 |
 | [16](https://github.com/MRISS-Projects/parent-poms/issues/16) | task | Make project snapshot oriented by github webhook. | mriss | mriss | 9/21/20 |
 | [15](https://github.com/MRISS-Projects/parent-poms/issues/15) | task | Configure https for jenkins server. | mriss | mriss | 9/20/20 |
 
