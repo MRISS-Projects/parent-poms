@@ -293,8 +293,7 @@
                         <allowTimestampedSnapshots>true</allowTimestampedSnapshots>
                         <preparationGoals>clean install</preparationGoals>
                         <goals>deploy</goals>
-                        <scmCommentPrefix>[maven-release-plugin][skip
-                            jenkins]</scmCommentPrefix>
+                        <scmCommentPrefix>[maven-release-plugin][skip jenkins]</scmCommentPrefix>
                         <branchName>staging-${project.version}-RC</branchName>
                         <developmentVersion>${build.NEXT_DEVELOPMENT_VERSION}</developmentVersion>
                         <releaseVersion>${build.CURRENT_VERSION_NUMBER}</releaseVersion>
@@ -740,9 +739,7 @@
                                 <configuration>
                                     <serverId>github.com</serverId>
                                     <scmBranch>gh-pages</scmBranch>
-                                    <checkinComment>Publishing
-                                        ${project.name} site
-                                        ${project.version}</checkinComment>
+                                    <checkinComment>Publishing ${project.name} site ${project.version} [skip jenkins]</checkinComment>
                                     <pubScmUrl>scm:git:${source.code.server}/${source.project}</pubScmUrl>
                                     <content>/tmp/sites</content>
                                     <skipDeletedFiles>true</skipDeletedFiles>
@@ -756,8 +753,7 @@
                                 </goals>
                                 <configuration>
                                     <serverId>github.com</serverId>
-                                    <checkinComment>Publishing artifact
-                                        for version ${project.version}</checkinComment>
+                                    <checkinComment>Publishing artifact for version ${project.version}</checkinComment>
                                     <pubScmUrl>scm:git:https://github.com/MRISS-Projects/maven-repo</pubScmUrl>
                                     <content>${project.build.directory}/maven-repo</content>
                                     <checkoutDirectory>/tmp/artifact-deploy-checkout</checkoutDirectory>
@@ -845,8 +841,7 @@
                                 <configuration>
                                     <basedir>${basedir}</basedir>
                                     <includes>README.md</includes>
-                                    <message>Auto-generated README.md
-                                        [skip jenkins]</message>
+                                    <message>Auto-generated README.md [skip jenkins]</message>
                                 </configuration>
                                 <inherited>false</inherited>
                             </execution>

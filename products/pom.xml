@@ -98,8 +98,7 @@
                                 <configuration>
                                     <basedir>${basedir}</basedir>
                                     <includes>README.md</includes>
-                                    <message>Auto-generated README.md
-                                        [skip jenkins]</message>
+                                    <message>Auto-generated README.md [skip jenkins]</message>
                                 </configuration>
                             </execution>
                         </executions>
@@ -218,8 +217,7 @@
                                 </goals>
                                 <configuration>
                                     <serverId>github.com</serverId>
-                                    <checkinComment>Publishing artifact
-                                        for version ${project.version}</checkinComment>
+                                    <checkinComment>Publishing artifact for version ${project.version}</checkinComment>
                                     <pubScmUrl>scm:git:https://github.com/MRISS-Projects/maven-repo</pubScmUrl>
                                     <content>${project.build.directory}/maven-repo</content>
                                     <checkoutDirectory>/tmp/artifact-deploy-checkout</checkoutDirectory>
