@@ -15,7 +15,7 @@
     <parent>
         <groupId>com.mriss.mriss-parent.infrastructure</groupId>
         <artifactId>maven-archetypes</artifactId>
-        <version>3.4.0</version>
+        <version>3.5.0</version>
     </parent>
     <!-- <dependencyManagement></dependencyManagement> -->
     <!-- <modules> -->
