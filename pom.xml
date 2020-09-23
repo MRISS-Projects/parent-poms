@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0                       http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -100,6 +99,7 @@
         <jacoco.maven.plugin.version>0.8.5</jacoco.maven.plugin.version>
         <jacoco.badge.maven.plugin>0.1.4</jacoco.badge.maven.plugin>
         <scm.publish.plugin.version>3.0.0</scm.publish.plugin.version>
+        <appengine.plugin.version>2.2.0</appengine.plugin.version>
 
         <doxia.skin.version>1.9</doxia.skin.version>
         <doxia.tools.version>1.9.1</doxia.tools.version>
@@ -119,8 +119,9 @@
 
         <jenkins.view>${project.artifactId}</jenkins.view>
         <jenkins.server>https://34.70.246.135/jenkins</jenkins.server>
-        <jenkins.build.number>dev</jenkins.build.number> <!-- This should be provided by jenkins builds, when building maven SNAPSHOTS 
-            (not releases). If not, the default will be "dev" -->
+        <jenkins.build.number>dev</jenkins.build.number> <!-- This should be provided by jenkins builds, when building 
+                                                               maven SNAPSHOTS (not releases). If not, the default will 
+                                                               be "dev" -->
 
         <source.code.server>https://github.com/MRISS-Projects</source.code.server>
         <source.project>parent-poms</source.project>
@@ -523,6 +524,15 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-scm-publish-plugin</artifactId>
                     <version>${scm.publish.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>com.google.cloud.tools</groupId>
+                    <artifactId>appengine-maven-plugin</artifactId>
+                    <version>${appengine.plugin.version}</version>
+                    <configuration>
+                        <version>${appengine.project.version}</version>
+                        <projectId>${appengine.project.id}</projectId>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
