@@ -2,7 +2,7 @@
 
 ## Version
 
-3.6.0-SNAPSHOT - 24 - 20200923-051852
+3.6.0-SNAPSHOT - 24 - 20200923-051906
 
 ## Code Based Site
 
