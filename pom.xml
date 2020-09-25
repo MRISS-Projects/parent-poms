@@ -40,6 +40,16 @@
                 <version>${mockito.version}</version>
                 <scope>test</scope>
             </dependency>
+            <dependency>
+                <groupId>javax.mail</groupId>
+                <artifactId>mail</artifactId>
+                <version>${javax-mail.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>${commons-io.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
     <modules>
@@ -116,6 +126,8 @@
         <servlet.version>4.0.1</servlet.version>
         <mockito.version>3.5.7</mockito.version>
         <gwt.version>2.9.0</gwt.version>
+        <commons-io.version>2.8.0</commons-io.version>
+        <javax-mail.version>1.5.0-b01</javax-mail.version>
 
         <jenkins.view>${project.artifactId}</jenkins.view>
         <jenkins.server>https://34.70.246.135/jenkins</jenkins.server>
