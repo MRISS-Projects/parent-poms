@@ -544,6 +544,7 @@
                     <configuration>
                         <version>${appengine.project.version}</version>
                         <projectId>${appengine.project.id}</projectId>
+                        <appEngineDirectory>${project.build.directory}/appengine</appEngineDirectory>
                     </configuration>
                 </plugin>
             </plugins>
