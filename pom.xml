@@ -106,7 +106,7 @@
         <maven.gwt.plugin.version>2.9.0</maven.gwt.plugin.version>
         <hibernate4.plugin.version>1.1.1</hibernate4.plugin.version>
         <sql.plugin.version>1.5</sql.plugin.version>
-        <jacoco.maven.plugin.version>0.8.5</jacoco.maven.plugin.version>
+        <jacoco.maven.plugin.version>0.8.6</jacoco.maven.plugin.version>
         <jacoco.badge.maven.plugin>0.1.4</jacoco.badge.maven.plugin>
         <scm.publish.plugin.version>3.0.0</scm.publish.plugin.version>
         <appengine.plugin.version>2.2.0</appengine.plugin.version>
