@@ -45,9 +45,9 @@ pipeline {
         stage("Stage snapshot build") {
             steps{
                 echo 'Staging RC deployment...'
-                def versionInfo = getVersionInfo()
                 configFileProvider(
                     [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                    def versionInfo = getVersionInfo()
                     sh "mvn -s $MAVEN_SETTINGS -U -B -Dappengine.project.version=${versionInfo}-rc${BUILD_NUMBER} -Djenkins.build.number=RC${BUILD_NUMBER} -Drelease.type=rcs -P deployment clean deploy"
                     sh "mvn -s $MAVEN_SETTINGS -U -B -Djenkins.build.number=RC${BUILD_NUMBER} -Drelease.type=rcs -P deployment site-deploy"
                 }
