@@ -604,6 +604,7 @@
                             <report>scm</report>
                             <report>summary</report>
                             <report>team</report>
+                            <report>licenses</report>
                         </reports>
                     </reportSet>
                 </reportSets>
@@ -664,8 +665,8 @@
     <inceptionYear>2020</inceptionYear>
     <licenses>
         <license>
-            <name>APACHE LICENSE, VERSION 2.0¶</name>
-            <url>https://opensource.org/licenses/Apache-2.0</url>
+            <name>APACHE LICENSE, VERSION 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
         </license>
     </licenses>
     <organization>
