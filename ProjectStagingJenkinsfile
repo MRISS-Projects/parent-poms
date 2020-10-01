@@ -18,7 +18,6 @@ def repoAddressRoot = "github.com"
 def repoAddress = "${repoAddressRoot}/MRISS-Projects/${GIT_PROJECT}.git"
 def mavenConfigurationId = "default-maven-settings"
 def branchName = getBranchName("${BRANCH_NAME}")
-def versionInfo = getVersionInfo()
 
 pipeline {
     agent any
@@ -46,6 +45,7 @@ pipeline {
         stage("Stage snapshot build") {
             steps{
                 echo 'Staging RC deployment...'
+                def versionInfo = getVersionInfo()
                 configFileProvider(
                     [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
                     sh "mvn -s $MAVEN_SETTINGS -U -B -Dappengine.project.version=${versionInfo}-rc${BUILD_NUMBER} -Djenkins.build.number=RC${BUILD_NUMBER} -Drelease.type=rcs -P deployment clean deploy"
