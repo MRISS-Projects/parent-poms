@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 Simo Kinnunen.
+ * Copyright (c) 2009, 2020 Simo Kinnunen.
  * Licensed under the MIT license.
  *
  * @version 1.09
