@@ -2,7 +2,7 @@
 
 ## Version
 
-3.6.0-SNAPSHOT - 30 - 20201001-182636
+3.6.0 - dev - 20201001-224223
 
 ## Code Based Site
 
@@ -11,6 +11,15 @@ Snapshot: https://mriss-projects.github.io/parent-poms/snapshots
 Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
+
+### Version 3.6.0
+
+| # | Type | Summary | Assignee | Reporter | Updated |
+| - | ---- | ------- | -------- | -------- | ------- |
+| [22](https://github.com/MRISS-Projects/parent-poms/issues/22) | enhancement | Add global spring boot starter dependency | mriss | mriss | 10/1/20 |
+| [21](https://github.com/MRISS-Projects/parent-poms/issues/21) | enhancement | Add maven appengine configuration | mriss | mriss | 10/1/20 |
+| [20](https://github.com/MRISS-Projects/parent-poms/issues/20) | enhancement | Add spring boot maven plugin configuration | mriss | mriss | 10/1/20 |
+| [19](https://github.com/MRISS-Projects/parent-poms/issues/19) | enhancement | Add new jacoco plugin version. | mriss | mriss | 10/1/20 |
 
 ### Version 3.5.0
 
