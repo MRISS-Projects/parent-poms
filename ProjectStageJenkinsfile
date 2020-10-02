@@ -47,6 +47,7 @@ pipeline {
                  script {
                      echo "Next Development Version: ${nextDevelopmentVersionNumber}"
                      echo "Maven Artifact Id: ${mavenArtifactId}"
+                     echo "Maven Group Id: ${mavenGroupId}"
                  }
             }
         }
@@ -56,7 +57,7 @@ pipeline {
                 configFileProvider(
                     [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
                     echo "nextDevelopmentVersionNumber: ${nextDevelopmentVersionNumber}"
-                    sh "mvn -s $MAVEN_SETTINGS -U -B -DdevelopmentVersion=${nextDevelopmentVersionNumber} release:branch"
+                    sh "mvn -s $MAVEN_SETTINGS -U -B -DdevelopmentVersion=${nextDevelopmentVersionNumber} -Dproject.dev.${mavenGroupId}:${mavenArtifactId}=${nextDevelopmentVersionNumber} -DdryRun=true  release:branch"
                 }
             }
         }
@@ -90,4 +91,9 @@ def getNextDevelopmentVersionNumber() {
 def getMavenArtifactId() {
     def pom = readMavenPom file: 'pom.xml'
     return pom.artifactId
+}
+
+def getMavenArtifactId() {
+    def pom = readMavenPom file: 'pom.xml'
+    return pom.groupId
 }
