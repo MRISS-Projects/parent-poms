@@ -1,8 +1,10 @@
 # Parent POMs Structure Project
 
+[![Build Status](https://34.70.246.135/jenkins/buildStatus/icon?job=Infrastructure-Snapshot)](https://34.70.246.135/jenkins/view/mriss-parent/job/Infrastructure-Snapshot/)
+
 ## Version
 
-3.7.0-SNAPSHOT - 31 - 20201001-225758
+3.7.0-SNAPSHOT - 32 - 20201002-194406
 
 ## Code Based Site
 
