@@ -1,5 +1,7 @@
 # Parent POMs Structure Project
 
+[![Build Status](https://34.70.246.135/jenkins/buildStatus/icon?job=Infrastructure-Snapshot)](https://34.70.246.135/jenkins/view/mriss-parent/job/Infrastructure-Snapshot/)
+
 ## Version
 
 ${project.build.version}
