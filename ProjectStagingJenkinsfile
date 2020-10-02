@@ -48,10 +48,15 @@ pipeline {
                 script {
                     env.VERSION_INFO = getVersionInfo()
                 }
-                configFileProvider(
-                    [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
-                    sh "mvn -s $MAVEN_SETTINGS -U -B -Dappengine.project.version=${VERSION_INFO}-rc${BUILD_NUMBER} -Djenkins.build.number=RC${BUILD_NUMBER} -Drelease.type=rcs -P deployment clean deploy"
-                    sh "mvn -s $MAVEN_SETTINGS -U -B -Djenkins.build.number=RC${BUILD_NUMBER} -Drelease.type=rcs -P deployment site-deploy"
+                withCredentials([string(credentialsId: 'gcloud-project-id', variable: 'GCLOUD_PROJECT_ID'),
+                                 string(credentialsId: 'allowed-account', variable: 'ALLOWED_ACCOUNT_VAR'),
+                                 string(credentialsId: 'allowed-sender-list', variable: 'ALLOWED_SENDER_LIST_VAR'),
+                                 file(credentialsId: 'gcloud-service-account-1', variable: 'GCLOUD_SERVICE_ACCOUNT')]) {
+                    configFileProvider(
+                        [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                        sh "mvn -s $MAVEN_SETTINGS -U -B -Dappengine.project.version=${VERSION_INFO}-rc${BUILD_NUMBER} -Djenkins.build.number=RC${BUILD_NUMBER} -Drelease.type=rcs -P deployment clean deploy"
+                        sh "mvn -s $MAVEN_SETTINGS -U -B -Djenkins.build.number=RC${BUILD_NUMBER} -Drelease.type=rcs -P deployment site-deploy"
+                    }
                 }
             }
         }
