@@ -93,7 +93,7 @@ def getMavenArtifactId() {
     return pom.artifactId
 }
 
-def getMavenArtifactId() {
+def getMavenGroupId() {
     def pom = readMavenPom file: 'pom.xml'
     return pom.groupId
 }
