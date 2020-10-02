@@ -52,7 +52,7 @@ pipeline {
         }
         stage("Create stating RC branch") {
             steps{
-                echo 'Create stating RC branch...'
+                echo 'Create staging RC branch...'
                 configFileProvider(
                     [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
                     echo "nextDevelopmentVersionNumber: ${nextDevelopmentVersionNumber}"
