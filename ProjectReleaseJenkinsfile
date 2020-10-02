@@ -93,11 +93,16 @@ pipeline {
                     env.NEXT_DEV_RELEASE = releaseParameters.get("NEXT_DEVELOPMENT_VERSION")
                     env.CURRENT_VERSION = releaseParameters.get("CURRENT_VERSION_NUMBER")
                 }
-                configFileProvider(
-                    [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
-                    sh "mvn -gs $MAVEN_SETTINGS -B -Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEV_RELEASE -Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION release:clean"
-                    sh "mvn -gs $MAVEN_SETTINGS -B -Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEV_RELEASE -Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION release:prepare"
-                    sh "mvn -gs $MAVEN_SETTINGS -B release:perform"
+                withCredentials([string(credentialsId: 'gcloud-project-id', variable: 'GCLOUD_PROJECT_ID'),
+                                 string(credentialsId: 'allowed-account', variable: 'ALLOWED_ACCOUNT_VAR'),
+                                 string(credentialsId: 'allowed-sender-list', variable: 'ALLOWED_SENDER_LIST_VAR'),
+                                 file(credentialsId: 'gcloud-service-account-1', variable: 'GCLOUD_SERVICE_ACCOUNT')]) {
+                    configFileProvider(
+                        [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                        sh "mvn -gs $MAVEN_SETTINGS -B -Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEV_RELEASE -Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION release:clean"
+                        sh "mvn -gs $MAVEN_SETTINGS -B -Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEV_RELEASE -Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION release:prepare"
+                        sh "mvn -gs $MAVEN_SETTINGS -B release:perform"
+                    }
                 }
             }
         }
