@@ -1,10 +1,10 @@
 # Parent POMs Structure Project
 
-[![Build Status](https://34.70.246.135/jenkins/buildStatus/icon?job=Infrastructure-Snapshot)](https://34.70.246.135/jenkins/view/mriss-parent/job/Infrastructure-Snapshot/)
+![GitHub](https://img.shields.io/github/license/MRISS-Projects/parent-poms) [![Build Status](https://34.70.246.135/jenkins/buildStatus/icon?job=Infrastructure-Snapshot)](https://34.70.246.135/jenkins/view/mriss-parent/job/Infrastructure-Snapshot/)
 
 ## Version
 
-3.7.0-SNAPSHOT - 32 - 20201002-194406
+3.7.0-SNAPSHOT - 33 - 20201002-194842
 
 ## Code Based Site
 
