@@ -4,7 +4,7 @@
 
 ## Version
 
-3.7.0-SNAPSHOT - 39 - 20201004-031917
+3.6.1 - dev - 20201004-043702
 
 ## Code Based Site
 
@@ -13,6 +13,12 @@ Snapshot: https://mriss-projects.github.io/parent-poms/snapshots
 Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
+
+### Version 3.6.1
+
+| # | Type | Summary | Assignee | Reporter | Updated |
+| - | ---- | ------- | -------- | -------- | ------- |
+| [23](https://github.com/MRISS-Projects/parent-poms/issues/23) | task | Upgrade infrastructure to new maven changes plugin | mriss | mriss | 10/4/20 |
 
 ### Version 3.6.0
 
