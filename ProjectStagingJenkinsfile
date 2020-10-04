@@ -51,6 +51,7 @@ pipeline {
                 withCredentials([string(credentialsId: 'gcloud-project-id', variable: 'GCLOUD_PROJECT_ID'),
                                  string(credentialsId: 'allowed-account', variable: 'ALLOWED_ACCOUNT_VAR'),
                                  string(credentialsId: 'allowed-sender-list', variable: 'ALLOWED_SENDER_LIST_VAR'),
+                                 string(credentialsId: 'github-personal-token', variable: 'PERSONAL_TOKEN_VAR'),
                                  file(credentialsId: 'gcloud-service-account-1', variable: 'GCLOUD_SERVICE_ACCOUNT')]) {
                     configFileProvider(
                         [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {

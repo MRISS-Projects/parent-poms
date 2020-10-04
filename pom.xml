@@ -94,7 +94,7 @@
         <sure-fire-report.plugin.version>3.0.0-M5</sure-fire-report.plugin.version>
         <jar.plugin.version>3.2.0</jar.plugin.version>
         <project-info-reports.plugin.version>3.1.1</project-info-reports.plugin.version>
-        <changes.plugin.version>2.12.5</changes.plugin.version>
+        <changes.plugin.version>2.12.6-SNAPSHOT</changes.plugin.version>
         <assembly.plugin.version>3.3.0</assembly.plugin.version>
         <dependency.plugin.version>3.1.2</dependency.plugin.version>
         <deploy.plugin.version>3.0.0-M1</deploy.plugin.version>
@@ -403,6 +403,7 @@
                         <!-- </issueManagementSystems> -->
                         <runOnlyAtExecutionRoot>true</runOnlyAtExecutionRoot>
                         <failOnError>false</failOnError>
+                        <personalToken>${github.personal.token}</personalToken>
                         <!-- <issueTypes> -->
                         <!-- <fix>defect</fix> -->
                         <!-- <add>enhancement</add> -->
@@ -583,6 +584,7 @@
                     <failOnError>false</failOnError>
                     <runOnlyAtExecutionRoot>true</runOnlyAtExecutionRoot>
                     <githubAPIServerId>github.com</githubAPIServerId>
+                    <personalToken>${github.personal.token}</personalToken>
                 </configuration>
             </plugin>
             <plugin>
@@ -824,6 +826,7 @@
                                     <columnNames>Id,Type,Summary,Assignee,Reporter,Updated</columnNames>
                                     <failOnError>false</failOnError>
                                     <githubAPIServerId>github.com</githubAPIServerId>
+                                    <personalToken>${github.personal.token}</personalToken>
                                 </configuration>
                             </execution>
                         </executions>

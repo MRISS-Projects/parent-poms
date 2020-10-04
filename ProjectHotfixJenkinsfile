@@ -57,12 +57,18 @@ pipeline {
         stage("Build and Deploy Maven Release") {
             steps{
                 echo 'Execute Release Build Using Default Release Values (increment last fix version number)...'
-                configFileProvider(
-                    [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
-                    
-                    sh "mvn -gs $MAVEN_SETTINGS -B release:clean"
-                    sh "mvn -gs $MAVEN_SETTINGS -B release:prepare"
-                    sh "mvn -gs $MAVEN_SETTINGS -B release:perform"
+                withCredentials([string(credentialsId: 'gcloud-project-id', variable: 'GCLOUD_PROJECT_ID'),
+                                 string(credentialsId: 'allowed-account', variable: 'ALLOWED_ACCOUNT_VAR'),
+                                 string(credentialsId: 'allowed-sender-list', variable: 'ALLOWED_SENDER_LIST_VAR'),
+                                 string(credentialsId: 'github-personal-token', variable: 'PERSONAL_TOKEN_VAR'),
+                                 file(credentialsId: 'gcloud-service-account-1', variable: 'GCLOUD_SERVICE_ACCOUNT')]) {
+                    configFileProvider(
+                        [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                        
+                        sh "mvn -gs $MAVEN_SETTINGS -B release:clean"
+                        sh "mvn -gs $MAVEN_SETTINGS -B release:prepare"
+                        sh "mvn -gs $MAVEN_SETTINGS -B release:perform"
+                    }
                 }
             }
         }

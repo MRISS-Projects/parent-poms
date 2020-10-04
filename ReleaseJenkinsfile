@@ -80,12 +80,14 @@ pipeline {
                     env.CURRENT_VERSION = releaseParameters.get("CURRENT_VERSION_NUMBER")
                     env.COMMIT_MESSAGE = "'Infrastructure poms release version $CURRENT_VERSION'"
                 }
-                configFileProvider(
-                    [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
-                    sh "mvn -s $MAVEN_SETTINGS -U -B clean install"
-                    recursiveRelease("$MAVEN_SETTINGS", ".", "$NEXT_DEV_RELEASE", "$CURRENT_VERSION")
-                    sh "mvn -s $MAVEN_SETTINGS -B -Dmessage=$COMMIT_MESSAGE scm:checkin"
-                    sh "mvn -s $MAVEN_SETTINGS -B -Dtag=$mavenArtifactId-$CURRENT_VERSION scm:tag"
+                withCredentials([string(credentialsId: 'github-personal-token', variable: 'PERSONAL_TOKEN_VAR')]) {
+                    configFileProvider(
+                        [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
+                        sh "mvn -s $MAVEN_SETTINGS -U -B clean install"
+                        recursiveRelease("$MAVEN_SETTINGS", ".", "$NEXT_DEV_RELEASE", "$CURRENT_VERSION")
+                        sh "mvn -s $MAVEN_SETTINGS -B -Dmessage=$COMMIT_MESSAGE scm:checkin"
+                        sh "mvn -s $MAVEN_SETTINGS -B -Dtag=$mavenArtifactId-$CURRENT_VERSION scm:tag"
+                    }
                 }
             }
         }
