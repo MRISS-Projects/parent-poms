@@ -217,7 +217,7 @@
                                             <includes>
                                                 <include>markdown/**</include>
                                             </includes>
-                                            <targetPath>${project.build.directory}/pdf-resources</targetPath>
+                                            <targetPath>${project.build.directory}/site/pdf</targetPath>
                                             <filtering>true</filtering>
                                         </resource>
                                     </resources>
@@ -261,7 +261,7 @@
                                     <generatorOptions>
                                         <generator>pdf</generator>
                                         <inputPaths>
-                                            target/pdf-resources/markdown/README.md
+                                            ${project.build.directory}/site/pdf/markdown/README.md
                                         </inputPaths>
                                     </generatorOptions>
                                     <pdfGeneratorOptions>
