@@ -57,7 +57,7 @@ pipeline {
                 configFileProvider(
                     [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
                     echo "nextDevelopmentVersionNumber: ${nextDevelopmentVersionNumber}"
-                    sh "mvn -s $MAVEN_SETTINGS -U -B -DdevelopmentVersion=${nextDevelopmentVersionNumber} -Dproject.dev.${mavenGroupId}:${mavenArtifactId}=${nextDevelopmentVersionNumber} -DautoVersionSubmodules=true release:branch"
+                    sh "mvn -s $MAVEN_SETTINGS -U -B -DdryRun=true -DdevelopmentVersion=${nextDevelopmentVersionNumber} -Dproject.dev.${mavenGroupId}:${mavenArtifactId}=${nextDevelopmentVersionNumber} -DautoVersionSubmodules=true release:branch"
                 }
             }
         }
