@@ -4,7 +4,7 @@
 
 ## Version
 
-3.7.0-SNAPSHOT - 41 - 20201007-192249
+3.6.3 - dev - 20201007-194302
 
 ## Code Based Site
 
@@ -13,6 +13,12 @@ Snapshot: https://mriss-projects.github.io/parent-poms/snapshots
 Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
+
+### Version 3.6.3
+
+| # | Type | Summary | Assignee | Reporter | Updated |
+| - | ---- | ------- | -------- | -------- | ------- |
+| [25](https://github.com/MRISS-Projects/parent-poms/issues/25) | bug | New PDF generation for README.md was not creating right folder structure | mriss | mriss | 10/7/20 |
 
 ### Version 3.6.2
 
