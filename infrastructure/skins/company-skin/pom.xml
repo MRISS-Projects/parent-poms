@@ -27,7 +27,7 @@
     <parent>
         <groupId>com.mriss.mriss-parent.infrastructure</groupId>
         <artifactId>skins</artifactId>
-        <version>3.6.2</version>
+        <version>3.6.3</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <!-- <dependencyManagement>...</dependencyManagement> -->
