@@ -18,7 +18,7 @@
     <parent>
         <groupId>com.mriss</groupId>
         <artifactId>mriss-parent</artifactId>
-        <version>3.6.3</version>
+        <version>3.7.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <dependencyManagement>
@@ -31,6 +31,22 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>io.springfox</groupId>
+                <artifactId>springfox-swagger2</artifactId>
+                <version>${spring-fox.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.springfox</groupId>
+                <artifactId>springfox-swagger-ui</artifactId>
+                <version>${spring-fox.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>${swagger-annotations.version}</version>
+                <scope>provided</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
     <!-- <modules> -->
@@ -38,6 +54,8 @@
     <properties>
         <jenkins.view>${project.artifactId}</jenkins.view>
         <spring-boot.version>2.3.4.RELEASE</spring-boot.version>
+        <spring-fox.version>2.9.2</spring-fox.version>
+        <swagger-annotations.version>1.5.20</swagger-annotations.version>
     </properties>
 
 
