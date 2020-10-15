@@ -138,7 +138,7 @@
 
         <ant.version>1.10.8</ant.version>
         <castor.version>1.4.1</castor.version>
-        <junit.version>4.13</junit.version>
+        <junit.version>4.13.1</junit.version>
         <servlet.version>4.0.1</servlet.version>
         <mockito.version>3.5.7</mockito.version>
         <gwt.version>2.9.0</gwt.version>
