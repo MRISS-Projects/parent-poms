@@ -26,6 +26,28 @@
    bottom right corner. Click on it and install all provided updates. Keep
    doing update until the icon no longer appears after an re-start.
 
+### M2E Maven Automatic Annotation Processor (APT)
+
+1. Install it using market place. Open eclipse, go to 
+   `Help -> Eclipse Market Place`  using eclipse menus.
+
+2. Write **m2e-apt** at the **Find** field and click **Go** .
+
+3. Look the results for **m2e-apt 1.5.2** only.
+
+4. Install it. If **Installed** button appears, it is because it is already installed.
+
+### Maven Checkstyle Plugin
+
+1. Install it using market place. Open eclipse, go to 
+   `Help -> Eclipse Market Place`  using eclipse menus.
+
+2. Write **checkstyle** at the **Find** field and click **Go** .
+
+3. Look the results for **Checkstyle Plug-in 8.35.0** or greater, only.
+
+4. Install it. If **Installed** button appears, it is because it is already installed.
+
 ### M2E Maven to Eclipse WTP (Web Tools Platform) Integration. 
 
 1. Install it using market place. Open eclipse, go to 
@@ -38,14 +60,14 @@
 4. Install it. If **Installed** button appears, it is because it is already installed. If an
    **Update**  button appears, it needs to be pressed to update from old to new version.
 
-### M2E Maven Automatic Annotation Processor (APT)
+### Docker Files Editor
 
 1. Install it using market place. Open eclipse, go to 
    `Help -> Eclipse Market Place`  using eclipse menus.
 
-2. Write **m2e-apt** at the **Find** field and click **Go** .
+2. Write **docker** at the **Find** field and click <<Go>>.
 
-3. Look the results for **m2e-apt 1.5.2** only.
+3. Look the results for **Docker Editor 1.0.0** only.
 
 4. Install it. If **Installed** button appears, it is because it is already installed.
 
@@ -60,30 +82,36 @@
 
 4. Install it. If **Installed** button appears, it is because it is already installed.
 
-### Trac and Jenkins MyLyn Connectors
-
-1. `Window -> Show View -> Other... -> MyLyn -> Task Repositories` 
-
-2. At the **Task Repositories** view, click with right mouse Button over
-   the **Tasks** entry. Choose **Add Task Repository**.
-
-3. If the Trac connector appears, it means it is already installed. If not,
-   click **Add More Connectors...** button. Select **Trac**. 
-   Click **Finish** button to install them.
-
-4. `Window -> Show View -> Other... -> MyLyn -> Builds` .
-
-5. Click **Create a build server...**. At the build server creation window,
-   Add connector for jenkins if needed.
-
-### Easy Shell
+### Velocity Templates Editor
 
 1. Install it using market place. Open eclipse, go to 
    `Help -> Eclipse Market Place`  using eclipse menus.
 
-2. Write **easy shell** at the **Find**  field and click **Go** .
+2. Write **veloedit** at the **Find** field and click <<Go>>.
 
-3. Look the results for **EasyShell 2.1.0** only.
+3. Look the results for **veloedit 1.0.9** only.
+
+4. Install it. If **Installed** button appears, it is because it is already installed.
+
+### Window Builder
+
+1. Install it using market place. Open eclipse, go to 
+   `Help -> Eclipse Market Place`  using eclipse menus.
+
+2. Write **window builder** at the **Find** field and click <<Go>>.
+
+3. Look the results for **WindowBuilder 1.9.4** or greater, only.
+
+4. Install it. If **Installed** button appears, it is because it is already installed.
+
+### SpotBugs Eclipse Plugin
+
+1. Install it using market place. Open eclipse, go to 
+   `Help -> Eclipse Market Place`  using eclipse menus.
+
+2. Write **spotbugs** at the **Find** field and click <<Go>>.
+
+3. Look the results for **SpotBugs Eclipse plugin 3.1.5** or greater, only.
 
 4. Install it. If **Installed** button appears, it is because it is already installed.
 
@@ -95,6 +123,17 @@
 2. Write **bash editor** at the **Find** field and click **Go**.
 
 3. Look the results for **Bash Editor 2.2.0** only.
+
+4. Install it. If **Installed** button appears, it is because it is already installed.
+
+### Jenkinsfile Editor
+
+1. Install it using market place. Open eclipse, go to 
+   `Help -> Eclipse Market Place`  using eclipse menus.
+
+2. Write **Jenkinsfile editor** at the **Find** field and click **Go**.
+
+3. Look the results for **Jenkins Editor 1.7.0** only.
 
 4. Install it. If **Installed** button appears, it is because it is already installed.
 
@@ -120,17 +159,6 @@
 
 4. Install it. If **Installed** button appears, it is because it is already installed.
 
-### Jenkinsfile Editor
-
-1. Install it using market place. Open eclipse, go to 
-   `Help -> Eclipse Market Place`  using eclipse menus.
-
-2. Write **Jenkinsfile editor** at the **Find** field and click **Go**.
-
-3. Look the results for **Jenkins Editor 1.7.0** only.
-
-4. Install it. If **Installed** button appears, it is because it is already installed.
-
 ### PlantUML Plug-in
 
 1. Install it using market place. Open eclipse, go to 
@@ -150,43 +178,32 @@
 
    c. Restart eclipse if needed.
 
-### Window Builder
-
-1. `Help -> Install New Software...`
-
-2. Click Add Button.
-
-3. Enter **WindowBuilder** at the **Name** field and 
-   http://download.eclipse.org/windowbuilder/latest/
-   at the **Location** field. Click Ok. Wait till eclipse load all available
-   plugins from that location.
-
-4. Click **Select All**. Click **Next**. Keep moving forward till eclipse
-   asks for installation of a new component. Confirm clicking **Ok** or
-   **Yes** on all questions. After finishing, eclipse will ask for reboot.
-   Answer **Yes** and waiting until eclipse restarts.
-
-### Velocity Templates Editor
+### Easy Shell
 
 1. Install it using market place. Open eclipse, go to 
    `Help -> Eclipse Market Place`  using eclipse menus.
 
-2. Write **veloedit** at the **Find** field and click <<Go>>.
+2. Write **easy shell** at the **Find**  field and click **Go** .
 
-3. Look the results for **veloedit 1.0.9** only.
-
-4. Install it. If **Installed** button appears, it is because it is already installed.
-
-### Docker Files Editor
-
-1. Install it using market place. Open eclipse, go to 
-   `Help -> Eclipse Market Place`  using eclipse menus.
-
-2. Write **docker** at the **Find** field and click <<Go>>.
-
-3. Look the results for **Docker Editor 1.0.0** only.
+3. Look the results for **EasyShell 2.1.0** only.
 
 4. Install it. If **Installed** button appears, it is because it is already installed.
+
+### Trac and Jenkins MyLyn Connectors
+
+1. `Window -> Show View -> Other... -> MyLyn -> Task Repositories` 
+
+2. At the **Task Repositories** view, click with right mouse Button over
+   the **Tasks** entry. Choose **Add Task Repository**.
+
+3. If the Trac connector appears, it means it is already installed. If not,
+   click **Add More Connectors...** button. Select **Trac**. 
+   Click **Finish** button to install them.
+
+4. `Window -> Show View -> Other... -> MyLyn -> Builds` .
+
+5. Click **Create a build server...**. At the build server creation window,
+   Add connector for jenkins if needed.
 
 ### Eclipse Copyrights Tool
 
