@@ -177,6 +177,21 @@
 
 4. Install it. If **Installed** button appears, it is because it is already installed.
 
+### Docker Files Editor
+
+1. Install it using market place. Open eclipse, go to 
+   `Help -> Eclipse Market Place`  using eclipse menus.
+
+2. Write **docker** at the **Find** field and click <<Go>>.
+
+3. Look the results for **Docker Editor 1.0.0** only.
+
+4. Install it. If **Installed** button appears, it is because it is already installed.
+
+### Eclipse Copyrights Tool
+
+1. Follow instructions at: https://wiki.eclipse.org/Development_Resources/How_to_Use_Eclipse_Copyright_Tool
+
 ## Configuring
 
 ### Edit Eclipse .ini File
