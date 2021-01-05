@@ -1,6 +1,6 @@
 # Parent POMs Structure Project
 
-![GitHub](https://img.shields.io/github/license/MRISS-Projects/parent-poms?color=blue&label=License) [![Build Status](https://34.70.246.135/jenkins/buildStatus/icon?job=Infrastructure-Snapshot)](https://34.70.246.135/jenkins/view/mriss-parent/job/Infrastructure-Snapshot/)
+![GitHub](https://img.shields.io/github/license/MRISS-Projects/parent-poms?color=blue&label=License) [![Build Status](https://jenkins.mriss.org/jenkins/buildStatus/icon?job=Infrastructure-Snapshot)](https://jenkins.mriss.org/jenkins/view/mriss-parent/job/Infrastructure-Snapshot/)
 
 ## Version
 
