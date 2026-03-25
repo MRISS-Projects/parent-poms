@@ -54,7 +54,7 @@
     <properties>
         <jenkins.view>${project.artifactId}</jenkins.view>
         <spring-boot.version>2.3.4.RELEASE</spring-boot.version>
-        <spring-fox.version>2.9.2</spring-fox.version>
+        <spring-fox.version>2.10.0</spring-fox.version>
         <swagger-annotations.version>1.5.20</swagger-annotations.version>
     </properties>
 
