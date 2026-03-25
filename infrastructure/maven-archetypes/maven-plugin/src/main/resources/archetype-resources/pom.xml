@@ -267,7 +267,7 @@
 
         <doxia.version>1.6</doxia.version>
         <doxia-sitetools.version>1.6</doxia-sitetools.version>
-        <maven.version>2.2.1</maven.version>
+        <maven.version>3.8.1</maven.version>
 
     </properties>
 
