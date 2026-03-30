@@ -33,16 +33,16 @@ jobs:
     permissions:
       contents: read
     env:
-      # MRISS_PACKAGES_TOKEN must be stored as a repository secret.
+      # DEPLOY_TOKEN must be stored as a repository secret.
       # Create a GitHub Personal Access Token (classic) with the
       # "read:packages" scope from an account that has read access to the
       # MRISS-Projects organization, then add it to this repo's secrets as
-      # MRISS_PACKAGES_TOKEN (Settings → Secrets and variables → Actions).
+      # DEPLOY_TOKEN (Settings → Secrets and variables → Actions).
       # The auto-generated GITHUB_TOKEN cannot be used here because it is
       # scoped to THIS repository (parent-poms) only; packages published
       # under MRISS-Projects/maven-repo belong to a different repository and
       # require a cross-repository token.
-      MRISS_PACKAGES_TOKEN: ${{ secrets.MRISS_PACKAGES_TOKEN }}
+      DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,7 +60,7 @@ jobs:
       #
       # Two things are required:
       # 1. <servers> — credentials.  GitHub Packages always requires authentication,
-      #    even for public packages.  We use MRISS_PACKAGES_TOKEN (a PAT with
+      #    even for public packages.  We use DEPLOY_TOKEN (a PAT with
       #    "read:packages" scope) rather than the auto-generated GITHUB_TOKEN,
       #    because GITHUB_TOKEN is scoped to THIS repository (parent-poms) only and
       #    cannot read packages published by a different repository (maven-repo).
@@ -68,7 +68,7 @@ jobs:
       #    can locate parent POMs during multi-module initialisation, before any
       #    pom.xml <repositories> sections have been parsed.
       #
-      # Maven resolves ${env.MRISS_PACKAGES_TOKEN} and ${env.GITHUB_ACTOR} from the
+      # Maven resolves ${env.DEPLOY_TOKEN} and ${env.GITHUB_ACTOR} from the
       # process environment at build time; the token value is never written literally
       # into this file.
       - name: Configure Maven settings for GitHub Packages
@@ -84,12 +84,12 @@ jobs:
                   <server>
                       <id>MRISS-Projects-maven-repo</id>
                       <username>${env.GITHUB_ACTOR}</username>
-                      <password>${env.MRISS_PACKAGES_TOKEN}</password>
+                      <password>${env.DEPLOY_TOKEN}</password>
                   </server>
                   <server>
                       <id>MRISS-Projects-maven-repo-plugins</id>
                       <username>${env.GITHUB_ACTOR}</username>
-                      <password>${env.MRISS_PACKAGES_TOKEN}</password>
+                      <password>${env.DEPLOY_TOKEN}</password>
                   </server>
               </servers>
               <!--
@@ -97,7 +97,7 @@ jobs:
                   resolve parent POMs (e.g. com.mriss:mriss-parent) from the registry during
                   multi-module build initialisation — before any pom.xml repository sections
                   are parsed.  Credentials are supplied by the <servers> block above using
-                  MRISS_PACKAGES_TOKEN (a cross-repository PAT).
+                  DEPLOY_TOKEN (a cross-repository PAT).
               -->
               <profiles>
                   <profile>
