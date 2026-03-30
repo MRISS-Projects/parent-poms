@@ -32,9 +32,17 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: read
     env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # MRISS_PACKAGES_TOKEN must be stored as a repository secret.
+      # Create a GitHub Personal Access Token (classic) with the
+      # "read:packages" scope from an account that has read access to the
+      # MRISS-Projects organization, then add it to this repo's secrets as
+      # MRISS_PACKAGES_TOKEN (Settings → Secrets and variables → Actions).
+      # The auto-generated GITHUB_TOKEN cannot be used here because it is
+      # scoped to THIS repository (parent-poms) only; packages published
+      # under MRISS-Projects/maven-repo belong to a different repository and
+      # require a cross-repository token.
+      MRISS_PACKAGES_TOKEN: ${{ secrets.MRISS_PACKAGES_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,18 +54,23 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      # Configure Maven settings so it can read from the GitHub Packages repository
+      # Configure Maven settings so it can read from the GitHub Packages registry
       # (https://maven.pkg.github.com/MRISS-Projects/maven-repo) where
       # com.mriss:mriss-parent is hosted.
       #
-      # Two things are needed:
-      # 1. <servers> — credentials (GitHub Packages always requires authentication).
-      # 2. <profiles>/<repositories> — the repository URL itself, activated globally so
-      #    Maven can find parent POMs during multi-module initialisation, before any
+      # Two things are required:
+      # 1. <servers> — credentials.  GitHub Packages always requires authentication,
+      #    even for public packages.  We use MRISS_PACKAGES_TOKEN (a PAT with
+      #    "read:packages" scope) rather than the auto-generated GITHUB_TOKEN,
+      #    because GITHUB_TOKEN is scoped to THIS repository (parent-poms) only and
+      #    cannot read packages published by a different repository (maven-repo).
+      # 2. <profiles>/<repositories> — the registry URL, activated globally so Maven
+      #    can locate parent POMs during multi-module initialisation, before any
       #    pom.xml <repositories> sections have been parsed.
       #
-      # Maven resolves ${env.GITHUB_TOKEN} and ${env.GITHUB_ACTOR} from the environment
-      # at build time; the token value is never written literally into this file.
+      # Maven resolves ${env.MRISS_PACKAGES_TOKEN} and ${env.GITHUB_ACTOR} from the
+      # process environment at build time; the token value is never written literally
+      # into this file.
       - name: Configure Maven settings for GitHub Packages
         run: |
           mkdir -p ~/.m2
@@ -71,21 +84,20 @@ jobs:
                   <server>
                       <id>MRISS-Projects-maven-repo</id>
                       <username>${env.GITHUB_ACTOR}</username>
-                      <password>${env.GITHUB_TOKEN}</password>
+                      <password>${env.MRISS_PACKAGES_TOKEN}</password>
                   </server>
                   <server>
                       <id>MRISS-Projects-maven-repo-plugins</id>
                       <username>${env.GITHUB_ACTOR}</username>
-                      <password>${env.GITHUB_TOKEN}</password>
+                      <password>${env.MRISS_PACKAGES_TOKEN}</password>
                   </server>
               </servers>
               <!--
                   Declare GitHub Packages as a repository in a settings profile so Maven can
-                  resolve parent POMs (e.g. com.mriss:mriss-parent) from GitHub Packages
-                  during multi-module build initialisation — before any pom.xml repository
-                  sections are parsed.  Credentials are supplied via the <servers> block above.
-                  Note: GitHub Packages always requires authentication; it cannot be made
-                  fully anonymous even for public packages.
+                  resolve parent POMs (e.g. com.mriss:mriss-parent) from the registry during
+                  multi-module build initialisation — before any pom.xml repository sections
+                  are parsed.  Credentials are supplied by the <servers> block above using
+                  MRISS_PACKAGES_TOKEN (a cross-repository PAT).
               -->
               <profiles>
                   <profile>
