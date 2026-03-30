@@ -46,10 +46,16 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      # Configure server credentials so Maven can authenticate against the
-      # GitHub Packages repository (https://maven.pkg.github.com/MRISS-Projects/maven-repo)
-      # where com.mriss:mriss-parent is hosted. Without this, Maven receives a
-      # 401 response and falls through to Maven Central, where the artifact is absent.
+      # Configure Maven settings so it can read from the GitHub Packages repository
+      # (https://maven.pkg.github.com/MRISS-Projects/maven-repo) where
+      # com.mriss:mriss-parent is hosted.
+      #
+      # Two things are needed:
+      # 1. <servers> — credentials (GitHub Packages always requires authentication).
+      # 2. <profiles>/<repositories> — the repository URL itself, activated globally so
+      #    Maven can find parent POMs during multi-module initialisation, before any
+      #    pom.xml <repositories> sections have been parsed.
+      #
       # Maven resolves ${env.GITHUB_TOKEN} and ${env.GITHUB_ACTOR} from the environment
       # at build time; the token value is never written literally into this file.
       - name: Configure Maven settings for GitHub Packages
@@ -73,6 +79,38 @@ jobs:
                       <password>${env.GITHUB_TOKEN}</password>
                   </server>
               </servers>
+              <!--
+                  Declare GitHub Packages as a repository in a settings profile so Maven can
+                  resolve parent POMs (e.g. com.mriss:mriss-parent) from GitHub Packages
+                  during multi-module build initialisation — before any pom.xml repository
+                  sections are parsed.  Credentials are supplied via the <servers> block above.
+                  Note: GitHub Packages always requires authentication; it cannot be made
+                  fully anonymous even for public packages.
+              -->
+              <profiles>
+                  <profile>
+                      <id>github-packages</id>
+                      <repositories>
+                          <repository>
+                              <id>MRISS-Projects-maven-repo</id>
+                              <url>https://maven.pkg.github.com/MRISS-Projects/maven-repo</url>
+                              <releases><enabled>true</enabled></releases>
+                              <snapshots><enabled>true</enabled></snapshots>
+                          </repository>
+                      </repositories>
+                      <pluginRepositories>
+                          <pluginRepository>
+                              <id>MRISS-Projects-maven-repo-plugins</id>
+                              <url>https://maven.pkg.github.com/MRISS-Projects/maven-repo</url>
+                              <releases><enabled>true</enabled></releases>
+                              <snapshots><enabled>true</enabled></snapshots>
+                          </pluginRepository>
+                      </pluginRepositories>
+                  </profile>
+              </profiles>
+              <activeProfiles>
+                  <activeProfile>github-packages</activeProfile>
+              </activeProfiles>
           </settings>
           EOF
 
