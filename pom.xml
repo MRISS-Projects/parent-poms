@@ -77,6 +77,11 @@
 
         <java.version>17</java.version>
 
+        <!-- Default phase for the commit-readme-md SCM execution.
+             Override with -Dcommit.readme.phase=none on the command line to
+             prevent any git commit from being made (e.g. in CI builds). -->
+        <commit.readme.phase>process-resources</commit.readme.phase>
+
         <sites.server>https://mriss-projects.github.io/parent-poms</sites.server>
         <sites.url>${sites.server}</sites.url>
         <site.deployment>${site.deployment.personal.main}</site.deployment>
@@ -94,7 +99,7 @@
         <sure-fire-report.plugin.version>3.5.5</sure-fire-report.plugin.version>
         <jar.plugin.version>3.4.2</jar.plugin.version>
         <project-info-reports.plugin.version>3.9.0</project-info-reports.plugin.version>
-        <changes.plugin.version>2.13.0</changes.plugin.version>
+        <changes.plugin.version>2.12.7-SNAPSHOT</changes.plugin.version>
         <assembly.plugin.version>3.7.1</assembly.plugin.version>
         <dependency.plugin.version>3.8.1</dependency.plugin.version>
         <deploy.plugin.version>3.1.4</deploy.plugin.version>
@@ -616,26 +621,6 @@
                     <pluginManagementExcludes>
                         <pluginManagementExclude>org.apache.maven.plugins:maven-changes-plugin</pluginManagementExclude>
                     </pluginManagementExcludes>
-                    <pluginRepositories>
-                        <pluginRepository>
-                            <id>plugin-management-maven-repo-plugins</id>
-                            <url>file:///mnt/data/.m2/repository</url>
-                            <releases>
-                                <updatePolicy>always</updatePolicy>
-                                <enabled>true</enabled>
-                            </releases>
-                        </pluginRepository>
-                    </pluginRepositories>
-                    <remoteRepositories>
-                        <remoteRepository>
-                            <id>plugin-management-maven-repo</id>
-                            <url>https://raw.githubusercontent.com/MRISS-Projects/maven-repo/master</url>
-                            <releases>
-                                <updatePolicy>always</updatePolicy>
-                                <enabled>true</enabled>
-                            </releases>
-                        </remoteRepository>
-                    </remoteRepositories>
                 </configuration>
             </plugin>
             <plugin>
@@ -710,7 +695,7 @@
     <repositories>
         <repository>
             <id>MRISS-Projects-maven-repo</id>
-            <url>https://raw.githubusercontent.com/MRISS-Projects/maven-repo/master</url>
+            <url>https://maven.pkg.github.com/MRISS-Projects/maven-repo</url>
             <releases>
                 <enabled>true</enabled>
             </releases>
@@ -719,7 +704,7 @@
     <pluginRepositories>
         <pluginRepository>
             <id>MRISS-Projects-maven-repo-plugins</id>
-            <url>https://raw.githubusercontent.com/MRISS-Projects/maven-repo/master</url>
+            <url>https://maven.pkg.github.com/MRISS-Projects/maven-repo</url>
             <releases>
                 <enabled>true</enabled>
             </releases>
@@ -882,7 +867,7 @@
                         <executions>
                             <execution>
                                 <id>commit-readme-md</id>
-                                <phase>process-resources</phase>
+                                <phase>${commit.readme.phase}</phase>
                                 <goals>
                                     <goal>checkin</goal>
                                 </goals>

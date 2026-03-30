@@ -170,7 +170,7 @@
                         <executions>
                             <execution>
                                 <id>commit-readme-md</id>
-                                <phase>process-resources</phase>
+                                <phase>${commit.readme.phase}</phase>
                                 <goals>
                                     <goal>checkin</goal>
                                 </goals>
