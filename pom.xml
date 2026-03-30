@@ -75,7 +75,7 @@
     </modules>
     <properties>
 
-        <java.version>11</java.version>
+        <java.version>17</java.version>
 
         <sites.server>https://mriss-projects.github.io/parent-poms</sites.server>
         <sites.url>${sites.server}</sites.url>
