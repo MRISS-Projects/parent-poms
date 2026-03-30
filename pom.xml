@@ -621,26 +621,6 @@
                     <pluginManagementExcludes>
                         <pluginManagementExclude>org.apache.maven.plugins:maven-changes-plugin</pluginManagementExclude>
                     </pluginManagementExcludes>
-                    <pluginRepositories>
-                        <pluginRepository>
-                            <id>plugin-management-maven-repo-plugins</id>
-                            <url>file:///mnt/data/.m2/repository</url>
-                            <releases>
-                                <updatePolicy>always</updatePolicy>
-                                <enabled>true</enabled>
-                            </releases>
-                        </pluginRepository>
-                    </pluginRepositories>
-                    <remoteRepositories>
-                        <remoteRepository>
-                            <id>plugin-management-maven-repo</id>
-                            <url>https://raw.githubusercontent.com/MRISS-Projects/maven-repo/master</url>
-                            <releases>
-                                <updatePolicy>always</updatePolicy>
-                                <enabled>true</enabled>
-                            </releases>
-                        </remoteRepository>
-                    </remoteRepositories>
                 </configuration>
             </plugin>
             <plugin>
