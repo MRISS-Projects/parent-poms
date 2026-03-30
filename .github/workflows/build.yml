@@ -132,12 +132,15 @@ jobs:
 
       # Mirrors: recursiveRelease -> mvn -P deployment deploy
       # Uses 'install' instead of 'deploy' to skip artifact publishing.
-      # Skips SCM checkin (commit-readme-md execution in the deployment profile)
-      # via maven.scm.skip=true so no commits are made.
+      # Skips the commit-readme-md SCM execution by setting its phase to 'none'
+      # (the maven-scm-plugin 2.x has no built-in skip parameter; overriding the
+      # phase to 'none' is the reliable way to unbind and skip that execution).
       - name: Build with Deployment Profile (no artifact publishing)
-        run: mvn -B -P deployment -Dmaven.scm.skip=true install
+        run: mvn -B -P deployment -Dcommit.readme.phase=none install
 
       # Mirrors: recursiveRelease -> mvn -P deployment,release-deployment site-deploy
       # Uses 'site' instead of 'site-deploy' to skip gh-pages publishing.
+      # -Dcommit.readme.phase=none ensures the commit-readme-md SCM execution is
+      # not triggered even if the deployment profile is active.
       - name: Generate Site (no gh-pages publishing)
-        run: mvn -B -P deployment,release-deployment -Dsite.deployment.personal.main=file:///tmp/sites site
+        run: mvn -B -P deployment,release-deployment -Dcommit.readme.phase=none -Dsite.deployment.personal.main=file:///tmp/sites site

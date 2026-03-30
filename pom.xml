@@ -77,6 +77,11 @@
 
         <java.version>17</java.version>
 
+        <!-- Default phase for the commit-readme-md SCM execution.
+             Override with -Dcommit.readme.phase=none on the command line to
+             prevent any git commit from being made (e.g. in CI builds). -->
+        <commit.readme.phase>process-resources</commit.readme.phase>
+
         <sites.server>https://mriss-projects.github.io/parent-poms</sites.server>
         <sites.url>${sites.server}</sites.url>
         <site.deployment>${site.deployment.personal.main}</site.deployment>
@@ -882,7 +887,7 @@
                         <executions>
                             <execution>
                                 <id>commit-readme-md</id>
-                                <phase>process-resources</phase>
+                                <phase>${commit.readme.phase}</phase>
                                 <goals>
                                     <goal>checkin</goal>
                                 </goals>
