@@ -710,7 +710,7 @@
     <repositories>
         <repository>
             <id>MRISS-Projects-maven-repo</id>
-            <url>https://raw.githubusercontent.com/MRISS-Projects/maven-repo/master</url>
+            <url>https://maven.pkg.github.com/MRISS-Projects/maven-repo</url>
             <releases>
                 <enabled>true</enabled>
             </releases>
@@ -719,7 +719,7 @@
     <pluginRepositories>
         <pluginRepository>
             <id>MRISS-Projects-maven-repo-plugins</id>
-            <url>https://raw.githubusercontent.com/MRISS-Projects/maven-repo/master</url>
+            <url>https://maven.pkg.github.com/MRISS-Projects/maven-repo</url>
             <releases>
                 <enabled>true</enabled>
             </releases>
