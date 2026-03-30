@@ -91,6 +91,11 @@ jobs:
                       <username>${env.GITHUB_ACTOR}</username>
                       <password>${env.DEPLOY_TOKEN}</password>
                   </server>
+                  <server>
+                      <id>github.com</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
               </servers>
               <!--
                   Declare GitHub Packages as a repository in a settings profile so Maven can
@@ -102,6 +107,9 @@ jobs:
               <profiles>
                   <profile>
                       <id>github-packages</id>
+                      <properties>
+                          <github.personal.token>${env.DEPLOY_TOKEN}</github.personal.token>
+                      </properties>
                       <repositories>
                           <repository>
                               <id>MRISS-Projects-maven-repo</id>
