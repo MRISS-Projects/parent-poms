@@ -152,9 +152,11 @@
 
         <jenkins.view>${project.artifactId}</jenkins.view>
         <jenkins.server>https://jenkins.mriss.org/jenkins</jenkins.server>
-        <jenkins.build.number>dev</jenkins.build.number> <!-- This should be provided by jenkins builds, when building 
-                                                               maven SNAPSHOTS (not releases). If not, the default will 
-                                                               be "dev" -->
+        <build.number>dev</build.number> <!-- This will be provided by github actions builds via env.GITHUB_RUN_NUMBER,
+                                                               when building maven SNAPSHOTS (not releases). If not set,
+                                                               the default will be "dev" -->
+
+        <deploymentUrl>https://maven.pkg.github.com/MRISS-Projects/maven-repo</deploymentUrl>
 
         <source.code.server>https://github.com/MRISS-Projects</source.code.server>
         <source.project>parent-poms</source.project>
@@ -729,8 +731,7 @@
             </activation>
             <properties>
                 <project.scm.id>github</project.scm.id>
-                <deploymentUrl>file://${project.build.directory}/maven-repo</deploymentUrl>
-                <project.build.version>${project.version} - ${jenkins.build.number} - ${timestamp}</project.build.version>
+                <project.build.version>${project.version} - ${build.number} - ${timestamp}</project.build.version>
             </properties>
             <build>
                 <plugins>
@@ -775,22 +776,6 @@
                                     <pubScmUrl>scm:git:${source.code.server}/${source.project}</pubScmUrl>
                                     <content>/tmp/sites</content>
                                     <skipDeletedFiles>true</skipDeletedFiles>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>publish-artifact-to-github</id>
-                                <phase>deploy</phase>
-                                <goals>
-                                    <goal>publish-scm</goal>
-                                </goals>
-                                <configuration>
-                                    <serverId>github.com</serverId>
-                                    <checkinComment>Publishing artifact for version ${project.version} [skip jenkins]</checkinComment>
-                                    <pubScmUrl>scm:git:https://github.com/MRISS-Projects/maven-repo</pubScmUrl>
-                                    <content>${project.build.directory}/maven-repo</content>
-                                    <checkoutDirectory>/tmp/artifact-deploy-checkout</checkoutDirectory>
-                                    <skipDeletedFiles>true</skipDeletedFiles>
-                                    <tryUpdate>true</tryUpdate>
                                 </configuration>
                             </execution>
                         </executions>
@@ -891,7 +876,6 @@
             <properties>
                 <release.type>releases</release.type>
                 <project.build.version>${project.version}</project.build.version>
-                <deploymentUrl>file://${project.build.directory}/maven-repo</deploymentUrl>
             </properties>
             <build>
                 <plugins>
