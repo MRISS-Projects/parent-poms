@@ -30,7 +30,7 @@
         <groupId>com.mriss.mriss-parent.infrastructure</groupId>
         <artifactId>announcement-templates</artifactId>
         <version>3.6.3</version>
-        <relativePath>../pom.xml</relativePath>
+        <relativePath/>
     </parent>
     <!-- <dependencyManagement>...</dependencyManagement> -->
     <!-- <modules> -->
