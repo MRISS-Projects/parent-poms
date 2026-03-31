@@ -91,6 +91,11 @@ jobs:
                       <username>${env.GITHUB_ACTOR}</username>
                       <password>${env.DEPLOY_TOKEN}</password>
                   </server>
+                  <server>
+                      <id>github.com</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
               </servers>
               <!--
                   Declare GitHub Packages as a repository in a settings profile so Maven can
@@ -102,6 +107,9 @@ jobs:
               <profiles>
                   <profile>
                       <id>github-packages</id>
+                      <properties>
+                          <github.personal.token>${env.DEPLOY_TOKEN}</github.personal.token>
+                      </properties>
                       <repositories>
                           <repository>
                               <id>MRISS-Projects-maven-repo</id>
@@ -136,7 +144,7 @@ jobs:
       # (the maven-scm-plugin 2.x has no built-in skip parameter; overriding the
       # phase to 'none' is the reliable way to unbind and skip that execution).
       - name: Build with Deployment Profile (no artifact publishing)
-        run: mvn -B -P deployment -Dcommit.readme.phase=none install
+        run: mvn -B -P deployment -Dcommit.readme.phase=none -Dbuild.number=${GITHUB_RUN_NUMBER} install
 
       # Mirrors: recursiveRelease -> mvn -P deployment,release-deployment site-deploy
       # Uses 'site' instead of 'site-deploy' to skip gh-pages publishing.
