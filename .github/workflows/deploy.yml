@@ -1,0 +1,278 @@
+# Copyright 2020 Marcelo Riss
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Deploy workflow - mirrors ReleaseJenkinsfile operations for actual deployment.
+# Triggered manually via workflow_dispatch.
+# Supports snapshot and release deployments via the release_type parameter.
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type: snapshots (default) or releases'
+        required: true
+        default: 'snapshots'
+        type: choice
+        options:
+          - snapshots
+          - releases
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    env:
+      # DEPLOY_TOKEN must be stored as a repository secret.
+      # Create a GitHub Personal Access Token (classic) with the
+      # "read:packages", "write:packages", and "repo" scopes from an account
+      # that has write access to the MRISS-Projects organization, then add it
+      # to this repo's secrets as DEPLOY_TOKEN
+      # (Settings → Secrets and variables → Actions).
+      DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.DEPLOY_TOKEN }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      # Configure Maven settings so it can read from and write to the GitHub
+      # Packages registry and authenticate for SCM operations (site deploy to
+      # gh-pages, version commits, and tagging).
+      - name: Configure Maven settings for GitHub Packages
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                                        https://maven.apache.org/xsd/settings-1.0.0.xsd">
+              <servers>
+                  <server>
+                      <id>releases</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>MRISS-Projects-maven-repo</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>MRISS-Projects-maven-repo-plugins</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>github.com</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>github</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+              </servers>
+              <!--
+                  Declare GitHub Packages as a repository in a settings profile so Maven can
+                  resolve parent POMs (e.g. com.mriss:mriss-parent) from the registry during
+                  multi-module build initialisation — before any pom.xml repository sections
+                  are parsed.  Credentials are supplied by the <servers> block above using
+                  DEPLOY_TOKEN (a cross-repository PAT).
+              -->
+              <profiles>
+                  <profile>
+                      <id>github-packages</id>
+                      <properties>
+                          <github.personal.token>${env.DEPLOY_TOKEN}</github.personal.token>
+                      </properties>
+                      <repositories>
+                          <repository>
+                              <id>MRISS-Projects-maven-repo</id>
+                              <url>https://maven.pkg.github.com/MRISS-Projects/maven-repo</url>
+                              <releases><enabled>true</enabled></releases>
+                              <snapshots><enabled>true</enabled></snapshots>
+                          </repository>
+                      </repositories>
+                      <pluginRepositories>
+                          <pluginRepository>
+                              <id>MRISS-Projects-maven-repo-plugins</id>
+                              <url>https://maven.pkg.github.com/MRISS-Projects/maven-repo</url>
+                              <releases><enabled>true</enabled></releases>
+                              <snapshots><enabled>true</enabled></snapshots>
+                          </pluginRepository>
+                      </pluginRepositories>
+                  </profile>
+              </profiles>
+              <activeProfiles>
+                  <activeProfile>github-packages</activeProfile>
+              </activeProfiles>
+          </settings>
+          EOF
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # ----------------------------------------------------------------
+      # Common: initial build (mirrors ReleaseJenkinsfile's first step)
+      # ----------------------------------------------------------------
+      - name: Build and Install
+        run: mvn -B -U clean install
+
+      # ----------------------------------------------------------------
+      # Snapshot deployment
+      # ----------------------------------------------------------------
+
+      # Mirrors: mvn -P deployment deploy
+      # All deployment activities are mandatory: artifact deployment, SCM
+      # changes (README commit), and site deployment.
+      - name: Deploy Snapshot Artifacts
+        if: ${{ inputs.release_type == 'snapshots' }}
+        run: >
+          mvn -B -P deployment
+          -Drelease.type=snapshots
+          -Dbuild.number=${GITHUB_RUN_NUMBER}
+          deploy
+
+      # Mirrors: mvn -P deployment site-deploy
+      - name: Deploy Snapshot Site
+        if: ${{ inputs.release_type == 'snapshots' }}
+        run: >
+          mvn -B -P deployment
+          -Drelease.type=snapshots
+          -Dbuild.number=${GITHUB_RUN_NUMBER}
+          -Dsite.deployment.personal.main=file:///tmp/sites
+          site-deploy
+
+      # ----------------------------------------------------------------
+      # Release deployment
+      # Mirrors 100% of ReleaseJenkinsfile: recursiveRelease() function,
+      # followed by scm:checkin and scm:tag.
+      # ----------------------------------------------------------------
+      - name: Release Deploy
+        if: ${{ inputs.release_type == 'releases' }}
+        run: |
+          # ---- Extract version information from pom.xml ----
+          FULL_VERSION=$(mvn -q help:evaluate -Dexpression=project.version -DforceStdout -N)
+          CURRENT_VERSION=${FULL_VERSION%-SNAPSHOT}
+          IFS='.' read -r MAJOR MINOR FIX <<< "$CURRENT_VERSION"
+          if [ "$MINOR" -ge 0 ] && [ "$FIX" -eq 0 ]; then
+            NEXT_MINOR=$((MINOR + 1))
+            NEXT_FIX=$FIX
+          elif [ "$MINOR" -ge 0 ] && [ "$FIX" -gt 0 ]; then
+            NEXT_MINOR=$MINOR
+            NEXT_FIX=$((FIX + 1))
+          fi
+          NEXT_DEV_VERSION="${MAJOR}.${NEXT_MINOR}.${NEXT_FIX}-SNAPSHOT"
+          ARTIFACT_ID=$(mvn -q help:evaluate -Dexpression=project.artifactId -DforceStdout -N)
+
+          echo "Full version: $FULL_VERSION"
+          echo "Release version: $CURRENT_VERSION"
+          echo "Next dev version: $NEXT_DEV_VERSION"
+          echo "Artifact ID: $ARTIFACT_ID"
+
+          # ---- Recursive release function ----
+          # Mirrors ReleaseJenkinsfile's recursiveRelease() exactly:
+          #   1. Set module version to release version
+          #   2. Deploy artifacts with -P deployment
+          #   3. Deploy site with -P deployment,release-deployment
+          #   4. Set module version back to next development SNAPSHOT
+          #   5. For each child module:
+          #      a. Update parent reference to the just-deployed release version
+          #      b. Recurse into the child UNLESS the current path is one of:
+          #         skins, announcement-templates, maven-archetypes, maven-plugins
+          #         (those children are released independently — only their parent
+          #          reference is updated, their own version stays unchanged)
+          recursive_release() {
+            local pom_path="$1"
+            local next_dev="$2"
+            local current="$3"
+
+            echo "=== Releasing module at: $pom_path ==="
+
+            # Step 1: Set version to release
+            mvn -B -N -f "$pom_path/pom.xml" \
+              -DgenerateBackupPoms=false \
+              -DnewVersion="$current" \
+              versions:set
+
+            # Step 2: Deploy with deployment profile
+            mvn -B -N -f "$pom_path/pom.xml" \
+              -P deployment \
+              deploy
+
+            # Step 3: Site deploy with deployment + release-deployment profiles
+            mvn -B -N -f "$pom_path/pom.xml" \
+              -P deployment,release-deployment \
+              -Dsite.deployment.personal.main=file:///tmp/sites \
+              site-deploy
+
+            # Step 4: Set version back to next development SNAPSHOT
+            mvn -B -N -f "$pom_path/pom.xml" \
+              -DgenerateBackupPoms=false \
+              -DnewVersion="$next_dev" \
+              versions:set
+
+            # Step 5: Process child modules
+            local modules
+            modules=$(grep -oP '<module>\K[^<]+' "$pom_path/pom.xml" || true)
+
+            for module in $modules; do
+              echo "--- Processing child module: $module (parent: $pom_path) ---"
+
+              # Step 5a: Update parent version in child to the deployed release
+              mvn -B -N -f "$pom_path/$module/pom.xml" \
+                -DgenerateBackupPoms=false \
+                versions:update-parent
+
+              # Step 5b: Recurse unless parent path is an independently-released module
+              case "$pom_path" in
+                *skins|*announcement-templates|*maven-archetypes|*maven-plugins)
+                  echo "Skipping recursive release for $pom_path/$module (released independently)"
+                  ;;
+                *)
+                  recursive_release "$pom_path/$module" "$next_dev" "$current"
+                  ;;
+              esac
+            done
+          }
+
+          # ---- Execute recursive release ----
+          recursive_release "." "$NEXT_DEV_VERSION" "$CURRENT_VERSION"
+
+          # ---- Commit all version changes ----
+          COMMIT_MESSAGE="Infrastructure poms release version $CURRENT_VERSION"
+          mvn -B -P deployment -Dmessage="$COMMIT_MESSAGE" scm:checkin
+
+          # ---- Tag the release ----
+          mvn -B -P deployment -Dtag="${ARTIFACT_ID}-${CURRENT_VERSION}" scm:tag
