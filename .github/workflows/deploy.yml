@@ -186,12 +186,19 @@ jobs:
           FULL_VERSION=$(mvn -q help:evaluate -Dexpression=project.version -DforceStdout -N)
           CURRENT_VERSION=${FULL_VERSION%-SNAPSHOT}
           IFS='.' read -r MAJOR MINOR FIX <<< "$CURRENT_VERSION"
+          if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$FIX" ]; then
+            echo "ERROR: Failed to parse version '$FULL_VERSION' into MAJOR.MINOR.FIX components"
+            exit 1
+          fi
           if [ "$MINOR" -ge 0 ] && [ "$FIX" -eq 0 ]; then
             NEXT_MINOR=$((MINOR + 1))
             NEXT_FIX=$FIX
           elif [ "$MINOR" -ge 0 ] && [ "$FIX" -gt 0 ]; then
             NEXT_MINOR=$MINOR
             NEXT_FIX=$((FIX + 1))
+          else
+            echo "ERROR: Unexpected version components MINOR=$MINOR FIX=$FIX"
+            exit 1
           fi
           NEXT_DEV_VERSION="${MAJOR}.${NEXT_MINOR}.${NEXT_FIX}-SNAPSHOT"
           ARTIFACT_ID=$(mvn -q help:evaluate -Dexpression=project.artifactId -DforceStdout -N)
@@ -257,7 +264,7 @@ jobs:
 
               # Step 5b: Recurse unless parent path is an independently-released module
               case "$pom_path" in
-                *skins|*announcement-templates|*maven-archetypes|*maven-plugins)
+                */skins|*/announcement-templates|*/maven-archetypes|*/maven-plugins)
                   echo "Skipping recursive release for $pom_path/$module (released independently)"
                   ;;
                 *)
