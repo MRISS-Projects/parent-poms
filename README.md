@@ -4,7 +4,7 @@
 
 ## Version
 
-3.7.0-SNAPSHOT - 48 - 20210106-000310
+3.7.0-SNAPSHOT - 2 - 20260331-185429
 
 ## Code Based Site
 
@@ -13,6 +13,12 @@ Snapshot: https://mriss-projects.github.io/parent-poms/snapshots
 Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
+
+### Version 3.7.0-SNAPSHOT
+
+| # | Type | Summary | Assignee | Reporter | Updated |
+| - | ---- | ------- | -------- | -------- | ------- |
+| [28](https://github.com/MRISS-Projects/parent-poms/issues/28) | enhancement | Upgrade junit to 4.13.1 to fix vulnerability issues. | mriss | mriss | 3/25/26 |
 
 ### Version 3.6.3
 
@@ -45,7 +51,7 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | - | ---- | ------- | -------- | -------- | ------- |
-| [18](https://github.com/MRISS-Projects/parent-poms/issues/18) | task | Implement pom parent update for snapshots at release of parent poms. | mriss | mriss | 9/21/20 |
+| [18](https://github.com/MRISS-Projects/parent-poms/issues/18) | wontfix | Implement pom parent update for snapshots at release of parent poms. | mriss | mriss | 9/21/20 |
 | [17](https://github.com/MRISS-Projects/parent-poms/issues/17) | task | Check all [skip jenkins] push message at pom.xml files and jenkins scripts | mriss | mriss | 9/21/20 |
 | [16](https://github.com/MRISS-Projects/parent-poms/issues/16) | task | Make project snapshot oriented by github webhook. | mriss | mriss | 9/21/20 |
 | [15](https://github.com/MRISS-Projects/parent-poms/issues/15) | task | Configure https for jenkins server. | mriss | mriss | 9/20/20 |
