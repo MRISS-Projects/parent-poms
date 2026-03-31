@@ -269,6 +269,8 @@ jobs:
                   ;;
                 *)
                   recursive_release "$pom_path/$module" "$next_dev" "$current"
+                  # Step 5c: Revert parent version back to next development SNAPSHOT
+                  sed -i "/<parent>/,/<\/parent>/ s|<version>${current}</version>|<version>${next_dev}</version>|" "$pom_path/$module/pom.xml"
                   ;;
               esac
             done
