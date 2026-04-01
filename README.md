@@ -4,7 +4,7 @@
 
 ## Version
 
-3.7.0 - dev - 20260401-180704
+3.7.0
 
 ## Code Based Site
 
