@@ -15,14 +15,13 @@
     limitations under the License.
  -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0                       http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0                       http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <!-- The Basics -->
     <groupId>com.mriss</groupId>
     <artifactId>mriss-parent</artifactId>
-    <version>3.8.0-SNAPSHOT</version>
+    <version>3.7.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <!-- <dependencies>...</dependencies> -->
     <!-- <parent>...</parent> -->
@@ -165,12 +164,12 @@
         <tomcat.seven.server>tomcat9-server</tomcat.seven.server>
 
         <!-- Announcement properties for changes plugnis -->
-        <smtp.host></smtp.host>
+        <smtp.host />
         <announcement.file.name>Newsletter_HTML.html</announcement.file.name>
-        <announcement.template.directory></announcement.template.directory>
-        <announcement.template.version></announcement.template.version>
-        <announcement.images.server></announcement.images.server>
-        <announcement.list></announcement.list>
+        <announcement.template.directory />
+        <announcement.template.version />
+        <announcement.images.server />
+        <announcement.list />
         <announcement.introduction>${project.description}</announcement.introduction>
 
         <group.id.path.prefix>com/mris/mriss-parent</group.id.path.prefix>
