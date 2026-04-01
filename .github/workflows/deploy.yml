@@ -252,6 +252,7 @@ jobs:
 
             # Step 5: Process child modules
             local modules
+            local module
             modules=$(grep -oP '<module>\K[^<]+' "$pom_path/pom.xml" || true)
 
             for module in $modules; do
