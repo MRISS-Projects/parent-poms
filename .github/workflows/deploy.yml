@@ -156,13 +156,25 @@ jobs:
       # Mirrors: mvn -P deployment deploy
       # All deployment activities are mandatory: artifact deployment, SCM
       # changes (README commit), and site deployment.
+      # If an artifact already exists (409 Conflict from GitHub Packages),
+      # the error is ignored so the workflow can continue.
       - name: Deploy Snapshot Artifacts
         if: ${{ inputs.release_type == 'snapshots' }}
-        run: >
-          mvn -B -P deployment
-          -Drelease.type=snapshots
-          -Dbuild.number=${GITHUB_RUN_NUMBER}
-          deploy
+        run: |
+          set +e
+          output=$(mvn -B -P deployment \
+            -Drelease.type=snapshots \
+            -Dbuild.number=${GITHUB_RUN_NUMBER} \
+            deploy 2>&1)
+          rc=$?
+          echo "$output"
+          if [ $rc -ne 0 ]; then
+            if echo "$output" | grep -qE "status code: 409|HTTP 409|Conflict \(409\)"; then
+              echo "WARNING: Artifact already exists (409 Conflict). Skipping artifact deploy."
+            else
+              exit $rc
+            fi
+          fi
 
       # Mirrors: mvn -P deployment site-deploy
       - name: Deploy Snapshot Site
@@ -208,10 +220,35 @@ jobs:
           echo "Next dev version: $NEXT_DEV_VERSION"
           echo "Artifact ID: $ARTIFACT_ID"
 
+          # ---- Helper: check if artifact already exists in GitHub Packages ----
+          # Returns 0 (true) if the artifact POM is already published, 1 otherwise.
+          DEPLOY_URL="https://maven.pkg.github.com/MRISS-Projects/maven-repo"
+          artifact_exists_in_repo() {
+            local pom_file="$1"
+            local version="$2"
+            local group_id artifact_id group_path check_url http_code
+            group_id=$(mvn -q -N -f "$pom_file" help:evaluate -Dexpression=project.groupId -DforceStdout)
+            artifact_id=$(mvn -q -N -f "$pom_file" help:evaluate -Dexpression=project.artifactId -DforceStdout)
+            group_path=${group_id//./\/}
+            check_url="${DEPLOY_URL}/${group_path}/${artifact_id}/${version}/${artifact_id}-${version}.pom"
+            http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Authorization: token $DEPLOY_TOKEN" \
+              "$check_url") || {
+              echo "WARNING: curl failed checking ${check_url} — will attempt deploy."
+              return 1
+            }
+            if [ "$http_code" = "200" ]; then
+              echo "Artifact ${group_id}:${artifact_id}:${version} already exists at ${check_url} — skipping deploy."
+              return 0
+            fi
+            echo "Artifact check returned HTTP ${http_code} for ${check_url} — will deploy."
+            return 1
+          }
+
           # ---- Recursive release function ----
           # Mirrors ReleaseJenkinsfile's recursiveRelease() exactly:
           #   1. Set module version to release version
-          #   2. Deploy artifacts with -P deployment
+          #   2. Deploy artifacts with -P deployment (skip if already published)
           #   3. Deploy site with -P deployment,release-deployment
           #   4. Set module version back to next development SNAPSHOT
           #   5. For each child module:
@@ -233,10 +270,14 @@ jobs:
               -DnewVersion="$current" \
               versions:set
 
-            # Step 2: Deploy with deployment profile
-            mvn -B -N -f "$pom_path/pom.xml" \
-              -P deployment \
-              deploy
+            # Step 2: Deploy with deployment profile (skip if artifact already exists)
+            if artifact_exists_in_repo "$pom_path/pom.xml" "$current"; then
+              echo "Skipping deploy for module at $pom_path (already published)."
+            else
+              mvn -B -N -f "$pom_path/pom.xml" \
+                -P deployment \
+                deploy
+            fi
 
             # Step 3: Site deploy with deployment + release-deployment profiles
             mvn -B -N -f "$pom_path/pom.xml" \
