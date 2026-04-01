@@ -169,7 +169,7 @@ jobs:
           rc=$?
           echo "$output"
           if [ $rc -ne 0 ]; then
-            if echo "$output" | grep -q "status code: 409"; then
+            if echo "$output" | grep -qE "status code: 409|HTTP 409|Conflict \(409\)"; then
               echo "WARNING: Artifact already exists (409 Conflict). Skipping artifact deploy."
             else
               exit $rc
@@ -233,11 +233,15 @@ jobs:
             check_url="${DEPLOY_URL}/${group_path}/${artifact_id}/${version}/${artifact_id}-${version}.pom"
             http_code=$(curl -s -o /dev/null -w "%{http_code}" \
               -H "Authorization: token $DEPLOY_TOKEN" \
-              "$check_url")
+              "$check_url") || {
+              echo "WARNING: curl failed checking ${check_url} — will attempt deploy."
+              return 1
+            }
             if [ "$http_code" = "200" ]; then
               echo "Artifact ${group_id}:${artifact_id}:${version} already exists at ${check_url} — skipping deploy."
               return 0
             fi
+            echo "Artifact check returned HTTP ${http_code} for ${check_url} — will deploy."
             return 1
           }
 
