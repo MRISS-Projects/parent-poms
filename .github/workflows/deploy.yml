@@ -237,8 +237,8 @@ jobs:
               echo "WARNING: curl failed checking ${check_url} — will attempt deploy."
               return 1
             }
-            if [ "$http_code" = "200" ]; then
-              echo "Artifact ${group_id}:${artifact_id}:${version} already exists at ${check_url} — skipping deploy."
+            if [ "$http_code" = "200" ] || [ "$http_code" = "302" ]; then
+              echo "Artifact ${group_id}:${artifact_id}:${version} already exists at ${check_url} (HTTP ${http_code}) — skipping deploy."
               return 0
             fi
             echo "Artifact check returned HTTP ${http_code} for ${check_url} — will deploy."
