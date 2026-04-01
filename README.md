@@ -4,7 +4,7 @@
 
 ## Version
 
-3.7.0-SNAPSHOT - 3 - 20260331-200837
+3.7.0 - dev - 20260401-162914
 
 ## Code Based Site
 
@@ -14,10 +14,11 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
 
-### Version 3.7.0-SNAPSHOT
+### Version 3.7.0
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | - | ---- | ------- | -------- | -------- | ------- |
+| [43](https://github.com/MRISS-Projects/parent-poms/issues/43) | task | Upgrade maven-changes-plugin to 2.12.7 | null | mriss | 4/1/26 |
 | [28](https://github.com/MRISS-Projects/parent-poms/issues/28) | enhancement | Upgrade junit to 4.13.1 to fix vulnerability issues. | mriss | mriss | 3/25/26 |
 
 ### Version 3.6.3
