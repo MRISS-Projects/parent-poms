@@ -4,7 +4,7 @@
 
 ## Version
 
-3.8.0-SNAPSHOT - 9 - 20260401-184036
+3.7.1-SNAPSHOT - 10 - 20260404-231810
 
 ## Code Based Site
 
@@ -13,6 +13,12 @@ Snapshot: https://mriss-projects.github.io/parent-poms/snapshots
 Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
+
+### Version 3.7.1-SNAPSHOT
+
+| # | Type | Summary | Assignee | Reporter | Updated |
+| - | ---- | ------- | -------- | -------- | ------- |
+| [52](https://github.com/MRISS-Projects/parent-poms/issues/52) | bug | Release site is not generating modules section at final deployed site | null | mriss | 4/4/26 |
 
 ### Version 3.7.0
 
