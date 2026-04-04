@@ -29,7 +29,12 @@
             <item name="Parent POMs" href="../index.html" />
         </breadcrumbs>    
         <menu ref="parent" />
-        <menu ref="modules" />
+        <menu name="Project Modules">
+            <item name="Skins" href="skins/" />
+            <item name="Announcement Templates" href="announcement-templates/" />
+            <item name="Maven Archetypes" href="maven-archetypes/" />
+            <item name="Maven Plugins" href="maven-plugins/" />
+        </menu>
         <menu name="Development Environment">
             <item name="Setup" href="setup.html" />
             <item name="Operating System" href="os.html" />

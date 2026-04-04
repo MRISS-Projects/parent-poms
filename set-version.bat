@@ -17,4 +17,3 @@
 @rem Example: set-version.bat 3.9.0-SNAPSHOT
 @echo off
 call mvn -B -DautoVersionSubmodules=true -Dproject.dev.com.mriss:mriss-parent=%1 release:update-versions
-

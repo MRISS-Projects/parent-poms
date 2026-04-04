@@ -29,7 +29,11 @@
             <item name="Parent POMs" href="../index.html" />
         </breadcrumbs>    
         <menu ref="parent" />
-        <menu ref="modules" />
+        <menu name="Project Modules">
+            <item name="Infrastructure" href="../infrastructure/" />
+            <item name="Framework" href="../framework/" />
+            <item name="Products" href="../products/" />
+        </menu>
         <menu ref="reports" />
     </body>
 </project>

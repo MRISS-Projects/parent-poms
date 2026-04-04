@@ -29,7 +29,11 @@
             <item name="Parent POMs" href="../../index.html" />
         </breadcrumbs>
         <menu ref="parent" />
-        <menu ref="modules" />
+        <menu name="Project Modules">
+            <item name="Maven Plugin" href="maven-plugin/" />
+            <item name="Product Parent" href="product-parent/" />
+            <item name="Module Standard" href="module-standard/" />
+        </menu>
         <menu name="Using Archetypes">
             <item name="Before Running an Archetype"
                 href="before-running.html" />

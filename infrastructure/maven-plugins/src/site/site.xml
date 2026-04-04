@@ -29,7 +29,6 @@
             <item name="Parent POMs" href="../../index.html" />
         </breadcrumbs>    
         <menu ref="parent" />
-        <menu ref="modules" />
         <menu ref="reports" />
     </body>
 </project>
