@@ -243,12 +243,10 @@ jobs:
           }
 
           # ---- Recursive release function ----
-          # Mirrors ReleaseJenkinsfile's recursiveRelease() exactly:
-          #   1. Set module version to release version
-          #   2. Deploy artifacts with -P deployment (skip if already published)
-          #   3. Deploy site with -P deployment,release-deployment
-          #   4. Set module version back to next development SNAPSHOT
-          #   5. For each child module:
+          # Set version only at repository root. Recursion is used for:
+          #   1. Deploy artifacts with -P deployment (skip if already published)
+          #   2. Deploy site with -P deployment,release-deployment
+          #   3. For each child module:
           #      a. Update parent reference to the just-deployed release version
           #      b. Recurse into the child UNLESS the current path is one of:
           #         skins, announcement-templates, maven-archetypes, maven-plugins
@@ -261,13 +259,7 @@ jobs:
 
             echo "=== Releasing module at: $pom_path ==="
 
-            # Step 1: Set version to release
-            mvn -B -N -f "$pom_path/pom.xml" \
-              -DgenerateBackupPoms=false \
-              -DnewVersion="$current" \
-              versions:set
-
-            # Step 2: Deploy with deployment profile (skip if artifact already exists)
+            # Step 1: Deploy with deployment profile (skip if artifact already exists)
             if artifact_exists_in_repo "$pom_path/pom.xml" "$current"; then
               echo "Skipping deploy for module at $pom_path (already published)."
             else
@@ -276,19 +268,13 @@ jobs:
                 deploy
             fi
 
-            # Step 3: Site deploy with deployment + release-deployment profiles
+            # Step 2: Site deploy with deployment + release-deployment profiles
             mvn -B -N -f "$pom_path/pom.xml" \
               -P deployment,release-deployment \
               -Dsite.deployment.personal.main=file:///tmp/sites \
               site-deploy
 
-            # Step 4: Set version back to next development SNAPSHOT
-            mvn -B -N -f "$pom_path/pom.xml" \
-              -DgenerateBackupPoms=false \
-              -DnewVersion="$next_dev" \
-              versions:set
-
-            # Step 5: Process child modules
+            # Step 3: Process child modules
             local modules
             local module
             modules=$(grep -oP '<module>\K[^<]+' "$pom_path/pom.xml" || true)
@@ -296,27 +282,39 @@ jobs:
             for module in $modules; do
               echo "--- Processing child module: $module (parent: $pom_path) ---"
 
-              # Step 5a: Update parent version in child to the deployed release
+              # Step 3a: Update parent version in child to the deployed release
               mvn -B -N -f "$pom_path/$module/pom.xml" \
                 -DgenerateBackupPoms=false \
                 versions:update-parent
 
-              # Step 5b: Recurse unless parent path is an independently-released module
+              # Step 3b: Recurse unless parent path is an independently-released module
               case "$pom_path" in
                 */skins|*/announcement-templates|*/maven-archetypes|*/maven-plugins)
                   echo "Skipping recursive release for $pom_path/$module (released independently)"
                   ;;
                 *)
                   recursive_release "$pom_path/$module" "$next_dev" "$current"
-                  # Step 5c: Revert parent version back to next development SNAPSHOT
+                  # Step 3c: Revert parent version back to next development SNAPSHOT
                   sed -i "/<parent>/,/<\/parent>/ s|<version>${current}</version>|<version>${next_dev}</version>|" "$pom_path/$module/pom.xml"
                   ;;
               esac
             done
           }
 
-          # ---- Execute recursive release ----
+          # ---- Set release version at root only ----
+          mvn -B -N -f ./pom.xml \
+            -DgenerateBackupPoms=false \
+            -DnewVersion="$CURRENT_VERSION" \
+            versions:set
+
+          # ---- Execute recursive artifact/site deploy + parent updates ----
           recursive_release "." "$NEXT_DEV_VERSION" "$CURRENT_VERSION"
+
+          # ---- Restore next development SNAPSHOT at root only ----
+          mvn -B -N -f ./pom.xml \
+            -DgenerateBackupPoms=false \
+            -DnewVersion="$NEXT_DEV_VERSION" \
+            versions:set
 
           # ---- Commit all version changes ----
           COMMIT_MESSAGE="Infrastructure poms release version $CURRENT_VERSION"
