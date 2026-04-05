@@ -197,21 +197,18 @@ jobs:
           # ---- Extract version information from pom.xml ----
           FULL_VERSION=$(mvn -q help:evaluate -Dexpression=project.version -DforceStdout -N)
           CURRENT_VERSION=${FULL_VERSION%-SNAPSHOT}
+          if ! [[ "$CURRENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: Version '$FULL_VERSION' must follow MAJOR.MINOR.FIX-SNAPSHOT"
+            exit 1
+          fi
           IFS='.' read -r MAJOR MINOR FIX <<< "$CURRENT_VERSION"
           if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$FIX" ]; then
             echo "ERROR: Failed to parse version '$FULL_VERSION' into MAJOR.MINOR.FIX components"
             exit 1
           fi
-          if [ "$MINOR" -ge 0 ] && [ "$FIX" -eq 0 ]; then
-            NEXT_MINOR=$((MINOR + 1))
-            NEXT_FIX=$FIX
-          elif [ "$MINOR" -ge 0 ] && [ "$FIX" -gt 0 ]; then
-            NEXT_MINOR=$MINOR
-            NEXT_FIX=$((FIX + 1))
-          else
-            echo "ERROR: Unexpected version components MINOR=$MINOR FIX=$FIX"
-            exit 1
-          fi
+          # Release flow always advances MINOR and resets FIX to 0.
+          NEXT_MINOR=$((MINOR + 1))
+          NEXT_FIX=0
           NEXT_DEV_VERSION="${MAJOR}.${NEXT_MINOR}.${NEXT_FIX}-SNAPSHOT"
           ARTIFACT_ID=$(mvn -q help:evaluate -Dexpression=project.artifactId -DforceStdout -N)
 
