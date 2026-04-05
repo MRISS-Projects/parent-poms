@@ -16,7 +16,7 @@
     <parent>
         <groupId>com.mriss</groupId>
         <artifactId>mriss-parent</artifactId>
-        <version>3.7.1-SNAPSHOT</version>
+        <version>3.7.1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <dependencyManagement>
