@@ -98,7 +98,7 @@
         <sure-fire-report.plugin.version>3.5.5</sure-fire-report.plugin.version>
         <jar.plugin.version>3.4.2</jar.plugin.version>
         <project-info-reports.plugin.version>3.9.0</project-info-reports.plugin.version>
-        <changes.plugin.version>2.12.8-SNAPSHOT</changes.plugin.version>
+        <changes.plugin.version>2.12.8</changes.plugin.version>
         <assembly.plugin.version>3.7.1</assembly.plugin.version>
         <dependency.plugin.version>3.8.1</dependency.plugin.version>
         <deploy.plugin.version>3.1.4</deploy.plugin.version>
