@@ -4,7 +4,7 @@
 
 ## Version
 
-3.7.1-SNAPSHOT - 11 - 20260405-001001
+3.7.1
 
 ## Code Based Site
 
@@ -14,10 +14,11 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
 
-### Version 3.7.1-SNAPSHOT
+### Version 3.7.1
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | - | ---- | ------- | -------- | -------- | ------- |
+| [53](https://github.com/MRISS-Projects/parent-poms/issues/53) | bug | Changes plugin is not correct at maven generated site | null | mriss | 4/5/26 |
 | [52](https://github.com/MRISS-Projects/parent-poms/issues/52) | bug | Release site is not generating modules section at final deployed site | null | mriss | 4/4/26 |
 
 ### Version 3.7.0
