@@ -29,7 +29,7 @@
     <parent>
         <groupId>com.mriss.mriss-parent.infrastructure</groupId>
         <artifactId>announcement-templates</artifactId>
-        <version>3.7.0</version>
+        <version>3.7.1</version>
         <relativePath/>
     </parent>
     <!-- <dependencyManagement>...</dependencyManagement> -->
