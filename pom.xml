@@ -21,7 +21,7 @@
     <!-- The Basics -->
     <groupId>com.mriss</groupId>
     <artifactId>mriss-parent</artifactId>
-    <version>3.7.1-SNAPSHOT</version>
+    <version>3.8.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <!-- <dependencies>...</dependencies> -->
     <!-- <parent>...</parent> -->
@@ -149,8 +149,6 @@
         <commons-io.version>2.18.0</commons-io.version>
         <javax-mail.version>1.5.0-b01</javax-mail.version>
 
-        <jenkins.view>${project.artifactId}</jenkins.view>
-        <jenkins.server>https://jenkins.mriss.org/jenkins</jenkins.server>
         <build.number>dev</build.number> <!-- This will be provided by github actions builds via env.GITHUB_RUN_NUMBER,
                                                                when building maven SNAPSHOTS (not releases). If not set,
                                                                the default will be "dev" -->
@@ -256,6 +254,13 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${sure-fire.plugin.version}</version>
+                    <!-- FR013: exclude integration tests from unit-test phase -->
+                    <configuration>
+                        <excludes>
+                            <exclude>**/*IT.java</exclude>
+                            <exclude>**/*IntegrationTest.java</exclude>
+                        </excludes>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -311,6 +316,22 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>${maven.failsafe.plugin.version}</version>
+                    <!-- FR013: run only classes matching *IT or *IntegrationTest -->
+                    <configuration>
+                        <includes>
+                            <include>**/*IT.java</include>
+                            <include>**/*IntegrationTest.java</include>
+                        </includes>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>integration-tests</id>
+                            <goals>
+                                <goal>integration-test</goal>
+                                <goal>verify</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -577,6 +598,45 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
             </plugin>
+            <!-- FR014: JaCoCo prepare-agent and coverage check inherited by all modules -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>prepare-code-coverage</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>check-code-coverage</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.95</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>BRANCH</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.95</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
     <reporting>
@@ -642,6 +702,41 @@
                     </reportSet>
                 </reportSets>
             </plugin>
+            <!-- FR012: Surefire unit-test report -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-report-plugin</artifactId>
+                <version>${sure-fire-report.plugin.version}</version>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <report>report-only</report>
+                        </reports>
+                    </reportSet>
+                    <reportSet>
+                        <id>failsafe-report</id>
+                        <reports>
+                            <report>failsafe-report-only</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+                <configuration>
+                    <aggregate>true</aggregate>
+                </configuration>
+            </plugin>
+            <!-- FR012: JaCoCo coverage report -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.maven.plugin.version}</version>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <report>report</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
         </plugins>
     </reporting>
 
@@ -684,8 +779,8 @@
         <url>${source.code.server}/${source.project}/issues</url>
     </issueManagement>
     <ciManagement>
-        <system>jenkins</system>
-        <url>${jenkins.server}/view/${jenkins.view}</url>
+        <system>github-actions</system>
+        <url>https://github.com/MRISS-Projects/parent-poms/actions</url>
     </ciManagement>
     <!-- <mailingLists>...</mailingLists> -->
     <scm>
