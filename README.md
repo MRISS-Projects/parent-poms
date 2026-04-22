@@ -4,7 +4,7 @@
 
 ## Version
 
-3.7.1
+3.8.0-SNAPSHOT - 14 - 20260421-234738
 
 ## Code Based Site
 
@@ -13,6 +13,12 @@ Snapshot: https://mriss-projects.github.io/parent-poms/snapshots
 Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
+
+### Version 3.8.0-SNAPSHOT
+
+| # | Type | Summary | Assignee | Reporter | Updated |
+| - | ---- | ------- | -------- | -------- | ------- |
+| [54](https://github.com/MRISS-Projects/parent-poms/issues/54) | enhancement | Improve versions of frameworks like spring and spring boot. Add more configuration to be generic, getting insights from DSH project | null | mriss | 4/21/26 |
 
 ### Version 3.7.1
 
