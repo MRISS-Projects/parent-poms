@@ -602,6 +602,15 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
+                <!-- Exclude test classes from coverage analysis so that assertion branches
+                     in test code do not reduce the measured production coverage ratio. -->
+                <configuration>
+                    <excludes>
+                        <exclude>**/*Test.class</exclude>
+                        <exclude>**/*Test$*.class</exclude>
+                        <exclude>**/*TestConfiguration.class</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <id>prepare-code-coverage</id>

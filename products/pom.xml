@@ -21,6 +21,19 @@
     </parent>
     <dependencyManagement>
         <dependencies>
+            <!-- Override byte-buddy to 1.14.x: Mockito 4.8.x references ClassFileVersion.JAVA_V21
+                 which was added in byte-buddy 1.14.0. Spring Boot 2.7.x bundles 1.12.x causing
+                 NoSuchFieldError: JAVA_V21 on Java 17 at test runtime. Must appear BEFORE the BOM import. -->
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy</artifactId>
+                <version>${byte-buddy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy-agent</artifactId>
+                <version>${byte-buddy.version}</version>
+            </dependency>
             <dependency>
                 <!-- Import dependency management from Spring Boot -->
                 <groupId>org.springframework.boot</groupId>
@@ -70,6 +83,10 @@
         <jaxb-api.version>2.4.0-b180830.0359</jaxb-api.version>
         <!-- spring-boot-starter-data-solr removed in Spring Boot 2.6; use spring-data-solr directly -->
         <spring-data-solr.version>4.3.15</spring-data-solr.version>
+        <!-- byte-buddy 1.12.x (bundled with Spring Boot 2.7.x) lacks ClassFileVersion.JAVA_V21,
+             causing NoSuchFieldError when Mockito's inline mock maker runs on Java 17+.
+             Override to 1.14.x which adds JAVA_V21 and is fully compatible. -->
+        <byte-buddy.version>1.14.5</byte-buddy.version>
     </properties>
 
 
