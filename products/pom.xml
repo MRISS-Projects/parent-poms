@@ -112,6 +112,20 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+        <!-- FR005: override maven-release-plugin <arguments> at products level to include
+             product-release-deployment in addition to deployment + release-deployment.
+             Uses -D property flags (not -P) consistent with the new activation convention.
+             This overrides the root parent-poms/pom.xml configuration which only uses
+             deployment + release-deployment. -->
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <configuration>
+                    <arguments>-Ddeployment -Drelease-deployment -Dproduct-release-deployment -Dsite.deployment.personal.main=${site.deployment.personal.main}</arguments>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
     <!-- <reporting>...</reporting> -->
 
@@ -162,64 +176,17 @@
     </pluginRepositories>
     <!-- <distributionManagement>...</distributionManagement> -->
     <profiles>
-        <profile>
-            <id>deployment</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-resources-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>copy-readme-md</id>
-                                <phase>process-resources</phase>
-                                <goals>
-                                    <goal>copy-resources</goal>
-                                </goals>
-                                <configuration>
-                                    <outputDirectory>.</outputDirectory>
-                                    <resources>
-                                        <resource>
-                                            <directory>src/site/markdown</directory>
-                                            <includes>
-                                                <include>README.md</include>
-                                            </includes>
-                                            <targetPath>.</targetPath>
-                                            <filtering>true</filtering>
-                                        </resource>
-                                    </resources>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-scm-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>commit-readme-md</id>
-                                <phase>${commit.readme.phase}</phase>
-                                <goals>
-                                    <goal>checkin</goal>
-                                </goals>
-                                <configuration>
-                                    <basedir>${basedir}</basedir>
-                                    <includes>README.md</includes>
-                                    <message>Auto-generated README.md [skip jenkins]</message>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
+        <!-- FR001/FR008: 'deployment' profile removed from products level. The copy-readme-md and
+             commit-readme-md executions it contained are identical to the root parent-poms/pom.xml
+             'deployment' profile and are fully covered by inheritance. Removing here prevents
+             duplicate execution IDs from being merged incorrectly across the hierarchy. -->
         <profile>
             <id>product-release-deployment</id>
+            <!-- FR003: activated by -Dproduct-release-deployment property; starts here at products level -->
             <activation>
-                <activeByDefault>false</activeByDefault>
+                <property>
+                    <name>product-release-deployment</name>
+                </property>
             </activation>
             <properties>
                 <doxia.skin.version>1.8</doxia.skin.version>
@@ -295,10 +262,10 @@
                     <!-- </execution> -->
                     <!-- </executions> -->
                     <!-- </plugin> -->
+                    <!-- FR009: version managed in parent-poms/pom.xml pluginManagement -->
                     <plugin>
                         <groupId>se.natusoft.tools.doc.markdowndoc</groupId>
                         <artifactId>markdowndoc-maven-plugin</artifactId>
-                        <version>2.1.4</version>
                         <executions>
                             <execution>
                                 <id>pdf-generation</id>
@@ -342,28 +309,10 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-scm-publish-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>publish-artifact-to-github</id>
-                                <phase>deploy</phase>
-                                <goals>
-                                    <goal>publish-scm</goal>
-                                </goals>
-                                <configuration>
-                                    <serverId>github.com</serverId>
-                                    <checkinComment>Publishing artifact for version ${project.version} [skip jenkins]</checkinComment>
-                                    <pubScmUrl>scm:git:https://github.com/MRISS-Projects/maven-repo</pubScmUrl>
-                                    <content>${project.build.directory}/maven-repo</content>
-                                    <checkoutDirectory>/tmp/artifact-deploy-checkout</checkoutDirectory>
-                                    <skipDeletedFiles>true</skipDeletedFiles>
-                                    <tryUpdate>true</tryUpdate>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
+                    <!-- FR006: maven-scm-publish-plugin removed from product-release-deployment.
+                         Artifact deployment to maven-repo must use distributionManagement (defined
+                         in parent-poms/pom.xml), not scm-publish. The scm-publish plugin is only
+                         valid for site publishing to gh-pages (root parent-poms/pom.xml deployment profile). -->
                 </plugins>
             </build>
         </profile>

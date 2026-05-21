@@ -343,8 +343,9 @@
                     <artifactId>maven-release-plugin</artifactId>
                     <version>${release.plugin.version}</version>
                     <configuration>
-                        <arguments>-Dsite.deployment.personal.main=${site.deployment.personal.main}</arguments>
-                        <releaseProfiles>release-deployment,product-release-deployment</releaseProfiles>
+                        <!-- FR005: pass -D property flags instead of -P releaseProfiles to activate profiles during release.
+                             Root level uses deployment + release-deployment (no product-release-deployment here). -->
+                        <arguments>-Ddeployment -Drelease-deployment -Dsite.deployment.personal.main=${site.deployment.personal.main}</arguments>
                         <tagNameFormat>v@{project.version}</tagNameFormat>
                         <allowTimestampedSnapshots>true</allowTimestampedSnapshots>
                         <preparationGoals>clean install</preparationGoals>
@@ -591,6 +592,13 @@
                         <appEngineDirectory>${project.build.directory}/appengine</appEngineDirectory>
                     </configuration>
                 </plugin>
+                <!-- FR009: markdowndoc-maven-plugin version centralized here; used in product-release-deployment
+                     profile at products level for PDF generation from Markdown sources. -->
+                <plugin>
+                    <groupId>se.natusoft.tools.doc.markdowndoc</groupId>
+                    <artifactId>markdowndoc-maven-plugin</artifactId>
+                    <version>2.1.4</version>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -830,8 +838,11 @@
     <profiles>
         <profile>
             <id>deployment</id>
+            <!-- FR001: activated by -Ddeployment property instead of -P to avoid Maven hierarchy merge bugs -->
             <activation>
-                <activeByDefault>false</activeByDefault>
+                <property>
+                    <name>deployment</name>
+                </property>
             </activation>
             <properties>
                 <project.scm.id>github</project.scm.id>
@@ -974,8 +985,11 @@
         </profile>
         <profile>
             <id>release-deployment</id>
+            <!-- FR002: activated by -Drelease-deployment property instead of -P to avoid Maven hierarchy merge bugs -->
             <activation>
-                <activeByDefault>false</activeByDefault>
+                <property>
+                    <name>release-deployment</name>
+                </property>
             </activation>
             <properties>
                 <release.type>releases</release.type>

@@ -96,8 +96,8 @@ pipeline {
                     }
                     configFileProvider(
                         [configFile(fileId: "${mavenConfigurationId}", variable: 'MAVEN_SETTINGS')]) {
-                        sh "cd target/checkout; pwd; mvn -gs $MAVEN_SETTINGS -B -Dsite.deployment.personal.main=file:///tmp/sites -P deployment,release-deployment site-deploy"
-                        sh "cd target/checkout; pwd; mvn -gs $MAVEN_SETTINGS -B -P deployment,release-deployment process-resources"
+                        sh "cd target/checkout; pwd; mvn -gs $MAVEN_SETTINGS -B -Dsite.deployment.personal.main=file:///tmp/sites -Ddeployment -Drelease-deployment site-deploy"
+                        sh "cd target/checkout; pwd; mvn -gs $MAVEN_SETTINGS -B -Ddeployment -Drelease-deployment process-resources"
                     }
                 }
             }
