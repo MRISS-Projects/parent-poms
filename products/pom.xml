@@ -150,30 +150,9 @@
         <tag>HEAD</tag>
     </scm>
     <!-- <prerequisites>...</prerequisites> -->
-    <repositories>
-        <repository>
-            <id>pdf-plugin</id>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <url>https://dl.bintray.com/tommy/maven</url>
-        </repository>
-    </repositories>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>pdf-plugin-maven-plugin</id>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <url>https://dl.bintray.com/tommy/maven</url>
-        </pluginRepository>
-    </pluginRepositories>
+    <!-- Bintray (formerly hosting markdowndoc-maven-plugin) was shut down in 2021 — removed. -->
+    <!-- <repositories>...</repositories> -->
+    <!-- <pluginRepositories>...</pluginRepositories> -->
     <!-- <distributionManagement>...</distributionManagement> -->
     <profiles>
         <!-- FR001/FR008: 'deployment' profile removed from products level. The copy-readme-md and
@@ -220,20 +199,18 @@
                         <artifactId>maven-resources-plugin</artifactId>
                         <executions>
                             <execution>
-                                <id>copy-readme-md</id>
+                                <!-- Copy site sources into generated-site so maven-pdf-plugin
+                                     can read them from the same siteDirectory path as DSH. -->
+                                <id>copy-site-resources-for-pdf</id>
                                 <phase>process-resources</phase>
                                 <goals>
                                     <goal>copy-resources</goal>
                                 </goals>
                                 <configuration>
-                                    <outputDirectory>.</outputDirectory>
+                                    <outputDirectory>${project.build.directory}/generated-site</outputDirectory>
                                     <resources>
                                         <resource>
                                             <directory>src/site</directory>
-                                            <includes>
-                                                <include>markdown/**</include>
-                                            </includes>
-                                            <targetPath>${project.build.directory}/site/pdf</targetPath>
                                             <filtering>true</filtering>
                                         </resource>
                                     </resources>
@@ -241,48 +218,25 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <!-- <plugin> -->
-                    <!-- <groupId>org.apache.maven.plugins</groupId> -->
-                    <!-- <artifactId>maven-pdf-plugin</artifactId> -->
-                    <!-- <executions> -->
-                    <!-- <execution> -->
-                    <!-- <id>pdf-generation</id> -->
-                    <!-- <phase>prepare-package</phase> -->
-                    <!-- <goals> -->
-                    <!-- <goal>pdf</goal> -->
-                    <!-- </goals> -->
-                    <!-- <configuration> -->
-                    <!-- <siteDirectory>${project.build.directory}/pdf-resources</siteDirectory> -->
-                    <!-- <outputDirectory>${project.build.directory}/site/pdf</outputDirectory> -->
-                    <!-- <workingDirectory>${project.build.directory}/site/pdf</workingDirectory> -->
-                    <!-- <aggregate>false</aggregate> -->
-                    <!-- <includeReports>false</includeReports> -->
-                    <!-- <implementation>itext</implementation> -->
-                    <!-- </configuration> -->
-                    <!-- </execution> -->
-                    <!-- </executions> -->
-                    <!-- </plugin> -->
-                    <!-- FR009: version managed in parent-poms/pom.xml pluginManagement -->
+                    <!-- Replaced markdowndoc-maven-plugin (abandoned, Bintray dead since 2021)
+                         with standard maven-pdf-plugin from Maven Central. Version and Doxia
+                         dependencies are managed in parent-poms/pom.xml pluginManagement. -->
                     <plugin>
-                        <groupId>se.natusoft.tools.doc.markdowndoc</groupId>
-                        <artifactId>markdowndoc-maven-plugin</artifactId>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-pdf-plugin</artifactId>
                         <executions>
                             <execution>
                                 <id>pdf-generation</id>
-                                <goals>
-                                    <goal>doc</goal>
-                                </goals>
                                 <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>pdf</goal>
+                                </goals>
                                 <configuration>
-                                    <generatorOptions>
-                                        <generator>pdf</generator>
-                                        <inputPaths>
-                                            ${project.build.directory}/site/pdf/markdown/README.md
-                                        </inputPaths>
-                                    </generatorOptions>
-                                    <pdfGeneratorOptions>
-                                        <resultFile>${project.build.directory}/site/pdf/README.pdf</resultFile>
-                                    </pdfGeneratorOptions>
+                                    <outputDirectory>${project.build.directory}/site/pdf</outputDirectory>
+                                    <workingDirectory>${project.build.directory}/site/pdf</workingDirectory>
+                                    <aggregate>false</aggregate>
+                                    <includeReports>false</includeReports>
+                                    <siteDirectory>${project.build.directory}/generated-site</siteDirectory>
                                 </configuration>
                             </execution>
                         </executions>
