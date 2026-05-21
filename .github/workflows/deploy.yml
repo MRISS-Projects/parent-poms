@@ -153,7 +153,8 @@ jobs:
       # Snapshot deployment
       # ----------------------------------------------------------------
 
-      # Mirrors: mvn -P deployment deploy
+      # Mirrors: mvn -Ddeployment deploy
+      # FR004: replaced -P deployment with -Ddeployment (property-based activation)
       # All deployment activities are mandatory: artifact deployment, SCM
       # changes (README commit), and site deployment.
       # If an artifact already exists (409 Conflict from GitHub Packages),
@@ -162,7 +163,7 @@ jobs:
         if: ${{ inputs.release_type == 'snapshots' }}
         run: |
           set +e
-          output=$(mvn -B -P deployment \
+          output=$(mvn -B -Ddeployment \
             -Drelease.type=snapshots \
             -Dbuild.number=${GITHUB_RUN_NUMBER} \
             deploy 2>&1)
@@ -176,11 +177,12 @@ jobs:
             fi
           fi
 
-      # Mirrors: mvn -P deployment site-deploy
+      # Mirrors: mvn -Ddeployment site-deploy
+      # FR004: replaced -P deployment with -Ddeployment
       - name: Deploy Snapshot Site
         if: ${{ inputs.release_type == 'snapshots' }}
         run: >
-          mvn -B -P deployment
+          mvn -B -Ddeployment
           -Drelease.type=snapshots
           -Dbuild.number=${GITHUB_RUN_NUMBER}
           -Dsite.deployment.personal.main=file:///tmp/sites
@@ -243,9 +245,10 @@ jobs:
           }
 
           # ---- Recursive release function ----
+          # FR004: all -P flags replaced with -D property flags.
           # Set version only at repository root. Recursion is used for:
-          #   1. Deploy artifacts with -P deployment (skip if already published)
-          #   2. Deploy site with -P deployment,release-deployment
+          #   1. Deploy artifacts with -Ddeployment (skip if already published)
+          #   2. Deploy site with -Ddeployment -Drelease-deployment
           #   3. For each child module:
           #      a. Update parent reference to the just-deployed release version
           #      b. Recurse into the child UNLESS the current path is one of:
@@ -264,13 +267,13 @@ jobs:
               echo "Skipping deploy for module at $pom_path (already published)."
             else
               mvn -B -N -f "$pom_path/pom.xml" \
-                -P deployment \
+                -Ddeployment \
                 deploy
             fi
 
             # Step 2: Site deploy with deployment + release-deployment profiles
             mvn -B -N -f "$pom_path/pom.xml" \
-              -P deployment,release-deployment \
+              -Ddeployment -Drelease-deployment \
               -Dsite.deployment.personal.main=file:///tmp/sites \
               site-deploy
 
@@ -317,8 +320,10 @@ jobs:
             versions:set
 
           # ---- Commit all version changes ----
+          # FR004: replaced -P deployment with -Ddeployment
           COMMIT_MESSAGE="Infrastructure poms release version $CURRENT_VERSION"
-          mvn -B -P deployment -Dmessage="$COMMIT_MESSAGE" scm:checkin
+          mvn -B -Ddeployment -Dmessage="$COMMIT_MESSAGE" scm:checkin
 
           # ---- Tag the release ----
-          mvn -B -P deployment -Dtag="${ARTIFACT_ID}-${CURRENT_VERSION}" scm:tag
+          # FR004: replaced -P deployment with -Ddeployment
+          mvn -B -Ddeployment -Dtag="${ARTIFACT_ID}-${CURRENT_VERSION}" scm:tag
