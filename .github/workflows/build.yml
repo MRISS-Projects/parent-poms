@@ -138,17 +138,20 @@ jobs:
       - name: Build and Install
         run: mvn -B -U clean install
 
-      # Mirrors: recursiveRelease -> mvn -P deployment deploy
+      # Mirrors: recursiveRelease -> mvn -Ddeployment deploy
+      # FR004: replaced -P deployment with -Ddeployment (property-based activation)
+      # to avoid Maven hierarchy interpolation/merge bugs.
       # Uses 'install' instead of 'deploy' to skip artifact publishing.
       # Skips the commit-readme-md SCM execution by setting its phase to 'none'
       # (the maven-scm-plugin 2.x has no built-in skip parameter; overriding the
       # phase to 'none' is the reliable way to unbind and skip that execution).
       - name: Build with Deployment Profile (no artifact publishing)
-        run: mvn -B -P deployment -Dcommit.readme.phase=none -Dbuild.number=${GITHUB_RUN_NUMBER} install
+        run: mvn -B -Ddeployment -Dcommit.readme.phase=none -Dbuild.number=${GITHUB_RUN_NUMBER} install
 
-      # Mirrors: recursiveRelease -> mvn -P deployment,release-deployment site-deploy
+      # Mirrors: recursiveRelease -> mvn -Ddeployment -Drelease-deployment site-deploy
+      # FR004: replaced -P deployment,release-deployment with -Ddeployment -Drelease-deployment
       # Uses 'site' instead of 'site-deploy' to skip gh-pages publishing.
       # -Dcommit.readme.phase=none ensures the commit-readme-md SCM execution is
       # not triggered even if the deployment profile is active.
       - name: Generate Site (no gh-pages publishing)
-        run: mvn -B -P deployment,release-deployment -Dcommit.readme.phase=none -Dsite.deployment.personal.main=file:///tmp/sites site
+        run: mvn -B -Ddeployment -Drelease-deployment -Dcommit.readme.phase=none -Dsite.deployment.personal.main=file:///tmp/sites site
