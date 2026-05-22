@@ -167,10 +167,8 @@
                     <name>product-release-deployment</name>
                 </property>
             </activation>
-            <properties>
-                <doxia.skin.version>1.8</doxia.skin.version>
-                <doxia.tools.version>1.8</doxia.tools.version>
-            </properties>
+            <!-- doxia.skin.version and doxia.tools.version inherited from root parent-poms/pom.xml (2.0.0).
+                 Removed local overrides (1.8) — versions must not be redefined in sub-modules. -->
             <build>
                 <plugins>
                     <plugin>
@@ -200,7 +198,9 @@
                         <executions>
                             <execution>
                                 <!-- Copy site sources into generated-site so maven-pdf-plugin
-                                     can read them from the same siteDirectory path as DSH. -->
+                                     can read them from the same siteDirectory path as DSH.
+                                     inherited=false: DSH defines its own copy-site-resources-for-pdf
+                                     execution at build level; this one is products-only. -->
                                 <id>copy-site-resources-for-pdf</id>
                                 <phase>process-resources</phase>
                                 <goals>
@@ -215,6 +215,57 @@
                                         </resource>
                                     </resources>
                                 </configuration>
+                                <inherited>false</inherited>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <!-- maven-pdf-plugin:1.6.1 (Doxia 1.11.1 classpath) fails when it reads
+                         target/generated-site/site.xml and finds maven-fluido-skin:2.0.0, which
+                         declares a "2.0.0 Doxia Sitetools" prerequisite.
+                         This antrun execution runs at compile phase (after process-resources copies
+                         src/site/* with filtering, before prepare-package runs the pdf plugin) and
+                         patches the skin version in the generated site.xml from 2.0.0 → 1.12.0,
+                         which is the last fluido-skin release compatible with Doxia 1.11.1. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>fix-pdf-skin-version</id>
+                                <phase>compile</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <!-- maven-pdf-plugin:1.6.1 requires Doxia Sitetools 1.x;
+                                             maven-fluido-skin:2.0.0 requires Doxia Sitetools 2.0.0.
+                                             Patch generated-site/site.xml to use fluido-skin:1.12.0
+                                             which is compatible with Doxia 1.11.1, before pdf:pdf runs.
+                                             Strategy: copy with replacestring tokenfilter → .pdf-bak,
+                                             then move .pdf-bak → site.xml.  Both tasks use
+                                             failonerror=false so modules without a generated-site/site.xml
+                                             (e.g. dsh sub-modules) silently skip the entire step. -->
+                                        <mkdir dir="${project.build.directory}/generated-site"/>
+                                        <copy file="${project.build.directory}/generated-site/site.xml"
+                                              tofile="${project.build.directory}/generated-site/site.xml.pdf-bak"
+                                              failonerror="false">
+                                            <filterchain>
+                                                <tokenfilter>
+                                                    <replacestring from="&lt;version&gt;2.0.0&lt;/version&gt;"
+                                                                   to="&lt;version&gt;1.12.0&lt;/version&gt;"/>
+                                                </tokenfilter>
+                                            </filterchain>
+                                        </copy>
+                                        <move file="${project.build.directory}/generated-site/site.xml.pdf-bak"
+                                              tofile="${project.build.directory}/generated-site/site.xml"
+                                              overwrite="true"
+                                              failonerror="false"/>
+                                    </target>
+                                </configuration>
+                                <!-- No <inherited>false</inherited> here: the failonerror=false guards above
+                                     make this a no-op wherever generated-site/site.xml does not exist
+                                     (e.g. sub-modules that don't run the pdf plugin). -->
                             </execution>
                         </executions>
                     </plugin>

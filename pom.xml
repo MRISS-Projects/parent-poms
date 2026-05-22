@@ -109,7 +109,15 @@
         <release.plugin.version>3.1.1</release.plugin.version>
         <source.plugin.version>3.4.0</source.plugin.version>
         <war.plugin.version>3.5.1</war.plugin.version>
-        <pdf.plugin.version>1.4</pdf.plugin.version>
+        <!-- maven-pdf-plugin 1.6.1 is the latest release compatible with Maven 3.x.
+             (2.0.0-M1+ requires Maven 4.x.) -->
+        <pdf.plugin.version>1.6.1</pdf.plugin.version>
+        <!-- Doxia 1.11.1 is what maven-pdf-plugin 1.6.1 was built against.
+             Kept separate from doxia.tools.version (2.0.0) which drives the
+             site plugin, to avoid the NoClassDefFoundError for
+             org.codehaus.doxia.sink.Sink that occurs when Doxia 2.x is
+             injected into the pdf-plugin classpath. -->
+        <doxia.pdf.tools.version>1.11.1</doxia.pdf.tools.version>
         <docck.plugin.version>1.1</docck.plugin.version>
         <archetype.plugin.version>3.4.0</archetype.plugin.version>
         <jxr.plugin.version>3.6.0</jxr.plugin.version>
@@ -374,25 +382,38 @@
                     <artifactId>maven-pdf-plugin</artifactId>
                     <version>${pdf.plugin.version}</version>
                     <dependencies>
+                        <!-- Use Doxia 1.x (matching the plugin's own compile-time
+                             contract) rather than the site-plugin's Doxia 2.x.
+                             This avoids NoClassDefFoundError for
+                             org.codehaus.doxia.sink.Sink on Maven 3.x. -->
+                        <!-- doxia-core: the Plexus-based parser registry and document
+                             infrastructure. Without it, doxia-module-markdown may not be
+                             discovered at runtime, causing .md files to be passed through
+                             as plain text (markdown tables appear as raw | ... | lines). -->
+                        <dependency>
+                            <groupId>org.apache.maven.doxia</groupId>
+                            <artifactId>doxia-core</artifactId>
+                            <version>${doxia.pdf.tools.version}</version>
+                        </dependency>
                         <dependency>
                             <groupId>org.apache.maven.doxia</groupId>
                             <artifactId>doxia-module-apt</artifactId>
-                            <version>${doxia.tools.version}</version>
+                            <version>${doxia.pdf.tools.version}</version>
                         </dependency>
                         <dependency>
                             <groupId>org.apache.maven.doxia</groupId>
                             <artifactId>doxia-module-markdown</artifactId>
-                            <version>${doxia.tools.version}</version>
+                            <version>${doxia.pdf.tools.version}</version>
                         </dependency>
                         <dependency>
                             <groupId>org.apache.maven.doxia</groupId>
                             <artifactId>doxia-site-renderer</artifactId>
-                            <version>${doxia.tools.version}</version>
+                            <version>${doxia.pdf.tools.version}</version>
                         </dependency>
                         <dependency>
                             <groupId>org.apache.maven.doxia</groupId>
                             <artifactId>doxia-sink-api</artifactId>
-                            <version>${doxia.tools.version}</version>
+                            <version>${doxia.pdf.tools.version}</version>
                         </dependency>
                     </dependencies>
                 </plugin>
