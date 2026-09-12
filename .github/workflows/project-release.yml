@@ -1,0 +1,227 @@
+name: Project Release
+
+on:
+  workflow_call:
+    inputs:
+      git_project:
+        type: string
+        required: true
+        description: 'Target repository name, e.g. dsh'
+      branch_name:
+        type: string
+        required: true
+        description: 'RC branch name, e.g. staging-0.3.0-SNAPSHOT-RC'
+      current_version:
+        type: string
+        required: true
+        description: 'Release version (no -SNAPSHOT), e.g. 0.3.0'
+      next_development_version:
+        type: string
+        required: true
+        description: 'Next dev SNAPSHOT after release, e.g. 0.4.0-SNAPSHOT'
+      hotfix_branch:
+        type: string
+        required: true
+        description: 'Name of the hotfix branch to create, e.g. 0.3.x'
+      initial_hotfix_version:
+        type: string
+        required: true
+        description: 'Initial SNAPSHOT for hotfix branch, e.g. 0.3.1-SNAPSHOT'
+      site_deployment_url:
+        type: string
+        required: false
+        default: 'file:///tmp/sites'
+        description: 'Site staging path. Default: file:///tmp/sites'
+    secrets:
+      DEPLOY_TOKEN:
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ inputs.git_project }}-release
+      cancel-in-progress: false
+    env:
+      DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: MRISS-Projects/${{ inputs.git_project }}
+          ref: ${{ inputs.branch_name }}
+          fetch-depth: 0
+          token: ${{ secrets.DEPLOY_TOKEN }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Set up Maven 3.9.9
+        uses: stCarolas/setup-maven@v5
+        with:
+          maven-version: 3.9.9
+
+      - name: Configure Maven settings
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << 'SETTINGS_EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                                        https://maven.apache.org/xsd/settings-1.0.0.xsd">
+              <servers>
+                  <server>
+                      <id>releases</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>MRISS-Projects-maven-repo</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>MRISS-Projects-maven-repo-plugins</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>github.com</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>github</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+              </servers>
+              <profiles>
+                  <profile>
+                      <id>github-packages</id>
+                      <properties>
+                          <github.personal.token>${env.DEPLOY_TOKEN}</github.personal.token>
+                      </properties>
+                      <repositories>
+                          <repository>
+                              <id>MRISS-Projects-maven-repo</id>
+                              <url>https://maven.pkg.github.com/MRISS-Projects/maven-repo</url>
+                              <releases><enabled>true</enabled></releases>
+                              <snapshots><enabled>true</enabled></snapshots>
+                          </repository>
+                      </repositories>
+                      <pluginRepositories>
+                          <pluginRepository>
+                              <id>MRISS-Projects-maven-repo-plugins</id>
+                              <url>https://maven.pkg.github.com/MRISS-Projects/maven-repo</url>
+                              <releases><enabled>true</enabled></releases>
+                              <snapshots><enabled>true</enabled></snapshots>
+                          </pluginRepository>
+                      </pluginRepositories>
+                  </profile>
+              </profiles>
+              <activeProfiles>
+                  <activeProfile>github-packages</activeProfile>
+              </activeProfiles>
+          </settings>
+          SETTINGS_EOF
+
+      - name: Configure Git
+        run: |
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Validate version
+        run: |
+          FULL_VERSION=$(mvn -q help:evaluate -Dexpression=project.version -DforceStdout -N)
+          IFS='.' read -r _ _ FIX <<< "${FULL_VERSION%-SNAPSHOT}"
+          if [ "$FIX" != "0" ]; then
+            echo "ERROR: project-release.yml is only for MAJOR.MINOR.0-SNAPSHOT versions."
+            echo "       FIX component is '$FIX'. Use project-hotfix.yml for FIX > 0."
+            exit 1
+          fi
+
+      - name: Maven Release
+        run: |
+          SITE_URL="${{ inputs.site_deployment_url }}"
+
+          mvn -B \
+            -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.next_development_version }} \
+            -Dbuild.CURRENT_VERSION_NUMBER=${{ inputs.current_version }} \
+            release:clean
+
+          mvn -B \
+            -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.next_development_version }} \
+            -Dbuild.CURRENT_VERSION_NUMBER=${{ inputs.current_version }} \
+            release:prepare
+
+          mvn -B \
+            -Dsite.deployment.personal.main="${SITE_URL}" \
+            release:perform
+
+      - name: Create Hotfix Branch
+        run: |
+          cd target/checkout
+          mvn -B -Dbranch=${{ inputs.hotfix_branch }} scm:branch
+
+      - name: Checkout Hotfix Branch and Set Initial Version
+        run: |
+          rm -rf target/checkout
+
+          mvn -B \
+            -DscmVersion=${{ inputs.hotfix_branch }} \
+            -DscmVersionType=branch \
+            -DcheckoutDirectory=target/checkout \
+            scm:checkout
+
+          cd target/checkout
+
+          mvn -B -DprocessAllModules=true -DnewVersion=${{ inputs.initial_hotfix_version }} versions:set
+
+          mvn -B -Dmessage="[maven-release-plugin] set hotfix version ${{ inputs.initial_hotfix_version }}" scm:checkin
+
+      - name: Merge Release Tag to Master
+        run: |
+          CURRENT_TAG="v${{ inputs.current_version }}"
+          REPO_URL="https://x-access-token:${DEPLOY_TOKEN}@github.com/MRISS-Projects/${{ inputs.git_project }}.git"
+
+          rm -rf target/checkout
+
+          git clone --branch master "$REPO_URL" target/checkout
+
+          cd target/checkout
+
+          git fetch origin "refs/tags/${CURRENT_TAG}:refs/tags/${CURRENT_TAG}"
+
+          git merge -s recursive -X theirs "$CURRENT_TAG"
+          git push "$REPO_URL" master
+
+      - name: Deploy Site to gh-pages
+        run: |
+          cd target/checkout
+          mvn -B \
+            -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
+            -Ddeployment \
+            -Drelease-deployment \
+            site-deploy
+
+      - name: Update README.md on Master
+        run: |
+          cd target/checkout
+          mvn -B \
+            -Ddeployment \
+            -Drelease-deployment \
+            process-resources
+
+      - name: Remove RC Branch
+        run: |
+          REPO_URL="https://x-access-token:${DEPLOY_TOKEN}@github.com/MRISS-Projects/${{ inputs.git_project }}.git"
+          git push "$REPO_URL" --delete ${{ inputs.branch_name }}

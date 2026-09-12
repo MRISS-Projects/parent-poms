@@ -1,0 +1,176 @@
+name: Project Staging
+
+on:
+  workflow_call:
+    inputs:
+      git_project:
+        type: string
+        required: true
+        description: 'Target repository name, e.g. dsh'
+      branch_name:
+        type: string
+        required: true
+        description: 'RC branch name, e.g. staging-0.3.0-SNAPSHOT-RC'
+      appengine_project_version:
+        type: string
+        required: false
+        default: ''
+        description: 'GCP App Engine version suffix (empty = skip flag)'
+      cloudrun_project_version:
+        type: string
+        required: false
+        default: ''
+        description: 'GCP Cloud Run version suffix (empty = skip flag)'
+      build_number:
+        type: string
+        required: false
+        default: ''
+        description: 'Build number; resolved to RC<n> in step'
+    secrets:
+      DEPLOY_TOKEN:
+        required: true
+      GCLOUD_PROJECT_ID:
+        required: false
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    env:
+      DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: MRISS-Projects/${{ inputs.git_project }}
+          ref: ${{ inputs.branch_name }}
+          fetch-depth: 0
+          token: ${{ secrets.DEPLOY_TOKEN }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Set up Maven 3.9.9
+        uses: stCarolas/setup-maven@v5
+        with:
+          maven-version: 3.9.9
+
+      - name: Configure Maven settings
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << 'SETTINGS_EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                                        https://maven.apache.org/xsd/settings-1.0.0.xsd">
+              <servers>
+                  <server>
+                      <id>releases</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>MRISS-Projects-maven-repo</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>MRISS-Projects-maven-repo-plugins</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>github.com</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>github</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+              </servers>
+              <profiles>
+                  <profile>
+                      <id>github-packages</id>
+                      <properties>
+                          <github.personal.token>${env.DEPLOY_TOKEN}</github.personal.token>
+                      </properties>
+                      <repositories>
+                          <repository>
+                              <id>MRISS-Projects-maven-repo</id>
+                              <url>https://maven.pkg.github.com/MRISS-Projects/maven-repo</url>
+                              <releases><enabled>true</enabled></releases>
+                              <snapshots><enabled>true</enabled></snapshots>
+                          </repository>
+                      </repositories>
+                      <pluginRepositories>
+                          <pluginRepository>
+                              <id>MRISS-Projects-maven-repo-plugins</id>
+                              <url>https://maven.pkg.github.com/MRISS-Projects/maven-repo</url>
+                              <releases><enabled>true</enabled></releases>
+                              <snapshots><enabled>true</enabled></snapshots>
+                          </pluginRepository>
+                      </pluginRepositories>
+                  </profile>
+              </profiles>
+              <activeProfiles>
+                  <activeProfile>github-packages</activeProfile>
+              </activeProfiles>
+          </settings>
+          SETTINGS_EOF
+
+      - name: Configure Git
+        run: |
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Build and Deploy Staging Artifacts
+        run: |
+          BUILD_NUM="${{ inputs.build_number }}"
+          BUILD_NUM="${BUILD_NUM:-${GITHUB_RUN_NUMBER}}"
+
+          GCP_FLAGS=""
+          if [ -n "${{ inputs.appengine_project_version }}" ]; then
+            GCP_FLAGS="$GCP_FLAGS -Dappengine.project.version=${{ inputs.appengine_project_version }}"
+          fi
+          if [ -n "${{ inputs.cloudrun_project_version }}" ]; then
+            GCP_FLAGS="$GCP_FLAGS -Dcloudrun.project.version=${{ inputs.cloudrun_project_version }}"
+          fi
+
+          set +e
+          output=$(mvn -B -U \
+            -Ddeployment \
+            -Drelease.type=rcs \
+            -Dbuild.number=RC${BUILD_NUM} \
+            $GCP_FLAGS \
+            clean deploy 2>&1)
+          rc=$?
+          echo "$output"
+          if [ $rc -ne 0 ]; then
+            if echo "$output" | grep -qE "status code: 409|HTTP 409|Conflict \(409\)"; then
+              echo "WARNING: Artifact already exists (409 Conflict). Continuing."
+            else
+              exit $rc
+            fi
+          fi
+          set -e
+
+      - name: Deploy Staging Site
+        run: |
+          BUILD_NUM="${{ inputs.build_number }}"
+          BUILD_NUM="${BUILD_NUM:-${GITHUB_RUN_NUMBER}}"
+
+          mvn -B -U \
+            -Ddeployment \
+            -Drelease.type=rcs \
+            -Dbuild.number=RC${BUILD_NUM} \
+            -Dsite.deployment.personal.main=file:///tmp/sites \
+            site-deploy
