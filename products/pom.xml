@@ -155,43 +155,25 @@
     <!-- <pluginRepositories>...</pluginRepositories> -->
     <!-- <distributionManagement>...</distributionManagement> -->
     <profiles>
-        <!-- FR001/FR008: 'deployment' profile removed from products level. The copy-readme-md and
-             commit-readme-md executions it contained are identical to the root parent-poms/pom.xml
-             'deployment' profile and are fully covered by inheritance. Removing here prevents
-             duplicate execution IDs from being merged incorrectly across the hierarchy. -->
+        <!-- FR001/FR008: the copy-readme-md and commit-readme-md executions formerly here are
+             identical to the root parent-poms/pom.xml 'deployment' profile and are fully covered
+             by inheritance. copy-site-resources-for-pdf and fix-pdf-skin-version, however, are
+             genuinely generic (any product's own 'deployment' profile may bind maven-pdf-plugin
+             against generated-site, e.g. dsh), so they live here rather than in
+             product-release-deployment: -Ddeployment is always passed whenever
+             -Dproduct-release-deployment is (see release:perform <arguments> below), so hosting
+             them here covers both snapshot staging and release without duplication. Both tasks
+             are no-ops (failonerror=false / no site.xml present) for products that don't run the
+             pdf plugin at all. -->
         <profile>
-            <id>product-release-deployment</id>
-            <!-- FR003: activated by -Dproduct-release-deployment property; starts here at products level -->
+            <id>deployment</id>
             <activation>
                 <property>
-                    <name>product-release-deployment</name>
+                    <name>deployment</name>
                 </property>
             </activation>
-            <!-- doxia.skin.version and doxia.tools.version inherited from root parent-poms/pom.xml (2.0.0).
-                 Removed local overrides (1.8) — versions must not be redefined in sub-modules. -->
             <build>
                 <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-changes-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>generate-list-of-issues</id>
-                                <phase>generate-sources</phase>
-                                <goals>
-                                    <goal>github-text-list</goal>
-                                </goals>
-                                <configuration>
-                                    <includeOpenIssues>false</includeOpenIssues>
-                                    <onlyMilestoneIssues>true</onlyMilestoneIssues>
-                                    <columnNames>Id,Type,Summary,Assignee,Reporter,Updated</columnNames>
-                                    <failOnError>false</failOnError>
-                                    <githubAPIServerId>github.com</githubAPIServerId>
-                                    <personalToken>${github.personal.token}</personalToken>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-resources-plugin</artifactId>
@@ -266,6 +248,42 @@
                                 <!-- No <inherited>false</inherited> here: the failonerror=false guards above
                                      make this a no-op wherever generated-site/site.xml does not exist
                                      (e.g. sub-modules that don't run the pdf plugin). -->
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>product-release-deployment</id>
+            <!-- FR003: activated by -Dproduct-release-deployment property; starts here at products level -->
+            <activation>
+                <property>
+                    <name>product-release-deployment</name>
+                </property>
+            </activation>
+            <!-- doxia.skin.version and doxia.tools.version inherited from root parent-poms/pom.xml (2.0.0).
+                 Removed local overrides (1.8) — versions must not be redefined in sub-modules. -->
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-changes-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>generate-list-of-issues</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>github-text-list</goal>
+                                </goals>
+                                <configuration>
+                                    <includeOpenIssues>false</includeOpenIssues>
+                                    <onlyMilestoneIssues>true</onlyMilestoneIssues>
+                                    <columnNames>Id,Type,Summary,Assignee,Reporter,Updated</columnNames>
+                                    <failOnError>false</failOnError>
+                                    <githubAPIServerId>github.com</githubAPIServerId>
+                                    <personalToken>${github.personal.token}</personalToken>
+                                </configuration>
                             </execution>
                         </executions>
                     </plugin>
