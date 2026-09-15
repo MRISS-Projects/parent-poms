@@ -4,7 +4,7 @@
 
 ## Version
 
-3.8.0-SNAPSHOT - 15 - 20260522-025047
+3.8.0-SNAPSHOT - 16 - 20260915-210808
 
 ## Code Based Site
 
@@ -18,8 +18,9 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | --- | ---- | ------- | -------- | -------- | ------- |
-| [56](https://github.com/MRISS-Projects/parent-poms/issues/56) | enhancement | Unify/reorganize deployment profiles | null | mriss | 5/22/26 |
-| [54](https://github.com/MRISS-Projects/parent-poms/issues/54) | enhancement | Improve versions of frameworks like spring and spring boot. Add more configuration to be generic, getting insights from DSH project | null | mriss | 4/21/26 |
+| [56](https://github.com/MRISS-Projects/parent-poms/issues/56) | enhancement | Unify/reorganize deployment profiles | mriss | mriss | 5/22/26 |
+| [54](https://github.com/MRISS-Projects/parent-poms/issues/54) | enhancement | Improve versions of frameworks like spring and spring boot. Add more configuration to be generic, getting insights from DSH project | mriss | mriss | 5/22/26 |
+| [14](https://github.com/MRISS-Projects/parent-poms/issues/14) | bug | Markdown tables are not accepted by maven pdf plugin | mriss | mriss | 5/22/26 |
 
 ### Version 3.7.1
 
