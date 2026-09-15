@@ -128,13 +128,15 @@ jobs:
           git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Note: -Dproject.dev.<groupId>:<artifactId>=<version> is intentionally omitted here.
-      # It is redundant with -DautoVersionSubmodules=true, and when it targets the root
-      # module's own GAV it causes maven-release-plugin to also bump the root POM's version
-      # on the RC branch itself (which must stay at the version being staged).
+      # Note: parent-poms/pom.xml binds the maven-release-plugin's developmentVersion
+      # parameter to ${build.NEXT_DEVELOPMENT_VERSION}, so that property (not the plain
+      # -DdevelopmentVersion flag) must be used to set the next dev version.
+      # -Dproject.dev.<groupId>:<artifactId>=<version> is intentionally omitted: it is
+      # unnecessary once the correct property is used, and when targeting the root
+      # module's own GAV it incorrectly bumps the root POM's version on the RC branch too.
       - name: Create RC branch
         run: |
           mvn -B \
-            -DdevelopmentVersion=${{ inputs.next_development_version }} \
+            -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.next_development_version }} \
             -DautoVersionSubmodules=true \
             release:branch

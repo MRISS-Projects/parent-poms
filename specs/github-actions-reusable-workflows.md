@@ -392,17 +392,22 @@ jobs:
 6. **Create RC branch**:
    ```bash
    mvn -B \
-     -DdevelopmentVersion=${{ inputs.next_development_version }} \
-     "-Dproject.dev.${{ inputs.maven_group_id }}:${{ inputs.maven_artifact_id }}=${{ inputs.next_development_version }}" \
+     -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.next_development_version }} \
      -DautoVersionSubmodules=true \
      release:branch
    ```
+   > `parent-poms/pom.xml`'s `maven-release-plugin` configuration binds `developmentVersion` to
+   > `${build.NEXT_DEVELOPMENT_VERSION}`, so that property (not the plain `-DdevelopmentVersion`
+   > flag) must be used to set the next dev version. The legacy `-Dproject.dev.<groupId>:<artifactId>`
+   > per-module override is intentionally omitted — it is unnecessary once the correct property is
+   > used, and when targeting the root module's own GAV it incorrectly bumps the root POM's version
+   > on the RC branch too (found and fixed during live validation against the `dsh` repository).
 
 #### Jenkinsfile mapping
 
 | Groovy | GitHub Actions equivalent |
 |--------|--------------------------|
-| `release:branch` with `-DdevelopmentVersion` | Same Maven goal, same flags |
+| `release:branch` with `-Dbuild.NEXT_DEVELOPMENT_VERSION` | Same Maven goal; property name matches parent-poms' plugin configuration binding |
 | `configFileProvider` + `mavenConfigurationId` | Inline `settings.xml` generated in step 4 |
 | RC branch name `staging-${project.version}-RC` | Controlled by `<branchName>` in product `pom.xml` (already configured) |
 
@@ -1216,7 +1221,7 @@ VERSION_INFO="${MAJOR}-${MINOR}-${FIX}"
 | AC1 | `project-stage.yml` with `workflow_call` | §6.1 | `release:branch` with inputs |
 | AC1 | Java 17 Temurin + Maven | §5 | `actions/setup-java@v4` + `stCarolas/setup-maven@v5` |
 | AC1 | Checks out development branch | §6.1 step 1 | `repository:` + `ref: ${{ inputs.development_branch }}` (default `DEVELOPMENT`, e.g. `DEVELOP` for dsh) |
-| AC1 | `release:branch` with `-DdevelopmentVersion` | §6.1 step 6 | Direct Maven invocation |
+| AC1 | `release:branch` with `-Dbuild.NEXT_DEVELOPMENT_VERSION` | §6.1 step 6 | Direct Maven invocation |
 | AC2 | `project-staging.yml` with `workflow_call` | §6.2 | |
 | AC2 | `mvn clean deploy` with RCS flags | §6.2 step 6 | `-Drelease.type=rcs`; 409 ignored |
 | AC2 | `mvn site-deploy` with RCS flags | §6.2 step 7 | `-Drelease.type=rcs` |
