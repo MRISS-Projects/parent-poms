@@ -26,6 +26,31 @@ on:
         required: false
         default: ''
         description: 'Build number; resolved to RC<n> in step'
+      mongo_host:
+        type: string
+        required: false
+        default: ''
+        description: 'MongoDB host for tests requiring a live connection (empty = skip Mongo setup entirely)'
+      mongo_port:
+        type: string
+        required: false
+        default: '27017'
+        description: 'MongoDB port for tests requiring a live connection'
+      mongo_user:
+        type: string
+        required: false
+        default: ''
+        description: 'MongoDB application user to create for tests (empty = skip user creation)'
+      mongo_password:
+        type: string
+        required: false
+        default: ''
+        description: 'MongoDB application user password for tests'
+      mongo_database:
+        type: string
+        required: false
+        default: ''
+        description: 'MongoDB database to create the application user against'
     secrets:
       DEPLOY_TOKEN:
         required: true
@@ -38,6 +63,18 @@ jobs:
     permissions:
       contents: write
       packages: write
+    # Some products' test suites need a live MongoDB/RabbitMQ connection (e.g. dsh-rest-api).
+    # These services are idle/unused for products whose tests don't reference them.
+    services:
+      mongodb:
+        image: mongo:6
+        ports:
+          - 27017:27017
+      rabbitmq:
+        image: rabbitmq:3-management
+        ports:
+          - 5672:5672
+          - 15672:15672
     env:
       DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
     steps:
@@ -132,6 +169,17 @@ jobs:
           git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Create MongoDB user and database
+        if: ${{ inputs.mongo_user != '' }}
+        run: |
+          docker run --rm --network host mongo:6 mongosh --host localhost --eval '
+            db.getSiblingDB("${{ inputs.mongo_database }}").createUser({
+              user: "${{ inputs.mongo_user }}",
+              pwd: "${{ inputs.mongo_password }}",
+              roles: [{ role: "readWrite", db: "${{ inputs.mongo_database }}" }]
+            });
+          '
+
       - name: Build and Deploy Staging Artifacts
         run: |
           BUILD_NUM="${{ inputs.build_number }}"
@@ -145,12 +193,18 @@ jobs:
             GCP_FLAGS="$GCP_FLAGS -Dcloudrun.project.version=${{ inputs.cloudrun_project_version }}"
           fi
 
+          MONGO_FLAGS=""
+          if [ -n "${{ inputs.mongo_host }}" ]; then
+            MONGO_FLAGS="-Dmongo.host=${{ inputs.mongo_host }} -Dmongo.port=${{ inputs.mongo_port }} -Dmongo.user=${{ inputs.mongo_user }} -Dmongo.password=${{ inputs.mongo_password }}"
+          fi
+
           set +e
           output=$(mvn -B -U \
             -Ddeployment \
             -Drelease.type=rcs \
             -Dbuild.number=RC${BUILD_NUM} \
             $GCP_FLAGS \
+            $MONGO_FLAGS \
             clean deploy 2>&1)
           rc=$?
           echo "$output"
