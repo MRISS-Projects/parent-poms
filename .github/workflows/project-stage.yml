@@ -128,10 +128,13 @@ jobs:
           git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+      # Note: -Dproject.dev.<groupId>:<artifactId>=<version> is intentionally omitted here.
+      # It is redundant with -DautoVersionSubmodules=true, and when it targets the root
+      # module's own GAV it causes maven-release-plugin to also bump the root POM's version
+      # on the RC branch itself (which must stay at the version being staged).
       - name: Create RC branch
         run: |
           mvn -B \
             -DdevelopmentVersion=${{ inputs.next_development_version }} \
-            "-Dproject.dev.${{ inputs.maven_group_id }}:${{ inputs.maven_artifact_id }}=${{ inputs.next_development_version }}" \
             -DautoVersionSubmodules=true \
             release:branch
