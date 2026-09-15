@@ -251,6 +251,19 @@
                             </execution>
                         </executions>
                     </plugin>
+                    <!-- maven-site-plugin auto-scans target/generated-site as an additional site
+                         source by default (generatedSiteDirectory). Since copy-site-resources-for-pdf
+                         above copies src/site verbatim into that same directory (for the PDF plugin's
+                         own siteDirectory config), the site:site goal would see every file twice and
+                         fail with "clashes with existing". Redirecting generatedSiteDirectory to an
+                         unused path keeps the two concerns (site rendering vs. PDF generation) apart. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-site-plugin</artifactId>
+                        <configuration>
+                            <generatedSiteDirectory>${project.build.directory}/generated-site-reports</generatedSiteDirectory>
+                        </configuration>
+                    </plugin>
                 </plugins>
             </build>
         </profile>
