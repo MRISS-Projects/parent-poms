@@ -351,15 +351,16 @@ jobs:
 
 #### Steps
 
-1. **Checkout** — `DEVELOPMENT` branch of `MRISS-Projects/{git_project}` with full history:
+1. **Checkout** — `development_branch` (default `DEVELOPMENT`) branch of `MRISS-Projects/{git_project}` with full history:
    ```yaml
    - uses: actions/checkout@v4
      with:
        repository: MRISS-Projects/${{ inputs.git_project }}
-       ref: DEVELOPMENT
+       ref: ${{ inputs.development_branch }}
        fetch-depth: 0
        token: ${{ secrets.DEPLOY_TOKEN }}
    ```
+   > `development_branch` is configurable because branch naming differs per repo (dsh uses `DEVELOP`, not `DEVELOPMENT`).
 2. **Setup Java 17 / Temurin**:
    ```yaml
    - uses: actions/setup-java@v4
@@ -997,6 +998,7 @@ jobs:
       next_development_version: ${{ inputs.next_development_version }}
       maven_artifact_id: dsh
       maven_group_id: com.mriss.products
+      development_branch: DEVELOP
     secrets:
       DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
 ```
@@ -1213,7 +1215,7 @@ VERSION_INFO="${MAJOR}-${MINOR}-${FIX}"
 |----|-------------|----------|---------------------|
 | AC1 | `project-stage.yml` with `workflow_call` | §6.1 | `release:branch` with inputs |
 | AC1 | Java 17 Temurin + Maven | §5 | `actions/setup-java@v4` + `stCarolas/setup-maven@v5` |
-| AC1 | Checks out DEVELOPMENT branch | §6.1 step 1 | `repository:` + `ref: DEVELOPMENT` |
+| AC1 | Checks out development branch | §6.1 step 1 | `repository:` + `ref: ${{ inputs.development_branch }}` (default `DEVELOPMENT`, e.g. `DEVELOP` for dsh) |
 | AC1 | `release:branch` with `-DdevelopmentVersion` | §6.1 step 6 | Direct Maven invocation |
 | AC2 | `project-staging.yml` with `workflow_call` | §6.2 | |
 | AC2 | `mvn clean deploy` with RCS flags | §6.2 step 6 | `-Drelease.type=rcs`; 409 ignored |

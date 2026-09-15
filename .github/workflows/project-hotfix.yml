@@ -1,0 +1,181 @@
+name: Project Hotfix
+
+on:
+  workflow_call:
+    inputs:
+      git_project:
+        type: string
+        required: true
+        description: 'Target repository name, e.g. dsh'
+      branch_name:
+        type: string
+        required: true
+        description: 'Hotfix branch name, e.g. 0.3.x'
+      site_deployment_url:
+        type: string
+        required: false
+        default: 'file:///tmp/sites'
+        description: 'Site staging path. Default: file:///tmp/sites'
+    secrets:
+      DEPLOY_TOKEN:
+        required: true
+
+jobs:
+  hotfix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ inputs.git_project }}-hotfix
+      cancel-in-progress: false
+    env:
+      DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: MRISS-Projects/${{ inputs.git_project }}
+          ref: ${{ inputs.branch_name }}
+          fetch-depth: 0
+          token: ${{ secrets.DEPLOY_TOKEN }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Set up Maven 3.9.9
+        uses: stCarolas/setup-maven@v5
+        with:
+          maven-version: 3.9.9
+
+      - name: Configure Maven settings
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << 'SETTINGS_EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                                        https://maven.apache.org/xsd/settings-1.0.0.xsd">
+              <servers>
+                  <server>
+                      <id>releases</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>MRISS-Projects-maven-repo</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>MRISS-Projects-maven-repo-plugins</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>github.com</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+                  <server>
+                      <id>github</id>
+                      <username>${env.GITHUB_ACTOR}</username>
+                      <password>${env.DEPLOY_TOKEN}</password>
+                  </server>
+              </servers>
+              <profiles>
+                  <profile>
+                      <id>github-packages</id>
+                      <properties>
+                          <github.personal.token>${env.DEPLOY_TOKEN}</github.personal.token>
+                      </properties>
+                      <repositories>
+                          <repository>
+                              <id>MRISS-Projects-maven-repo</id>
+                              <url>https://maven.pkg.github.com/MRISS-Projects/maven-repo</url>
+                              <releases><enabled>true</enabled></releases>
+                              <snapshots><enabled>true</enabled></snapshots>
+                          </repository>
+                      </repositories>
+                      <pluginRepositories>
+                          <pluginRepository>
+                              <id>MRISS-Projects-maven-repo-plugins</id>
+                              <url>https://maven.pkg.github.com/MRISS-Projects/maven-repo</url>
+                              <releases><enabled>true</enabled></releases>
+                              <snapshots><enabled>true</enabled></snapshots>
+                          </pluginRepository>
+                      </pluginRepositories>
+                  </profile>
+              </profiles>
+              <activeProfiles>
+                  <activeProfile>github-packages</activeProfile>
+              </activeProfiles>
+          </settings>
+          SETTINGS_EOF
+
+      - name: Configure Git
+        run: |
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Read hotfix release number
+        run: |
+          HOTFIX_RELEASE_NUMBER=$(mvn -q help:evaluate -Dexpression=project.version -DforceStdout -N \
+            | sed 's/-SNAPSHOT//')
+          echo "HOTFIX_RELEASE_NUMBER=${HOTFIX_RELEASE_NUMBER}" >> $GITHUB_ENV
+
+      - name: Validate version
+        run: |
+          FULL_VERSION=$(mvn -q help:evaluate -Dexpression=project.version -DforceStdout -N)
+          IFS='.' read -r _ _ FIX_PART <<< "${FULL_VERSION%-SNAPSHOT}"
+          if [ "$FIX_PART" = "0" ]; then
+            echo "ERROR: project-hotfix.yml is only for MAJOR.MINOR.FIX-SNAPSHOT where FIX > 0."
+            echo "       FIX component is '0'. Use project-release.yml for MAJOR.MINOR.0 releases."
+            exit 1
+          fi
+
+      - name: Maven Release
+        run: |
+          mvn -B release:clean
+          mvn -B release:prepare
+          mvn -B \
+            -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
+            release:perform
+
+      - name: Merge Release Tag to Master
+        run: |
+          CURRENT_TAG="v${HOTFIX_RELEASE_NUMBER}"
+          REPO_URL="https://x-access-token:${DEPLOY_TOKEN}@github.com/MRISS-Projects/${{ inputs.git_project }}.git"
+
+          rm -rf target/checkout
+
+          git clone --branch master "$REPO_URL" target/checkout
+
+          cd target/checkout
+
+          git fetch origin "refs/tags/${CURRENT_TAG}:refs/tags/${CURRENT_TAG}"
+
+          git merge -s recursive -X theirs --allow-unrelated-histories "$CURRENT_TAG"
+          git push "$REPO_URL" master
+
+      - name: Deploy Site to gh-pages
+        run: |
+          cd target/checkout
+          mvn -B \
+            -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
+            -Ddeployment \
+            -Drelease-deployment \
+            site-deploy
+
+      - name: Update README.md on Master
+        run: |
+          cd target/checkout
+          mvn -B \
+            -Ddeployment \
+            -Drelease-deployment \
+            process-resources
