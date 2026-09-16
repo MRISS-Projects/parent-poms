@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn -q help:evaluate *)",
+      "Bash(mvn help:evaluate *)",
+      "Bash(mvn -N help:evaluate *)",
+      "Bash(mvn -q -N help:evaluate *)",
+      "Bash(mvn dependency:tree*)",
+      "Bash(mvn versions:display-dependency-updates*)",
+      "Bash(mvn versions:display-plugin-updates*)",
+      "Bash(mvn help:effective-pom*)",
+      "Bash(mvn help:describe*)"
+    ]
+  }
+}
