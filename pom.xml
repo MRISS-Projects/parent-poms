@@ -131,11 +131,13 @@
         <castor.plugin.version>2.1</castor.plugin.version>
         <maven.failsafe.plugin.version>3.5.5</maven.failsafe.plugin.version>
         <enforcer.plugin.version>3.5.0</enforcer.plugin.version>
-        <!-- Placeholders for the enforce-coverage-data-exists guard below, so every
-             reference resolves on a plain build. A command-line -D overrides these,
-             which is what keeps -DskipTests and -Dmaven.test.skip=true working. -->
-        <skipTests>false</skipTests>
-        <maven.test.skip>false</maven.test.skip>
+        <!-- Default for the enforce-coverage-data-exists guard below. It feeds a boolean
+             <skip> parameter, so it needs a declared value: an uninterpolated ${...}
+             literal would fail type conversion. The test-skipping properties the guard
+             also reads are deliberately NOT declared here - an undefined property stays
+             an uninterpolated literal, which the guard's string comparisons already read
+             as "not skipped", and declaring names as globally meaningful as skipTests or
+             maven.test.skip in a shared root parent is a liability with no upside. -->
         <coverage.data.check.skip>false</coverage.data.check.skip>
         <maven.gwt.plugin.version>2.9.0</maven.gwt.plugin.version>
         <hibernate4.plugin.version>1.1.1</hibernate4.plugin.version>
@@ -734,10 +736,12 @@
                                     <condition><![CDATA[
                                         "true".equals("${skipTests}")
                                             || "true".equals("${maven.test.skip}")
+                                            || "true".equals("${maven.test.skip.exec}")
+                                            || "true".equals("${jacoco.skip}")
                                             || !new java.io.File("${coverage.guard.source.dir}").isDirectory()
                                             || new java.io.File("${coverage.guard.exec.file}").isFile()
                                     ]]></condition>
-                                    <message>This module has production sources under src/main/java but produced no target/jacoco.exec, so jacoco:check skipped it and the 95% coverage gate did not run. Add tests, or set -Dcoverage.data.check.skip=true if this module is genuinely exempt.</message>
+                                    <message>This module has production sources (its configured source directory exists) but produced no coverage data (no jacoco.exec in its build directory), so jacoco:check skipped it and the 95% coverage gate did not run. Add tests, or set -Dcoverage.data.check.skip=true if this module is genuinely exempt. Skipping tests (-DskipTests, -Dmaven.test.skip) or coverage (-Djacoco.skip) disarms this check along with the thing being skipped.</message>
                                 </evaluateBeanshell>
                             </rules>
                         </configuration>
