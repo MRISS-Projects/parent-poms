@@ -131,6 +131,12 @@
         <castor.plugin.version>2.1</castor.plugin.version>
         <maven.failsafe.plugin.version>3.5.5</maven.failsafe.plugin.version>
         <enforcer.plugin.version>3.5.0</enforcer.plugin.version>
+        <!-- Placeholders for the enforce-coverage-data-exists guard below, so every
+             reference resolves on a plain build. A command-line -D overrides these,
+             which is what keeps -DskipTests and -Dmaven.test.skip=true working. -->
+        <skipTests>false</skipTests>
+        <maven.test.skip>false</maven.test.skip>
+        <coverage.data.check.skip>false</coverage.data.check.skip>
         <maven.gwt.plugin.version>2.9.0</maven.gwt.plugin.version>
         <hibernate4.plugin.version>1.1.1</hibernate4.plugin.version>
         <sql.plugin.version>1.5</sql.plugin.version>
@@ -663,6 +669,76 @@
                                         </limit>
                                     </limits>
                                 </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Normalises the two paths the coverage-data guard below tests. A backslash
+                 inside a BeanShell string literal is an escape sequence, so interpolating
+                 a Windows path such as C:\Users\... makes the condition unparseable rather
+                 than false, and the rule then fails on every module. Replacing the
+                 separators keeps the guard evaluable on Windows and Linux alike, while
+                 still reading the directories the module actually configured. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>coverage-guard-source-dir</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>coverage.guard.source.dir</name>
+                            <value>${project.build.sourceDirectory}</value>
+                            <regex>\\</regex>
+                            <replacement>/</replacement>
+                            <failIfNoMatch>false</failIfNoMatch>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>coverage-guard-exec-file</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>coverage.guard.exec.file</name>
+                            <value>${project.build.directory}/jacoco.exec</value>
+                            <regex>\\</regex>
+                            <replacement>/</replacement>
+                            <failIfNoMatch>false</failIfNoMatch>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Completes jacoco:check, which skips a module that produced no exec data.
+                 A module with production sources that ran no tests would otherwise pass
+                 the coverage gate at 0%. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-coverage-data-exists</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${coverage.data.check.skip}</skip>
+                            <rules>
+                                <evaluateBeanshell>
+                                    <condition><![CDATA[
+                                        "true".equals("${skipTests}")
+                                            || "true".equals("${maven.test.skip}")
+                                            || !new java.io.File("${coverage.guard.source.dir}").isDirectory()
+                                            || new java.io.File("${coverage.guard.exec.file}").isFile()
+                                    ]]></condition>
+                                    <message>This module has production sources under src/main/java but produced no target/jacoco.exec, so jacoco:check skipped it and the 95% coverage gate did not run. Add tests, or set -Dcoverage.data.check.skip=true if this module is genuinely exempt.</message>
+                                </evaluateBeanshell>
                             </rules>
                         </configuration>
                     </execution>
