@@ -4,7 +4,7 @@
 
 ## Version
 
-3.8.0-SNAPSHOT - 22 - 20260918-121546
+3.8.0-SNAPSHOT - 22 - ${timestamp}
 
 ## Code Based Site
 
