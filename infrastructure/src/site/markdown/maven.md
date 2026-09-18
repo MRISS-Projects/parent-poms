@@ -91,9 +91,9 @@
 ### Copying settings.xml
 
 1. If you already have executed a full checkout, get the file at
-   `production/global-settinsg.xml` in you working copy and copy to
+   `production/global-settings.xml` in your working copy and copy to
    `M2_HOME/conf`. If you have not executed a full checkout, get
-   a copy of global settings [here]().
+   a copy of global settings here.
 
 2. Rename the file `settings.xml` already located at `M2_HOME/conf`
    to `settings.old.xml`.
@@ -102,11 +102,11 @@
    `M2_HOME/conf` to `settings.xml`.
 
 4. If you already have executed a full checkout, get the file at
-   `production/infrastructure/toos/user-settinsg.xml` in you working copy and copy to
+   `production/infrastructure/tools/user-settings.xml` in your working copy and copy to
    `$HOME/.m2` at linux or `C:\Users\YOUR_USER\.m2` at windows. If
    folder `.m2` does not exist at that destination, please create the
    folder. If you have not executed a full checkout, get
-   a copy of user settings [here]().
+   a copy of user settings here.
 
 5. Rename the file `settings.xml` already located at `.m2` folder,
    if there already is one, to `settings.old.xml`.
@@ -146,7 +146,7 @@ If you already have executed a full checkout:
    `C:\Users\YOUR_USER` at windows. This will be executed only at the
    first time and subsequent execution will not require download again.
 
-5. Wait till maven finish will a SUCCESSFUL BUILD message.
+5. Wait till maven finishes with a SUCCESSFUL BUILD message.
 
 If you did not execute the full checkout, you will need to bookmark this section
 and back to it after you checkout using eclipse subclipse plugin.

@@ -2,14 +2,14 @@
 
 ## Contents
 
-* [Donwload and Installation](#Donwload_and_Installation)
+* [Download and Installation](#Download_and_Installation)
 * [Setting environment variables](#Setting_environment_variables)
 * [Verifying the installation](#Verifying_the_installation)
 
-## Donwload and Installation
+## Download and Installation
 
-If you ar using a PCCOE version of windows, you will possibly have JRE 1.5, 1.6, 1.7 or
-1.8 installed. In this case it is recommended to uninsltall it, before to start
+If you are using a PCCOE version of windows, you will possibly have JRE 1.5, 1.6, 1.7 or
+1.8 installed. In this case it is recommended to uninstall it, before to start
 the process of installation of a new JDK. Use the **Application Self-Service
 Manager** to find and remove the JRE already installed. After that, follow
 the steps:
