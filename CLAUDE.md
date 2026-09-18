@@ -58,10 +58,10 @@ adding or editing a profile, follow the existing convention and never reintroduc
 
 | Profile | Activated by | Defined at | Purpose |
 |---|---|---|---|
-| `deployment` | `-Ddeployment` | root `pom.xml` | Timestamped build version, `clean-site-temporary-folder`, `maven-scm-publish-plugin` site-deploy to `gh-pages`, `copy-readme-md` + `commit-readme-md` (README.md regeneration/commit) |
+| `deployment` | `-Ddeployment` | root `pom.xml` | Timestamped build version, `clean-site-temporary-folder`, `maven-scm-publish-plugin` site-deploy to `gh-pages` |
+| `readme-generation` | `-Ddeployment` **and** `src/site/markdown/README.md` present | root `pom.xml` | `generate-list-of-issues`, `create-time-stamp`, `copy-readme-md`, `commit-readme-md` — README.md regeneration and commit. Inherited by every consuming project, and active only in the module that actually holds a README source. `-Dcommit.readme.phase=none` disarms the commit |
 | `release-deployment` | `-Drelease-deployment` | root `pom.xml` | Sets `release.type=releases` (site goes to `releases/` instead of `snapshots/` on gh-pages); binds `attach-descriptor` |
 | `product-release-deployment` | `-Dproduct-release-deployment` | `products/pom.xml` | `maven-changes-plugin:github-text-list` (closed-milestone issue list), copies `src/site` → `target/generated-site` for PDF, patches the PDF's fluido skin version, generates + attaches `README.pdf` |
-| `update-readme` | `-Dupdate-readme` | product-specific (e.g. `dsh/pom.xml`) | Lightweight README-only refresh, independent of the full `deployment` flow |
 
 Two Maven lifecycles are involved and are **not interchangeable**:
 - `mvn ... site-deploy` → site lifecycle: renders the site and pushes it to `gh-pages`. Does **not** run

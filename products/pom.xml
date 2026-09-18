@@ -155,9 +155,12 @@
     <!-- <pluginRepositories>...</pluginRepositories> -->
     <!-- <distributionManagement>...</distributionManagement> -->
     <profiles>
-        <!-- FR001/FR008: the copy-readme-md and commit-readme-md executions formerly here are
-             identical to the root parent-poms/pom.xml 'deployment' profile and are fully covered
-             by inheritance. copy-site-resources-for-pdf and fix-pdf-skin-version, however, are
+        <!-- FR001/FR008: the copy-readme-md and commit-readme-md executions formerly here now live in
+             the root parent-poms/pom.xml 'readme-generation' profile. They were briefly held in the
+             root 'deployment' profile carrying <inherited>false</inherited>, which excludes every
+             descendant POM and not merely submodules, so no consuming project ever received them —
+             the "fully covered by inheritance" this comment used to claim was wrong. See
+             MRISS-Projects/dsh#97. copy-site-resources-for-pdf and fix-pdf-skin-version, however, are
              genuinely generic (any product's own 'deployment' profile may bind maven-pdf-plugin
              against generated-site, e.g. dsh), so they live here rather than in
              product-release-deployment: -Ddeployment is always passed whenever

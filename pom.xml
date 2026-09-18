@@ -989,6 +989,47 @@
                             </execution>
                         </executions>
                     </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>readme-generation</id>
+            <!-- Two conditions, both required: Maven ANDs multiple activators (3.2.2+). The -Ddeployment
+                 half is what the staging, release and hotfix workflows already pass. The file half is what
+                 <inherited>false</inherited> could not express: it selects the reactor root of the
+                 CONSUMING project, because that is the only module holding a README source. Without it,
+                 maven-scm-plugin falls back to `git commit -a` in every module that has no README.md to
+                 stage, sweeping unrelated working-tree changes into a commit that claims to be a
+                 generated README, with exit code 0.
+
+                 Declared between 'deployment' and 'release-deployment' deliberately. Maven resolves a
+                 property defined by several active profiles in favour of the last declared, and
+                 'release-deployment' resets project.build.version to plain ${project.version} so that a
+                 released README carries no build number or timestamp. A profile declared after it that
+                 redefined the property would silently break released READMEs. This profile defines no
+                 properties at all - the placement is defence in depth, and the reason is recorded here
+                 for whoever adds one.
+
+                 Execution order matters: create-time-stamp, copy-readme-md and commit-readme-md all bind
+                 to process-resources, and same-phase executions run in POM declaration order, so the
+                 timestamp must be set before the resource is filtered.
+
+                 Filesystem caveat: <file><exists> is a plain File.exists(), case-insensitive on
+                 NTFS and APFS, while maven-resources-plugin and maven-scm-plugin match their
+                 filesets case-sensitively. A consuming module holding a case-variant such as
+                 src/site/markdown/readme.md activates this profile with nothing for the executions
+                 to match, which puts the git commit -a fallback back in play on a developer
+                 machine. Consuming projects must not keep one. See MRISS-Projects/dsh#97. -->
+            <activation>
+                <property>
+                    <name>deployment</name>
+                </property>
+                <file>
+                    <exists>${basedir}/src/site/markdown/README.md</exists>
+                </file>
+            </activation>
+            <build>
+                <plugins>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-changes-plugin</artifactId>
@@ -1020,7 +1061,6 @@
                                 <goals>
                                     <goal>create-timestamp</goal>
                                 </goals>
-                                <inherited>false</inherited>
                             </execution>
                         </executions>
                         <configuration>
@@ -1051,7 +1091,6 @@
                                         </resource>
                                     </resources>
                                 </configuration>
-                                <inherited>false</inherited>
                             </execution>
                         </executions>
                     </plugin>
@@ -1070,7 +1109,6 @@
                                     <includes>README.md</includes>
                                     <message>Auto-generated README.md [skip jenkins]</message>
                                 </configuration>
-                                <inherited>false</inherited>
                             </execution>
                         </executions>
                     </plugin>

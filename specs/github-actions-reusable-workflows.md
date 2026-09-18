@@ -94,9 +94,29 @@ This profile is activated during `release:perform` via the `<arguments>` in `pro
 <arguments>-Ddeployment -Drelease-deployment -Dproduct-release-deployment -Dsite.deployment.personal.main=${site.deployment.personal.main}</arguments>
 ```
 
-#### Profile: `update-readme` (activated by `-Dupdate-readme`) — DSH-specific
+#### Profile: `readme-generation` (activated by `-Ddeployment` **and** a `src/site/markdown/README.md`)
 
-Present only in `dsh/pom.xml`. Runs `maven-changes-plugin:github-text-list`, `copy-readme-md`, and `commit-readme-md`. This is a DSH-specific alternative to the `deployment`-profile README flow, intended for situations where only the README needs refreshing.
+Declared in the root `pom.xml` between `deployment` and `release-deployment`. Runs
+`maven-changes-plugin:github-text-list` (`generate-list-of-issues`), `buildnumber-maven-plugin:create-timestamp`
+(`create-time-stamp`), `copy-readme-md` and `commit-readme-md`. It is inherited by every consuming project,
+and the `<file><exists>` half of its activation restricts it to the one module that actually holds a README
+source — without that, `maven-scm-plugin:checkin` falls back to `git commit -a` in a module where
+`includes=README.md` matches nothing and commits unrelated working-tree changes under the message
+`Auto-generated README.md`, with exit code 0. `-Dcommit.readme.phase=none` disarms the commit.
+
+One constraint this places on consuming projects: Maven's `<file><exists>` is a plain `File.exists()`,
+which is case-insensitive on NTFS and on APFS, while `maven-resources-plugin` and `maven-scm-plugin`
+match their filesets case-sensitively through plexus' `DirectoryScanner`. A module holding a
+case-variant such as `src/site/markdown/readme.md` therefore activates the profile with nothing for
+the executions to match, which puts the `git commit -a` fallback back in play on a developer machine
+(Linux CI is unaffected). **A consuming project must not keep a case-variant of `README.md` under any
+submodule's `src/site/markdown`.** Verified against `MRISS-Projects/dsh`, which removed five such
+files as part of `dsh#97`.
+
+Until `MRISS-Projects/dsh#97` these four executions lived in the `deployment` profile, three of them carrying
+`<inherited>false</inherited>` — which excludes every descendant POM, not just submodules — so the
+`Update README.md on Master` step in `project-release.yml` and `project-hotfix.yml` was a no-op for every
+product repository. DSH's local `update-readme` profile, the workaround, was deleted at the same time.
 
 ### 2.3 DSH Module Structure
 

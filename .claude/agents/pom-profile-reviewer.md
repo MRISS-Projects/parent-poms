@@ -12,8 +12,8 @@ and lifecycle rules. You do not edit files — you report findings.
 - Profiles are activated with `-D<name>` property flags, never `-P` (multi-module `-P` inheritance caused
   merge bugs previously — see FR004/FR005 comments in `pom.xml` / `products/pom.xml`). Flag any new profile
   activation guidance that reintroduces `-P`.
-- Profile inheritance chain: root `pom.xml` (`deployment`, `release-deployment`) → `products/pom.xml`
-  (`product-release-deployment`) → product repos (e.g. `update-readme`). A profile redefined at a lower
+- Profile inheritance chain: root `pom.xml` (`deployment`, `readme-generation`, `release-deployment`) → `products/pom.xml`
+  (`product-release-deployment`) → product repos (e.g. a product's own `deployment` additions). A profile redefined at a lower
   level should be additive, not a silent duplicate of a parent-level execution.
 - Two Maven lifecycles must stay independent:
   - Site lifecycle (`site` / `site-deploy`) — publishes the rendered site to `gh-pages`.
