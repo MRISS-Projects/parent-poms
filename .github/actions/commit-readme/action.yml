@@ -90,6 +90,6 @@ runs:
           fi
 
           echo "Push to '$TARGET_BRANCH' was rejected; fetching latest branch tip and retrying ($attempt/3)."
-          git fetch --no-tags origin "$TARGET_BRANCH"
+          git fetch --no-tags "$PUSH_REMOTE" "$TARGET_BRANCH"
           git rebase FETCH_HEAD
         done
