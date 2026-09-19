@@ -76,9 +76,13 @@
 
         <java.version>17</java.version>
 
-        <!-- Default phase for the commit-readme-md SCM execution.
-             Override with -Dcommit.readme.phase=none on the command line to
-             prevent any git commit from being made (e.g. in CI builds). -->
+        <!-- Retained for compatibility only; it now controls nothing. It used to bind the
+             commit-readme-md execution, which moved out of the lifecycle in #71 because a
+             forked lifecycle replayed process-resources and committed the README once per
+             fork, one of those commits carrying an unresolved ${timestamp}. The README is
+             now committed by .github/actions/commit-readme. Passing
+             -Dcommit.readme.phase=none is harmless and no longer necessary. Remove this
+             property once no consuming project passes it. -->
         <commit.readme.phase>process-resources</commit.readme.phase>
 
         <sites.server>https://mriss-projects.github.io/parent-poms</sites.server>
@@ -1094,24 +1098,21 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-scm-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>commit-readme-md</id>
-                                <phase>${commit.readme.phase}</phase>
-                                <goals>
-                                    <goal>checkin</goal>
-                                </goals>
-                                <configuration>
-                                    <basedir>${basedir}</basedir>
-                                    <includes>README.md</includes>
-                                    <message>Auto-generated README.md [skip jenkins]</message>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
+                    <!-- No scm:checkin here. The generated README.md is committed by
+                         .github/actions/commit-readme, called from project-staging.yml,
+                         project-release.yml, project-hotfix.yml and deploy.yml.
+
+                         It used to be a commit-readme-md execution bound to
+                         ${commit.readme.phase} (process-resources). maven-jxr-plugin and
+                         maven-javadoc-plugin both contribute aggregate and test-aggregate
+                         reports whose mojos declare executePhase compile and test-compile, so
+                         maven-site-plugin forks a lifecycle four times per site invocation and
+                         replays process-resources with it. That produced one commit per fork,
+                         plus one per Maven invocation, and one of them carried an unresolved
+                         ${timestamp}. Rebinding to a later phase cannot help: a fork replays
+                         everything up to its phase, so a later phase is further inside a
+                         fork's reach, not outside it. See #71 and
+                         specs/71-commit-readme-md-reentrancy.md. -->
                 </plugins>
             </build>
         </profile>

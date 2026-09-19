@@ -214,6 +214,20 @@ creating it. Accepted deliberately; see §6 for the future mitigation.
 `-Dcommit.readme.phase=none`, so this repository's own CI already treats committing the
 README as not-part-of-the-build.
 
+**One narrowing, and it is an improvement.** A consumer running `mvn -Ddeployment` by hand,
+or from a bespoke workflow of its own, gets a README commit today and will not afterwards.
+No such invocation exists in DSH — `grep -rn 'Ddeployment'` over its workflows is empty — so
+nothing in the estate loses behaviour it relies on.
+
+It is an improvement because the current behaviour is a trap, demonstrated accidentally while
+building this story: a single diagnostic `mvn -B -N -Ddeployment process-resources`, run to
+inspect a property, silently committed `9b5f2bb5 Auto-generated README.md [skip jenkins]` to
+DSH's `staging-0.3.0-SNAPSHOT-RC`. No prompt, no warning, and it would have been pushed by
+the next unrelated `git push`. After this change the same command regenerates `README.md` in
+the working tree and commits nothing — verified in Task 4 Step 5, where a fully armed
+`mvn -Ddeployment site` left `HEAD` untouched. A build step that writes to a developer's
+branch without being asked is the surprising behaviour; removing it is the point, not a cost.
+
 ### 2.3 Why this fixes all four acceptance criteria
 
 With no `scm:checkin` bound to a lifecycle phase, the `aggregate` and `test-aggregate`
