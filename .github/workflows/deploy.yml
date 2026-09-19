@@ -190,6 +190,14 @@ jobs:
             fi
           fi
 
+      # #71: fail before the site is published, not only at commit time. See the equivalent
+      # step in project-staging.yml for why — generate-list-of-issues is failOnError=false.
+      # Called by path rather than through the action because this workflow runs in this
+      # repository, so the script is on disk.
+      - name: Verify the generated README before publishing (snapshot)
+        if: ${{ inputs.release_type == 'snapshots' }}
+        run: .github/actions/commit-readme/check-placeholders.sh README.md
+
       # Mirrors: mvn -Ddeployment site-deploy
       # FR004: replaced -P deployment with -Ddeployment
       - name: Deploy Snapshot Site

@@ -321,6 +321,28 @@ It runs inside the composite action, before `git add`. This is the only place it
 correct: it is the moment of committing, and it is reached identically by all four
 callers. `#71`'s third suggested direction asked for exactly this.
 
+**Two consequences of the guard, both accepted deliberately** (raised in code review):
+
+- **It fails on any `${NAME}`, not only properties this estate uses.** That is intended. A literal
+  `${...}` in a README *source* is already broken under Maven filtering — the filtered output would
+  differ from the source unpredictably — so the guard catches a latent bug rather than inventing a
+  false positive. What genuinely changes is the consequence: a silent bad commit before, a failed
+  build now. Both estate READMEs are clean today, checked. If a consumer ever needs a literal
+  `${...}`, add an allowlist here rather than loosening the pattern.
+- **A failure can now stop a run mid-publish.** `generate-list-of-issues` is configured
+  `<failOnError>false</failOnError>` (`pom.xml:1051`) and `${issues.text.list}` sits in both README
+  templates (`parent-poms` line 17, `dsh` line 579). So an API hiccup, an expired token or a missing
+  milestone leaves it literal *without* failing the build, and the guard then reddens the run. Before
+  this change that produced a bad commit but a completed release. Mitigated by checking **early as
+  well**: `project-staging.yml` calls the action with `verify-only: 'true'` right after the build, and
+  `deploy.yml` calls the script directly — both before the site is published. Not fully closed, since
+  artifact deploy happens first, but an artifact deploy is re-runnable (the 409 handling makes it
+  idempotent) whereas a half-published site is not. `project-release.yml` and `project-hotfix.yml` get
+  no early check: there the README is generated *after* the site deploy, inside `target/checkout`, so
+  the commit-time guard already sits immediately after generation and no earlier point exists. Making
+  `generate-list-of-issues` fail fast was rejected — a transient GitHub API failure would then block
+  releases outright, which is worse than a stale issue list.
+
 The pattern must match what `maven-resources-plugin` actually leaves behind. An
 unresolvable `${...}` is emitted verbatim, and property names in this estate include dots
 (`${project.build.version}`, `${site.deployment.personal.main}`), so the pattern is

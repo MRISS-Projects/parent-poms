@@ -217,6 +217,20 @@ jobs:
           fi
           set -e
 
+      # #71: an early copy of the guard that also runs at commit time. The build above has
+      # already regenerated README.md, so an unresolved placeholder is detectable here —
+      # before the site is published. This matters because generate-list-of-issues is
+      # configured failOnError=false (root pom.xml), so a GitHub API hiccup, an expired token
+      # or a missing milestone leaves ${issues.text.list} literal without failing the build.
+      # Without this step the run would go red only at the commit, after artifacts AND the
+      # site were published, with no way to finish. Failing here leaves only the artifact
+      # deploy done, which is re-runnable (the 409 handling above makes it idempotent).
+      - name: Verify the generated README before publishing
+        uses: MRISS-Projects/parent-poms/.github/actions/commit-readme@master
+        with:
+          branch: ${{ inputs.branch_name }}
+          verify-only: 'true'
+
       - name: Deploy Staging Site
         run: |
           BUILD_NUM="${{ inputs.build_number }}"

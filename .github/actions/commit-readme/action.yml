@@ -23,6 +23,14 @@ inputs:
     description: 'Commit message'
     required: false
     default: 'Auto-generated README.md [skip jenkins]'
+  verify-only:
+    description: >
+      'true' runs the placeholder check and stops without committing. Lets a caller fail
+      early — before publishing artifacts or the site — rather than only at commit time,
+      which matters because generate-list-of-issues is failOnError=false and can leave
+      ${issues.text.list} unresolved without failing the build.
+    required: false
+    default: 'false'
 
 runs:
   using: composite
@@ -33,6 +41,7 @@ runs:
       run: ${{ github.action_path }}/check-placeholders.sh README.md
 
     - name: Commit and push README.md
+      if: ${{ inputs.verify-only != 'true' }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
