@@ -74,11 +74,13 @@ runs:
         git commit -m "$COMMIT_MESSAGE" -- README.md
 
         if [ -n "$PUSH_URL" ]; then
+          FETCH_URL=$(git remote get-url origin)
           if git remote get-url readme-push >/dev/null 2>&1; then
-            git remote set-url readme-push "$PUSH_URL"
+            git remote set-url readme-push "$FETCH_URL"
           else
-            git remote add readme-push "$PUSH_URL"
+            git remote add readme-push "$FETCH_URL"
           fi
+          git remote set-url --push readme-push "$PUSH_URL"
           PUSH_REMOTE=readme-push
         else
           PUSH_REMOTE=origin
