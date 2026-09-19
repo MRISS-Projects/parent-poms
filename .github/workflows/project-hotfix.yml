@@ -185,7 +185,7 @@ jobs:
             process-resources
 
       - name: Commit generated README.md on Master
-        uses: ./.github/actions/commit-readme
+        uses: MRISS-Projects/parent-poms/.github/actions/commit-readme@issue-71-commit-readme-md-reentrancy
         with:
           branch: master
           working-directory: target/checkout
