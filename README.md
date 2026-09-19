@@ -4,7 +4,7 @@
 
 ## Version
 
-3.8.0-SNAPSHOT - 24 - 20260919-015544
+3.8.0 - dev - 20260919-020144
 
 ## Code Based Site
 
@@ -14,7 +14,7 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
 
-### Version 3.8.0-SNAPSHOT
+### Version 3.8.0
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | --- | ---- | ------- | -------- | -------- | ------- |
