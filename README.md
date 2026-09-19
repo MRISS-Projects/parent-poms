@@ -4,7 +4,7 @@
 
 ## Version
 
-3.8.0-SNAPSHOT - 23 - 20260918-154329
+3.8.0-SNAPSHOT - 24 - 20260919-015410
 
 ## Code Based Site
 
@@ -18,6 +18,9 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | --- | ---- | ------- | -------- | -------- | ------- |
+| [13](https://github.com/MRISS-Projects/parent-poms/issues/13) | bug | Image links don't work at .md files in maven generated site | mriss | mriss | 9/19/26 |
+| [57](https://github.com/MRISS-Projects/parent-poms/issues/57) | task | Update documentation: replace Maven 3.3.9 with 3.9.9 and standardise Java version to 17 | null | mriss | 9/18/26 |
+| [58](https://github.com/MRISS-Projects/parent-poms/issues/58) | task | Pin Maven 3.9.9 in all GitHub Actions workflows that invoke Maven | null | mriss | 9/18/26 |
 | [55](https://github.com/MRISS-Projects/parent-poms/issues/55) | task | Convert jenkins files for every stage of deployment | mriss | mriss | 9/15/26 |
 | [56](https://github.com/MRISS-Projects/parent-poms/issues/56) | enhancement | Unify/reorganize deployment profiles | mriss | mriss | 5/22/26 |
 | [54](https://github.com/MRISS-Projects/parent-poms/issues/54) | enhancement | Improve versions of frameworks like spring and spring boot. Add more configuration to be generic, getting insights from DSH project | mriss | mriss | 5/22/26 |
