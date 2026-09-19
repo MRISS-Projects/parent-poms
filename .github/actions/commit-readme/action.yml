@@ -73,28 +73,26 @@ runs:
 
         git commit -m "$COMMIT_MESSAGE" -- README.md
 
+        # git accepts a URL anywhere a remote name is accepted, for both push and fetch, so no
+        # named remote is needed. An earlier revision created a 'readme-push' remote with split
+        # fetch/push URLs; in the two callers that pass push-url, target/checkout is a clone made
+        # with that same tokenised URL, so the two halves were always identical and the remote
+        # only added state to reason about.
         if [ -n "$PUSH_URL" ]; then
-          FETCH_URL=$(git remote get-url origin)
-          if git remote get-url readme-push >/dev/null 2>&1; then
-            git remote set-url readme-push "$FETCH_URL"
-          else
-            git remote add readme-push "$FETCH_URL"
-          fi
-          git remote set-url --push readme-push "$PUSH_URL"
-          PUSH_REMOTE=readme-push
+          PUSH_TARGET="$PUSH_URL"
         else
-          PUSH_REMOTE=origin
+          PUSH_TARGET=origin
         fi
 
         for attempt in 1 2 3; do
-          if push_output=$(git push "$PUSH_REMOTE" "HEAD:$TARGET_BRANCH" 2>&1); then
+          if push_output=$(git push "$PUSH_TARGET" "HEAD:$TARGET_BRANCH" 2>&1); then
             printf '%s\n' "$push_output"
             exit 0
           fi
 
           printf '%s\n' "$push_output"
 
-          if ! fetch_output=$(git fetch --no-tags "$PUSH_REMOTE" "$TARGET_BRANCH" 2>&1); then
+          if ! fetch_output=$(git fetch --no-tags "$PUSH_TARGET" "$TARGET_BRANCH" 2>&1); then
             printf '%s\n' "$fetch_output"
             echo "::error::commit-readme: push to '$TARGET_BRANCH' failed and the latest branch tip could not be fetched for inspection."
             exit 1
@@ -119,3 +117,9 @@ runs:
             exit 1
           fi
         done
+
+        # Unreachable: every path in the loop exits. Kept because the failure mode if a future
+        # edit ever introduces a path that falls through here is the worst available one — the
+        # step reports success having pushed nothing.
+        echo "::error::commit-readme: retry loop ended without pushing. This is a bug in this action."
+        exit 1

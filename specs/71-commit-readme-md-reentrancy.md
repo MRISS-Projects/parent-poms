@@ -252,8 +252,25 @@ once.
 AC003 is worth spelling out. Today a concurrent push to the branch makes
 `maven-scm-plugin:checkin` fail *inside* `maven-site-plugin:site`'s report chain, and the
 reactor reports a `maven-jxr-plugin` failure — pointing an investigator at reports when
-the cause is README generation. Once the commit is a workflow step, a rejected push fails
-that step, named for what it is.
+the cause is README generation. Once the commit is a workflow step, a rejected push is
+handled where it happens, and reported as what it is.
+
+**It is also now recovered from rather than merely reported.** The action retries a rejected
+push up to three times, rebasing onto the advanced branch tip between attempts, and
+distinguishes contention from every other failure by checking whether the fetched tip is an
+ancestor of `HEAD` — if it is, the remote did not advance, so the failure is something else and
+the step errors out instead of retrying. A rebase that conflicts, which is what happens when the
+competing push also changed the README, aborts and fails. That keeps the "last writer wins with
+older content" outcome impossible: a clean retry only occurs when the advance was unrelated to
+`README.md`.
+
+This is a deliberate strengthening of AC003 beyond what `#71` asked for, and it matters because
+the run that motivated the AC — DSH
+[35401633533](https://github.com/MRISS-Projects/dsh/actions/runs/35401633533) — failed exactly
+this way, from a concurrent push. Contributed by the Copilot coding agent on PR #73 and kept
+after review; the remote handling was simplified afterwards (a URL works anywhere a remote name
+does, so the named remote it created was unnecessary state) and a fallthrough guard was added
+after the retry loop.
 
 ### 2.4 The composite action
 
