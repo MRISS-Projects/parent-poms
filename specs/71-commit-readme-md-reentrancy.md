@@ -279,24 +279,37 @@ at `project-release.yml:194,226` and `project-hotfix.yml:153`.
 The action is a no-op when `README.md` is unchanged, so a build that regenerates an
 identical file produces no empty commit.
 
-**Known risk — how `uses: ./` resolves inside a reusable workflow.** In `deploy.yml` and
-`build.yml`, which run in this repository, `./.github/actions/commit-readme` is unambiguous.
-In `project-staging.yml`, `project-release.yml` and `project-hotfix.yml`, which run as
-reusable workflows called from a consumer such as DSH, a relative `uses:` has to resolve
-against **this** repository at the ref it was called with, not against the caller's
-workspace. That is the current documented behaviour, and it is the only part of this change
-that cannot be verified locally — a local Maven run never exercises it.
+**Resolved: `uses: ./` does not work in a reusable workflow.** A relative path resolves
+against the **caller's** workspace, not the repository owning the workflow. Measured, not
+assumed — DSH staging run
+[35463833006](https://github.com/MRISS-Projects/dsh/actions/runs/35463833006) failed with:
 
-It fails loudly if wrong: `Can't find 'action.yml' … in '<repo>/.github/actions/commit-readme'`,
-at the step, with nothing committed. Task 6 Step 4 is where it gets tested for real, on a DSH
-staging run.
+```text
+Can't find 'action.yml', 'action.yaml' or 'Dockerfile' under
+'/home/runner/work/dsh/dsh/.github/actions/commit-readme'.
+Did you forget to run actions/checkout before running your local action?
+```
 
-**The fallback, if it does fail:** replace the relative form in the three reusable workflows
-with the fully qualified `MRISS-Projects/parent-poms/.github/actions/commit-readme@master`.
-That form is unambiguous from any repository. It was not chosen first because `@master` cannot
-be validated from an unmerged branch — the action does not exist on `master` until this story
-merges, so Task 6 would fail for a reason unrelated to the change under test. Relative first,
-qualified as the fallback, is the only order in which both can be checked.
+An earlier draft of this spec recorded the opposite as "the current documented behaviour",
+with a caveat that it could not be verified locally. The caveat was the useful half.
+
+**So the reference is qualified**, and the two contexts differ deliberately:
+
+| Workflow | Reference | Why |
+|---|---|---|
+| `deploy.yml` | `./.github/actions/commit-readme` | runs in this repository; the workspace is this repo |
+| `project-staging.yml`, `project-release.yml`, `project-hotfix.yml` | `MRISS-Projects/parent-poms/.github/actions/commit-readme@master` | run in a consumer's workspace; must name the providing repository |
+
+The qualified form is the same consumer-to-provider pointer DSH already uses for the reusable
+workflows themselves (`project-staging.yml@master`), so it introduces no new concept.
+
+**The hazard it creates, and the check that removes it.** A qualified reference carries a ref.
+Validating a change to the action requires pointing that ref at a task branch — Task 6 did
+exactly that. Merging a task-branch pin would break every consumer's release the moment the
+branch is deleted, silently, at release time. `build.yml` therefore fails if any `uses:` line
+pins the action to anything but `@master`, which makes the mistake unmergeable rather than
+merely documented. The check matches only real `uses:` lines, so it does not flag its own
+grep pattern — the first version did.
 
 ### 2.5 The placeholder guard
 
@@ -961,6 +974,50 @@ inspected — AC001 and AC002 against a real run.
 
 Comment the run URL, the commit list, and both counts. AC004 requires the commit list to
 be shown, not summarised.
+
+### Task 6 results — 2026-09-19
+
+**parent-poms snapshot deploy**, run
+[35463510690](https://github.com/MRISS-Projects/parent-poms/actions/runs/35463510690), success.
+One README commit (`366ac3ec`), one line changed, zero placeholders, on the task branch.
+`master` untouched at `fc78b679` — the `github.ref_name` fix held. For contrast, `master`'s two
+most recent commits are *both* `Auto-generated README.md`, which is the old behaviour.
+
+**DSH staging, first attempt**, run
+[35463833006](https://github.com/MRISS-Projects/dsh/actions/runs/35463833006), **failed** at
+`Commit generated README.md` on the relative-path resolution described in §2.4. It still
+produced positive evidence: `clean deploy` and `site-deploy` both ran with `-Ddeployment` and
+made **zero** README commits, where the defect produced three. That is the POM removal
+confirmed in CI for a real consumer.
+
+**DSH staging, second attempt** with the qualified reference, run
+[35465923115](https://github.com/MRISS-Projects/dsh/actions/runs/35465923115), **success**:
+
+| Check | Result |
+|---|---|
+| README commits on the RC branch | **1** (`2c2349bc`) — AC001 |
+| Placeholders in the committed README | **0** — AC002 |
+| `README.md` line 7 | `0.3.0-SNAPSHOT - RC10 - 20260919-200804` |
+| Reactor errors naming `maven-site-plugin` / `maven-jxr-plugin` | none — AC003 |
+
+Both values resolved, so the run also confirms the timestamp reaches the workflow step
+correctly now that only one commit happens.
+
+**A note on how the RC branch reached `9b5f2bb5`.** While diagnosing §1.3, a single
+`mvn -B -N -Ddeployment process-resources` — run only to read a property — committed **and
+pushed** a README to the shared RC branch, because `scm:checkin` pushes. From that run's log:
+
+```text
+Executing: git push https://mriss:********@github.com/MRISS-Projects/dsh.git
+  refs/heads/staging-0.3.0-SNAPSHOT-RC:refs/heads/staging-0.3.0-SNAPSHOT-RC
+```
+
+A local `git reset --hard` undid it locally only, and `git status` reported the branch in sync
+because it does not fetch. The commit was left in place by the repository owner's decision;
+run 35465923115 regenerated the content correctly on top of it, replacing the `dev` build
+number with `RC10`. It is the sharpest available evidence for §2.2's narrowing argument: before
+this change, a read-only-looking diagnostic could push to a shared release branch with no
+prompt and no warning.
 
 ---
 

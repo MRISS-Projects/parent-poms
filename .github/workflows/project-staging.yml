@@ -234,6 +234,6 @@ jobs:
       # forked lifecycle replayed four times. The workspace was checked out with a token, so
       # credentials are persisted and pushing to origin works.
       - name: Commit generated README.md
-        uses: MRISS-Projects/parent-poms/.github/actions/commit-readme@issue-71-commit-readme-md-reentrancy
+        uses: MRISS-Projects/parent-poms/.github/actions/commit-readme@master
         with:
           branch: ${{ inputs.branch_name }}
