@@ -832,11 +832,30 @@ inherit the step; it calls the same action by path. Add after `Deploy Snapshot S
         if: ${{ inputs.release_type == 'snapshots' }}
         uses: ./.github/actions/commit-readme
         with:
-          branch: master
+          branch: ${{ github.ref_name }}
 ```
 
-and the matching one after the release site step, with
-`if: ${{ inputs.release_type == 'releases' }}`.
+**`github.ref_name`, never a hardcoded `master`.** `deploy.yml` is normally dispatched on
+`master`, where the two are identical. Dispatched on a task branch — which Task 6 Step 1 does
+deliberately — a hardcoded `master` makes the action run `git push origin HEAD:master` from a
+checkout of the branch, fast-forwarding `master` to the branch tip and merging unreviewed work
+without a pull request. `github.ref_name` always names the ref actually checked out. The two
+release workflows keep `branch: master` because there `target/checkout` is an explicit
+`git clone --branch master`, so master genuinely is the target.
+
+**The release path gets no commit step.** Its `scm:checkin` for version changes
+(`deploy.yml:356`) already sweeps `README.md` into the release commit, so a second commit step
+would find nothing staged. What it lacks is a guard, which goes inline immediately before that
+checkin — see Step 4b.
+
+- [ ] **Step 4b: `deploy.yml` — guard the release path inline**
+
+Immediately before the `Commit all version changes` block inside `Release Deploy`:
+
+```bash
+          # ---- #71: guard before the commit below sweeps README.md in ----
+          .github/actions/commit-readme/check-placeholders.sh README.md
+```
 
 - [ ] **Step 5: `build.yml` — run the guard's tests and drop the disarming flag**
 

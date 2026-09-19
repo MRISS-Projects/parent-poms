@@ -204,11 +204,16 @@ jobs:
       # #71: this repository is its own consumer. deploy.yml is dispatched rather than
       # reusable, so it cannot inherit the step from project-staging.yml and calls the same
       # composite action directly.
+      # branch is the dispatched ref, not a hardcoded master. This workflow is normally
+      # dispatched on master, where the two are the same — but dispatched on a task branch
+      # (as #71's own validation does) a hardcoded master would push that branch's commits
+      # onto master as a fast-forward, merging unreviewed work. github.ref_name always names
+      # the ref that was actually checked out.
       - name: Commit generated README.md (snapshot)
         if: ${{ inputs.release_type == 'snapshots' }}
         uses: ./.github/actions/commit-readme
         with:
-          branch: master
+          branch: ${{ github.ref_name }}
 
       # ----------------------------------------------------------------
       # Release deployment
