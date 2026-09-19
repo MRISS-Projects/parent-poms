@@ -85,8 +85,16 @@ runs:
         fi
 
         for attempt in 1 2 3; do
-          if git push "$PUSH_REMOTE" "HEAD:$TARGET_BRANCH"; then
+          if push_output=$(git push "$PUSH_REMOTE" "HEAD:$TARGET_BRANCH" 2>&1); then
+            printf '%s\n' "$push_output"
             exit 0
+          fi
+
+          printf '%s\n' "$push_output"
+
+          if ! printf '%s\n' "$push_output" | grep -Eq '\((fetch first|non-fast-forward)\)'; then
+            echo "::error::commit-readme: push to '$TARGET_BRANCH' failed for a reason other than a non-fast-forward update."
+            exit 1
           fi
 
           if [ "$attempt" -eq 3 ]; then
