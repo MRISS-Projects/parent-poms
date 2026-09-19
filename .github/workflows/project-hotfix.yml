@@ -172,10 +172,21 @@ jobs:
             -Drelease-deployment \
             site-deploy
 
-      - name: Update README.md on Master
+      # #71: generation and committing are now two steps. Generation stays in Maven via the
+      # inherited readme-generation profile; the commit is a workflow step so a forked
+      # lifecycle cannot replay it. target/checkout is a git clone rather than an
+      # actions/checkout workspace, so it has no persisted credentials and needs push-url.
+      - name: Generate README.md on Master
         run: |
           cd target/checkout
           mvn -B \
             -Ddeployment \
             -Drelease-deployment \
             process-resources
+
+      - name: Commit generated README.md on Master
+        uses: MRISS-Projects/parent-poms/.github/actions/commit-readme@master
+        with:
+          branch: master
+          working-directory: target/checkout
+          push-url: https://x-access-token:${{ secrets.DEPLOY_TOKEN }}@github.com/MRISS-Projects/${{ inputs.git_project }}.git

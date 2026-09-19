@@ -40,12 +40,14 @@ mvn -B verify
 # (unit tests via surefire exclude *IT/*IntegrationTest; failsafe runs only those, bound to integration-test+verify)
 
 # Generate the Maven site locally without publishing (mirrors the Build workflow)
-mvn -B -Ddeployment -Drelease-deployment -Dcommit.readme.phase=none \
+mvn -B -Ddeployment -Drelease-deployment \
   -Dsite.deployment.personal.main=file:///tmp/sites site
-
-# Suppress the README.md SCM commit during local/CI builds that activate the deployment profile
-mvn ... -Dcommit.readme.phase=none ...
 ```
+
+`-Dcommit.readme.phase=none` used to be required on any local build that activated the
+`deployment` profile, to stop it committing — and pushing — `README.md`. **It is no longer needed.**
+`#71` moved the commit out of the Maven lifecycle, so no build commits anything. The property still
+exists but is inert, kept only for consumers that still pass it.
 
 There is no separate lint step; `maven-compiler-plugin` (Java 17 source/target) and `maven-surefire-plugin`
 are the only gates run on a plain `mvn install`.
@@ -59,16 +61,23 @@ adding or editing a profile, follow the existing convention and never reintroduc
 | Profile | Activated by | Defined at | Purpose |
 |---|---|---|---|
 | `deployment` | `-Ddeployment` | root `pom.xml` | Timestamped build version, `clean-site-temporary-folder`, `maven-scm-publish-plugin` site-deploy to `gh-pages` |
-| `readme-generation` | `-Ddeployment` **and** `src/site/markdown/README.md` present | root `pom.xml` | `generate-list-of-issues`, `create-time-stamp`, `copy-readme-md`, `commit-readme-md` — README.md regeneration and commit. Inherited by every consuming project, and active only in the module that actually holds a README source. `-Dcommit.readme.phase=none` disarms the commit |
+| `readme-generation` | `-Ddeployment` **and** `src/site/markdown/README.md` present | root `pom.xml` | `generate-list-of-issues`, `create-time-stamp`, `copy-readme-md` — README.md **regeneration only**. Inherited by every consuming project, and active only in the module that actually holds a README source. It commits nothing: since `#71` the commit is a workflow step (`.github/actions/commit-readme`), because report mojos that fork the lifecycle to `compile`/`test-compile` replayed `process-resources` and committed up to four times per invocation |
 | `release-deployment` | `-Drelease-deployment` | root `pom.xml` | Sets `release.type=releases` (site goes to `releases/` instead of `snapshots/` on gh-pages); binds `attach-descriptor` |
 | `product-release-deployment` | `-Dproduct-release-deployment` | `products/pom.xml` | `maven-changes-plugin:github-text-list` (closed-milestone issue list), copies `src/site` → `target/generated-site` for PDF, patches the PDF's fluido skin version, generates + attaches `README.pdf` |
 
 Two Maven lifecycles are involved and are **not interchangeable**:
-- `mvn ... site-deploy` → site lifecycle: renders the site and pushes it to `gh-pages`. Does **not** run
-  the `copy-readme-md`/`commit-readme-md` executions (those are bound to `process-resources` in the
-  default lifecycle).
-- `mvn ... process-resources` → default lifecycle: regenerates and commits root `README.md`. Does **not**
-  publish the site.
+- `mvn ... site-deploy` → site lifecycle: renders the site and pushes it to `gh-pages`. It **does**
+  reach `copy-readme-md` in practice, contrary to what this section used to claim: `maven-jxr-plugin`
+  and `maven-javadoc-plugin` each contribute `aggregate` and `test-aggregate` reports whose mojos
+  declare `executePhase` `compile`/`test-compile`, so the site build forks the default lifecycle four
+  times and replays `process-resources` with it. That is the whole cause of `#71`.
+- `mvn ... process-resources` → default lifecycle: regenerates root `README.md`. It does **not** commit
+  it (since `#71`) and does **not** publish the site.
+- Committing the regenerated `README.md` is a **workflow** step, not a Maven one:
+  `.github/actions/commit-readme`, called by `project-staging.yml`, `project-release.yml`,
+  `project-hotfix.yml` and `deploy.yml`. It must be pinned `@master` in the reusable workflows — a
+  relative `./` path resolves against the *caller's* workspace and fails — and `build.yml` enforces
+  that pin.
 
 `release:perform` only runs `deploy` (per the release plugin's `<goals>`), so a real release requires
 both an explicit `site-deploy` **and** an explicit `process-resources` invocation afterward against the
@@ -88,7 +97,8 @@ out — see `specs/github-actions-reusable-workflows.md` for the full Jenkins→
 including exact reusable-workflow inputs/secrets and a Jenkinsfile-to-step mapping):
 
 - `.github/workflows/build.yml` — runs on every push; mirrors `ReleaseJenkinsfile` build steps but with
-  publishing disabled (`install`/`site` instead of `deploy`/`site-deploy`, `-Dcommit.readme.phase=none`).
+  publishing disabled (`install`/`site` instead of `deploy`/`site-deploy`). It also runs the README
+  placeholder guard's tests and checks that the `commit-readme` action is pinned `@master`.
 - `.github/workflows/deploy.yml` — manual (`workflow_dispatch`), `release_type` input of `snapshots` or
   `releases`. Snapshot path deploys artifacts + site (tolerating 409 Conflict as non-fatal). Release path
   computes the next version, recursively deploys every module (skipping independently-released children:
@@ -106,7 +116,7 @@ all workflows.
 
 ## Versioning
 
-Root `pom.xml` version and `README.md`'s "Version" section are kept in sync by the `deployment` profile's
-`copy-readme-md`/`commit-readme-md` executions filtering `src/site/markdown/README.md` with
+Root `pom.xml` version and `README.md`'s "Version" section are kept in sync by the `readme-generation`
+profile's `copy-readme-md` execution filtering `src/site/markdown/README.md` with
 `${project.version}` / `${project.build.version}`. Don't hand-edit the root `README.md` directly — edit
 `src/site/markdown/README.md` instead, since the root file is regenerated and overwritten by CI.

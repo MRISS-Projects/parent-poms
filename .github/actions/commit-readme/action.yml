@@ -1,0 +1,125 @@
+name: Commit generated README.md
+description: >
+  Commit and push the README.md produced by the inherited readme-generation profile.
+  Kept outside the Maven lifecycle so a forked lifecycle cannot replay it — see
+  specs/71-commit-readme-md-reentrancy.md.
+
+inputs:
+  branch:
+    description: 'Branch to push the README commit to'
+    required: true
+  working-directory:
+    description: 'Directory holding the generated README.md. Default: the workspace'
+    required: false
+    default: '.'
+  push-url:
+    description: >
+      Explicit remote URL to push to. Empty pushes to origin, which works wherever
+      actions/checkout persisted credentials. Required in a directory produced by
+      git clone rather than by checkout.
+    required: false
+    default: ''
+  message:
+    description: 'Commit message'
+    required: false
+    default: 'Auto-generated README.md [skip jenkins]'
+  verify-only:
+    description: >
+      'true' runs the placeholder check and stops without committing. Lets a caller fail
+      early — before publishing artifacts or the site — rather than only at commit time,
+      which matters because generate-list-of-issues is failOnError=false and can leave
+      ${issues.text.list} unresolved without failing the build.
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Verify the generated README has no unresolved placeholders
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: ${{ github.action_path }}/check-placeholders.sh README.md
+
+    - name: Commit and push README.md
+      if: ${{ inputs.verify-only != 'true' }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        COMMIT_MESSAGE: ${{ inputs.message }}
+        PUSH_URL: ${{ inputs.push-url }}
+        TARGET_BRANCH: ${{ inputs.branch }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "$TARGET_BRANCH" ]; then
+          echo "::error::commit-readme: 'branch' input is empty. Composite actions do not" \
+               "enforce required: true, so this is checked here — an empty value would" \
+               "produce 'git push origin HEAD:' and fail opaquely."
+          exit 1
+        fi
+
+        # Do not depend on the caller having run a git config step. All four current callers
+        # do, but a fifth caller or a reordering would otherwise fail with 'Author identity
+        # unknown' after artifacts and the site are already published.
+        git config user.name  >/dev/null 2>&1 || git config user.name  "github-actions[bot]"
+        git config user.email >/dev/null 2>&1 || git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        git add README.md
+
+        if git diff --cached --quiet -- README.md; then
+          echo "README.md is unchanged; nothing to commit."
+          exit 0
+        fi
+
+        git commit -m "$COMMIT_MESSAGE" -- README.md
+
+        # git accepts a URL anywhere a remote name is accepted, for both push and fetch, so no
+        # named remote is needed. An earlier revision created a 'readme-push' remote with split
+        # fetch/push URLs; in the two callers that pass push-url, target/checkout is a clone made
+        # with that same tokenised URL, so the two halves were always identical and the remote
+        # only added state to reason about.
+        if [ -n "$PUSH_URL" ]; then
+          PUSH_TARGET="$PUSH_URL"
+        else
+          PUSH_TARGET=origin
+        fi
+
+        for attempt in 1 2 3; do
+          if push_output=$(git push "$PUSH_TARGET" "HEAD:$TARGET_BRANCH" 2>&1); then
+            printf '%s\n' "$push_output"
+            exit 0
+          fi
+
+          printf '%s\n' "$push_output"
+
+          if ! fetch_output=$(git fetch --no-tags "$PUSH_TARGET" "$TARGET_BRANCH" 2>&1); then
+            printf '%s\n' "$fetch_output"
+            echo "::error::commit-readme: push to '$TARGET_BRANCH' failed and the latest branch tip could not be fetched for inspection."
+            exit 1
+          fi
+
+          printf '%s\n' "$fetch_output"
+
+          if git merge-base --is-ancestor FETCH_HEAD HEAD; then
+            echo "::error::commit-readme: push to '$TARGET_BRANCH' failed for a reason other than the remote branch advancing."
+            exit 1
+          fi
+
+          if [ "$attempt" -eq 3 ]; then
+            echo "::error::commit-readme: push to '$TARGET_BRANCH' was rejected after 3 attempts."
+            exit 1
+          fi
+
+          echo "Push to '$TARGET_BRANCH' was rejected because the branch advanced; rebasing and retrying ($attempt/3)."
+          if ! git rebase FETCH_HEAD; then
+            git rebase --abort >/dev/null 2>&1 || true
+            echo "::error::commit-readme: could not rebase the README commit onto the latest '$TARGET_BRANCH' tip."
+            exit 1
+          fi
+        done
+
+        # Unreachable: every path in the loop exits. Kept because the failure mode if a future
+        # edit ever introduces a path that falls through here is the worst available one — the
+        # step reports success having pushed nothing.
+        echo "::error::commit-readme: retry loop ended without pushing. This is a bug in this action."
+        exit 1

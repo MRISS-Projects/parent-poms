@@ -67,6 +67,34 @@ jobs:
             exit 1
           }
 
+      # #71: the placeholder guard is the one unit-testable piece of the README commit path,
+      # so its tests run on every build rather than only when a release exercises it.
+      - name: Test the README placeholder guard
+        run: sh .github/actions/commit-readme/check-placeholders.test.sh
+
+      # #71: the reusable workflows must reach the commit-readme action by a @master ref.
+      # A relative ./ path does not work there — it resolves against the CALLER's workspace
+      # (proven by MRISS-Projects/dsh run 35463833006) — so the reference is qualified, and
+      # a qualified reference carries a ref. Validating a change to the action requires
+      # pointing that ref at a task branch; merging one would break every consumer's release
+      # the moment the branch is deleted, silently and at release time. This fails the build
+      # instead, so a task-branch pin cannot reach master.
+      - name: Check the commit-readme action is pinned to master
+        run: |
+          set -euo pipefail
+          # Matches only real 'uses:' lines, so this check does not flag its own pattern.
+          # Trailing comments and surrounding quotes are stripped before comparing, so a
+          # correctly pinned but quoted or annotated reference is not a false positive.
+          bad=$(grep -rnE '^[[:space:]]*uses:[[:space:]]*.{0,2}\S*actions/commit-readme@' .github/workflows/ \
+                | sed -e 's/[[:space:]]*#.*$//' -e "s/[\"']//g" -e 's/[[:space:]]*$//' \
+                | grep -v '@master$' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::commit-readme action pinned to a non-master ref:"
+            echo "$bad"
+            exit 1
+          fi
+          echo "All commit-readme references are pinned to @master."
+
       # Configure Maven settings so it can read from the GitHub Packages registry
       # (https://maven.pkg.github.com/MRISS-Projects/maven-repo) where
       # com.mriss:mriss-parent is hosted.
@@ -155,16 +183,15 @@ jobs:
       # FR004: replaced -P deployment with -Ddeployment (property-based activation)
       # to avoid Maven hierarchy interpolation/merge bugs.
       # Uses 'install' instead of 'deploy' to skip artifact publishing.
-      # Skips the commit-readme-md SCM execution by setting its phase to 'none'
-      # (the maven-scm-plugin 2.x has no built-in skip parameter; overriding the
-      # phase to 'none' is the reliable way to unbind and skip that execution).
+      # #71: -Dcommit.readme.phase=none is gone because there is no longer an scm:checkin
+      # bound to the lifecycle for it to disarm. The README is regenerated in the working
+      # tree and left uncommitted; nothing in this workflow commits it.
       - name: Build with Deployment Profile (no artifact publishing)
-        run: mvn -B -Ddeployment -Dcommit.readme.phase=none -Dbuild.number=${GITHUB_RUN_NUMBER} install
+        run: mvn -B -Ddeployment -Dbuild.number=${GITHUB_RUN_NUMBER} install
 
       # Mirrors: recursiveRelease -> mvn -Ddeployment -Drelease-deployment site-deploy
       # FR004: replaced -P deployment,release-deployment with -Ddeployment -Drelease-deployment
       # Uses 'site' instead of 'site-deploy' to skip gh-pages publishing.
-      # -Dcommit.readme.phase=none ensures the commit-readme-md SCM execution is
-      # not triggered even if the deployment profile is active.
+      # #71: see above — no commit.readme.phase override is needed any more.
       - name: Generate Site (no gh-pages publishing)
-        run: mvn -B -Ddeployment -Drelease-deployment -Dcommit.readme.phase=none -Dsite.deployment.personal.main=file:///tmp/sites site
+        run: mvn -B -Ddeployment -Drelease-deployment -Dsite.deployment.personal.main=file:///tmp/sites site

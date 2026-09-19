@@ -190,6 +190,14 @@ jobs:
             fi
           fi
 
+      # #71: fail before the site is published, not only at commit time. See the equivalent
+      # step in project-staging.yml for why — generate-list-of-issues is failOnError=false.
+      # Called by path rather than through the action because this workflow runs in this
+      # repository, so the script is on disk.
+      - name: Verify the generated README before publishing (snapshot)
+        if: ${{ inputs.release_type == 'snapshots' }}
+        run: .github/actions/commit-readme/check-placeholders.sh README.md
+
       # Mirrors: mvn -Ddeployment site-deploy
       # FR004: replaced -P deployment with -Ddeployment
       - name: Deploy Snapshot Site
@@ -200,6 +208,20 @@ jobs:
           -Dbuild.number=${GITHUB_RUN_NUMBER}
           -Dsite.deployment.personal.main=file:///tmp/sites
           site-deploy
+
+      # #71: this repository is its own consumer. deploy.yml is dispatched rather than
+      # reusable, so it cannot inherit the step from project-staging.yml and calls the same
+      # composite action directly.
+      # branch is the dispatched ref, not a hardcoded master. This workflow is normally
+      # dispatched on master, where the two are the same — but dispatched on a task branch
+      # (as #71's own validation does) a hardcoded master would push that branch's commits
+      # onto master as a fast-forward, merging unreviewed work. github.ref_name always names
+      # the ref that was actually checked out.
+      - name: Commit generated README.md (snapshot)
+        if: ${{ inputs.release_type == 'snapshots' }}
+        uses: ./.github/actions/commit-readme
+        with:
+          branch: ${{ github.ref_name }}
 
       # ----------------------------------------------------------------
       # Release deployment
@@ -331,6 +353,14 @@ jobs:
             -DgenerateBackupPoms=false \
             -DnewVersion="$NEXT_DEV_VERSION" \
             versions:set
+
+          # ---- #71: guard before the commit below sweeps README.md in ----
+          # recursive_release regenerated README.md via the readme-generation profile, and
+          # the scm:checkin that follows commits it along with the version changes. This is
+          # the last point at which an unresolved ${...} can still be stopped, so the same
+          # guard the commit-readme composite action uses runs here too. No separate commit
+          # step is added for this path: the checkin below already carries the README.
+          .github/actions/commit-readme/check-placeholders.sh README.md
 
           # ---- Commit all version changes ----
           # FR004: replaced -P deployment with -Ddeployment

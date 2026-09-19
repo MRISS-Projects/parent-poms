@@ -15,11 +15,16 @@ and lifecycle rules. You do not edit files — you report findings.
 - Profile inheritance chain: root `pom.xml` (`deployment`, `readme-generation`, `release-deployment`) → `products/pom.xml`
   (`product-release-deployment`) → product repos (e.g. a product's own `deployment` additions). A profile redefined at a lower
   level should be additive, not a silent duplicate of a parent-level execution.
-- Two Maven lifecycles must stay independent:
+- Two Maven lifecycles are involved, and they are **not** as independent as they look:
   - Site lifecycle (`site` / `site-deploy`) — publishes the rendered site to `gh-pages`.
-  - Default lifecycle (`process-resources` in particular) — regenerates and commits root `README.md`
-    via `copy-readme-md` / `commit-readme-md`.
-  A change that assumes one goal triggers behavior bound to the other lifecycle is a bug.
+  - Default lifecycle (`process-resources` in particular) — regenerates root `README.md` via
+    `copy-readme-md`.
+  A site build **forks the default lifecycle**: `maven-jxr-plugin` and `maven-javadoc-plugin` each
+  contribute `aggregate` and `test-aggregate` reports whose mojos declare `executePhase`
+  `compile`/`test-compile`, so `process-resources` is replayed four times per site invocation. Never
+  bind anything with a side effect outside `target/` to a phase a report fork can reach — that was
+  `#71`, where an `scm:checkin` committed and pushed the README once per fork. Committing the README is
+  now a workflow step, not a Maven one.
 - `release:perform` only runs `deploy` (its configured `<goals>`); it does NOT run `site-deploy` or
   `process-resources`. Any change to release automation must keep the explicit follow-up invocations of
   both.
