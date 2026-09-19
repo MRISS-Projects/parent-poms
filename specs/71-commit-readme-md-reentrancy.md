@@ -36,8 +36,10 @@ regenerate a file in the working tree, never commit one.
 - The `readme-generation` profile's two activators (`-Ddeployment` **and**
   `${basedir}/src/site/markdown/README.md` exists) stay as they are. Their rationale is
   recorded in `pom.xml:997-1022` and none of it is superseded here.
-- `commit.readme.phase` keeps working as an escape hatch during the transition, because
-  `build.yml:162,170` passes `-Dcommit.readme.phase=none` today.
+- `commit.readme.phase` stays defined as a property for compatibility with any consumer that
+  passes it, but it controls nothing once the execution it bound is gone. `build.yml` passed
+  `-Dcommit.readme.phase=none` on two steps to disarm the commit; Task 5 removes both, since
+  there is no longer anything to disarm.
 - Java 17, Maven 3.9.16 as pinned by the workflows.
 
 ---
@@ -276,6 +278,25 @@ at `project-release.yml:194,226` and `project-hotfix.yml:153`.
 
 The action is a no-op when `README.md` is unchanged, so a build that regenerates an
 identical file produces no empty commit.
+
+**Known risk — how `uses: ./` resolves inside a reusable workflow.** In `deploy.yml` and
+`build.yml`, which run in this repository, `./.github/actions/commit-readme` is unambiguous.
+In `project-staging.yml`, `project-release.yml` and `project-hotfix.yml`, which run as
+reusable workflows called from a consumer such as DSH, a relative `uses:` has to resolve
+against **this** repository at the ref it was called with, not against the caller's
+workspace. That is the current documented behaviour, and it is the only part of this change
+that cannot be verified locally — a local Maven run never exercises it.
+
+It fails loudly if wrong: `Can't find 'action.yml' … in '<repo>/.github/actions/commit-readme'`,
+at the step, with nothing committed. Task 6 Step 4 is where it gets tested for real, on a DSH
+staging run.
+
+**The fallback, if it does fail:** replace the relative form in the three reusable workflows
+with the fully qualified `MRISS-Projects/parent-poms/.github/actions/commit-readme@master`.
+That form is unambiguous from any repository. It was not chosen first because `@master` cannot
+be validated from an unmerged branch — the action does not exist on `master` until this story
+merges, so Task 6 would fail for a reason unrelated to the change under test. Relative first,
+qualified as the fallback, is the only order in which both can be checked.
 
 ### 2.5 The placeholder guard
 
@@ -839,11 +860,11 @@ for f in .github/workflows/*.yml .github/actions/commit-readme/action.yml; do
 done
 echo "--- commit-readme-md must be gone from the POM ---"
 grep -c 'commit-readme-md' pom.xml || echo 0
-echo "--- callers of the action (expect 5: staging, release, hotfix, deploy x2) ---"
+echo "--- callers of the action (expect 4 uses: staging, release, hotfix, deploy-snapshot) ---"
 grep -rc 'actions/commit-readme' .github/workflows/ | grep -v ':0'
 ```
 
-Expected: every file readable; `0` in the POM; five call sites across four workflows.
+Expected: every file readable; `0` in the POM; four `uses:` call sites plus one inline guard.
 
 - [ ] **Step 7: commit**
 
@@ -929,7 +950,7 @@ be shown, not summarised.
 - [ ] **Step 1: comment on `#72`**
 
 ```bash
-gh issue comment 72 --repo MRISS-Projects/parent-poms --body "#71 lands before this issue and changes its write-point table. It removes the in-reactor \`README.md\` commit — the \`Update README.md on Master\` rows at \`project-release.yml:216-222\` and \`project-hotfix.yml:175-180\` — and replaces it with a \`.github/actions/commit-readme\` step in four workflows, five call sites. So a rehearsal gains one write point to guard (the action's \`git push\`) and loses one Maven-internal one. Guarding it once inside the composite action covers all five callers."
+gh issue comment 72 --repo MRISS-Projects/parent-poms --body "#71 lands before this issue and changes its write-point table. It removes the in-reactor \`README.md\` commit — the \`Update README.md on Master\` rows at \`project-release.yml:216-222\` and \`project-hotfix.yml:175-180\` — and replaces it with a \`.github/actions/commit-readme\` step in \`project-staging.yml\`, \`project-release.yml\`, \`project-hotfix.yml\` and \`deploy.yml\`. So a rehearsal gains one write point to guard — the action's \`git push\` — and loses one Maven-internal one. Guarding it once inside the composite action covers all four callers. \`deploy.yml\`'s release path is the exception: its existing \`scm:checkin\` already carries the README, so it gets an inline placeholder guard rather than the action."
 ```
 
 ---
@@ -946,7 +967,7 @@ surviving `${...}`" → Task 2.
 repeats Task 5 Step 2's YAML verbatim rather than referring back to it.
 
 **Type consistency.** The action's four input names (`branch`, `working-directory`,
-`push-url`, `message`) are identical in §2.4, Task 3 and all five call sites in Task 5.
+`push-url`, `message`) are identical in §2.4, Task 3 and all four `uses:` call sites in Task 5.
 `check-placeholders.sh` takes one positional argument in Task 2's implementation, its
 test, and Task 3's invocation. The placeholder regex `\$\{[A-Za-z0-9_.-]+\}` is the same
 in §2.5, Task 2 and Task 6.
