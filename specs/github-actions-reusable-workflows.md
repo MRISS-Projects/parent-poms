@@ -108,10 +108,10 @@ One constraint this places on consuming projects: Maven's `<file><exists>` is a 
 which is case-insensitive on NTFS and on APFS, while `maven-resources-plugin` and `maven-scm-plugin`
 match their filesets case-sensitively through plexus' `DirectoryScanner`. A module holding a
 case-variant such as `src/site/markdown/readme.md` therefore activates the profile with nothing for
-the executions to match, which puts the `git commit -a` fallback back in play on a developer machine
-(Linux CI is unaffected). **A consuming project must not keep a case-variant of `README.md` under any
-submodule's `src/site/markdown`.** Verified against `MRISS-Projects/dsh`, which removed five such
-files as part of `dsh#97`.
+the executions to match, so on a developer machine it wastes a `copy-resources` pass while leaving no
+`README.md` to regenerate (Linux CI is unaffected). **A consuming project must not keep a
+case-variant of `README.md` under any submodule's `src/site/markdown`.** Verified against
+`MRISS-Projects/dsh`, which removed five such files as part of `dsh#97`.
 
 Until `MRISS-Projects/dsh#97` these four executions lived in the `deployment` profile, three of them carrying
 `<inherited>false</inherited>` — which excludes every descendant POM, not just submodules — so the
