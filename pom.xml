@@ -1014,16 +1014,26 @@
                  properties at all - the placement is defence in depth, and the reason is recorded here
                  for whoever adds one.
 
-                 Execution order matters: create-time-stamp, copy-readme-md and commit-readme-md all bind
-                 to process-resources, and same-phase executions run in POM declaration order, so the
-                 timestamp must be set before the resource is filtered.
+                 Execution order matters: create-time-stamp and copy-readme-md both bind to
+                 process-resources, and same-phase executions run in POM declaration order, so the
+                 timestamp must be set before the resource is filtered. (A third execution,
+                 commit-readme-md, used to bind here too; #71 moved it out of the lifecycle
+                 entirely - see the note where it was.)
 
                  Filesystem caveat: <file><exists> is a plain File.exists(), case-insensitive on
-                 NTFS and APFS, while maven-resources-plugin and maven-scm-plugin match their
-                 filesets case-sensitively. A consuming module holding a case-variant such as
-                 src/site/markdown/readme.md activates this profile with nothing for the executions
-                 to match, which puts the git commit -a fallback back in play on a developer
-                 machine. Consuming projects must not keep one. See MRISS-Projects/dsh#97. -->
+                 NTFS and APFS, while maven-resources-plugin matches its filesets
+                 case-sensitively. A consuming module holding a case-variant such as
+                 src/site/markdown/readme.md therefore activates this profile with nothing for
+                 copy-readme-md to match. See MRISS-Projects/dsh#97.
+
+                 That caveat is now cosmetic rather than dangerous, but the activator itself is
+                 NOT dead weight and must not be removed: it is what scopes this profile to the
+                 one module holding a README source. Before #71 the danger was concrete -
+                 maven-scm-plugin fell through to `git commit -a` in every module with nothing to
+                 stage, sweeping unrelated working-tree changes into a commit that claimed to be a
+                 generated README, with exit code 0. That plugin is no longer in this profile, so
+                 the fallback cannot happen; a spurious activation now costs a wasted
+                 copy-resources and nothing else. -->
             <activation>
                 <property>
                     <name>deployment</name>

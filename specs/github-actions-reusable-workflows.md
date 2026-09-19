@@ -68,7 +68,7 @@ parent-poms/pom.xml  (mriss-parent)
 
 | Level | What it adds |
 |-------|-------------|
-| `parent-poms/pom.xml` | `project.scm.id=github`; `project.build.version` with timestamp; `clean-site-temporary-folder` (cleans `/tmp/sites`); `maven-scm-publish-plugin` → `site-deploy` phase pushing `/tmp/sites` → `gh-pages`; `copy-readme-md` (copies `src/site/markdown/README.md` → root `README.md` with filtering); `commit-readme-md` (`scm:checkin` of README.md) |
+| `parent-poms/pom.xml` | `project.scm.id=github`; `project.build.version` with timestamp; `clean-site-temporary-folder` (cleans `/tmp/sites`); `maven-scm-publish-plugin` → `site-deploy` phase pushing `/tmp/sites` → `gh-pages`; `copy-readme-md` (copies `src/site/markdown/README.md` → root `README.md` with filtering); the README commit is NOT here since #71 — see `.github/actions/commit-readme` |
 | `products/pom.xml` | Profile removed at this level (FR001 — inherited from root, no duplication) |
 | `dsh/pom.xml` | `maven-pdf-plugin` → `prepare-package` (generates PDF from `generated-site`); `build-helper-maven-plugin` → `package` (attaches `README.pdf` as artifact) |
 
@@ -98,11 +98,11 @@ This profile is activated during `release:perform` via the `<arguments>` in `pro
 
 Declared in the root `pom.xml` between `deployment` and `release-deployment`. Runs
 `maven-changes-plugin:github-text-list` (`generate-list-of-issues`), `buildnumber-maven-plugin:create-timestamp`
-(`create-time-stamp`), `copy-readme-md` and `commit-readme-md`. It is inherited by every consuming project,
+(`create-time-stamp`) and `copy-readme-md`. Since #71 it regenerates README.md but commits nothing. It is inherited by every consuming project,
 and the `<file><exists>` half of its activation restricts it to the one module that actually holds a README
 source — without that, `maven-scm-plugin:checkin` falls back to `git commit -a` in a module where
 `includes=README.md` matches nothing and commits unrelated working-tree changes under the message
-`Auto-generated README.md`, with exit code 0. `-Dcommit.readme.phase=none` disarms the commit.
+`includes=README.md` matches nothing. That fallback is gone since #71 removed `maven-scm-plugin` from this profile; a spurious activation now costs a wasted `copy-resources` and nothing more. `-Dcommit.readme.phase=none` is inert.
 
 One constraint this places on consuming projects: Maven's `<file><exists>` is a plain `File.exists()`,
 which is case-insensitive on NTFS and on APFS, while `maven-resources-plugin` and `maven-scm-plugin`
@@ -153,7 +153,7 @@ dsh (root pom, packaging=pom)
 | Post-release README | `-Ddeployment -Drelease-deployment process-resources` | same |
 
 In `mail-processor-service/pom.xml`:
-- `deployment` profile: adds `buildnumber-maven-plugin:create-timestamp`, `maven-scm-plugin:commit-readme-md`, `maven-resources-plugin:copy-readme-md`
+- `deployment` profile: adds `buildnumber-maven-plugin:create-timestamp`, `maven-resources-plugin:copy-readme-md`
 - `product-release-deployment` profile: adds `build-helper-maven-plugin:attach-readme`, `maven-resources-plugin:copy-readme-md`; PDF plugin is **commented out** (inactive for mail-processor-service)
 
 This confirms that `product-release-deployment` is defined in `products/pom.xml` (which handles the PDF + issue list generation) and each product can further customize it without re-defining the base behaviour.
@@ -190,8 +190,8 @@ The same two lines appear in `ProjectHotfixJenkinsfile` at lines 98–101.
 
 - The `deployment` profile in `parent-poms/pom.xml` binds two executions to the `process-resources` phase of the **default** lifecycle:
   - `copy-readme-md`: copies `src/site/markdown/README.md` → root `README.md` with Maven filtering applied (substituting `${project.version}`, `${project.build.version}`, etc.)
-  - `commit-readme-md`: runs `maven-scm-plugin:checkin` to commit `README.md` to the SCM
-- These executions do **NOT** run during the site lifecycle (`site-deploy` invocation above)
+  - The README commit is no longer a Maven execution. Since #71 it is the `.github/actions/commit-readme` workflow step, because report mojos forking to `compile`/`test-compile` replayed `process-resources` and committed up to four times per invocation.
+- `copy-readme-md` **DOES** run during the site lifecycle, contrary to what this line used to claim: `maven-jxr-plugin` and `maven-javadoc-plugin` each contribute `aggregate` and `test-aggregate` reports whose mojos declare `executePhase` `compile`/`test-compile`, so `site` forks the default lifecycle four times. That was the cause of #71.
 - Running `mvn process-resources -Ddeployment -Drelease-deployment` from the master checkout ensures:
   - README.md at root is regenerated with the **released version** (since `release-deployment` sets `project.build.version=${project.version}`, removing snapshot identifiers)
   - The updated README.md is committed to the master branch
@@ -804,8 +804,8 @@ fi
       -Drelease-deployment \
       process-resources
     ```
-    > Do **not** add `-Dcommit.readme.phase=none` here — the intent is to commit README.md to master.
-    > That flag is only used in non-deployment CI builds to suppress the SCM checkin.
+    > `-Dcommit.readme.phase=none` is obsolete and inert. Since #71 no Maven phase commits README.md; the commit to master is the `.github/actions/commit-readme` step.
+
 13. **Remove RC branch**:
     ```bash
     REPO_URL="https://x-access-token:${DEPLOY_TOKEN}@github.com/MRISS-Projects/${{ inputs.git_project }}.git"
@@ -985,7 +985,7 @@ fi
       -Drelease-deployment \
       process-resources
     ```
-    > Do **not** add `-Dcommit.readme.phase=none` here — the intent is to commit README.md to master.
+    > `-Dcommit.readme.phase=none` is obsolete and inert — see #71. The commit to master is a workflow step.
 
 > **Note:** Unlike `project-release.yml`, there is **no RC branch removal** step — hotfix branches
 > are long-lived and remain active for future patch releases.

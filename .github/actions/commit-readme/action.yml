@@ -42,6 +42,19 @@ runs:
       run: |
         set -euo pipefail
 
+        if [ -z "$TARGET_BRANCH" ]; then
+          echo "::error::commit-readme: 'branch' input is empty. Composite actions do not" \
+               "enforce required: true, so this is checked here — an empty value would" \
+               "produce 'git push origin HEAD:' and fail opaquely."
+          exit 1
+        fi
+
+        # Do not depend on the caller having run a git config step. All four current callers
+        # do, but a fifth caller or a reordering would otherwise fail with 'Author identity
+        # unknown' after artifacts and the site are already published.
+        git config user.name  >/dev/null 2>&1 || git config user.name  "github-actions[bot]"
+        git config user.email >/dev/null 2>&1 || git config user.email "github-actions[bot]@users.noreply.github.com"
+
         git add README.md
 
         if git diff --cached --quiet -- README.md; then

@@ -39,5 +39,10 @@ expect_exit "an empty or blank brace pair passes" 0 "$TMP/empty.md"
 
 expect_exit "a missing file fails" 1 "$TMP/does-not-exist.md"
 
+mkdir -p "$TMP/adir"
+expect_exit "a directory argument fails" 1 "$TMP/adir"
+
+expect_exit "no argument fails" 1 ""
+
 if [ "$failures" -eq 0 ]; then echo "All tests passed."; else echo "$failures test(s) failed."; fi
 exit "$failures"

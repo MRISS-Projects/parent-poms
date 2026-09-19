@@ -83,7 +83,10 @@ jobs:
         run: |
           set -euo pipefail
           # Matches only real 'uses:' lines, so this check does not flag its own pattern.
-          bad=$(grep -rnE '^[[:space:]]*uses:[[:space:]]*\S*actions/commit-readme@' .github/workflows/ \
+          # Trailing comments and surrounding quotes are stripped before comparing, so a
+          # correctly pinned but quoted or annotated reference is not a false positive.
+          bad=$(grep -rnE '^[[:space:]]*uses:[[:space:]]*.{0,2}\S*actions/commit-readme@' .github/workflows/ \
+                | sed -e 's/[[:space:]]*#.*$//' -e "s/[\"']//g" -e 's/[[:space:]]*$//' \
                 | grep -v '@master$' || true)
           if [ -n "$bad" ]; then
             echo "::error::commit-readme action pinned to a non-master ref:"
