@@ -557,6 +557,10 @@ runs:
     - name: Commit and push README.md
       shell: bash
       working-directory: ${{ inputs.working-directory }}
+      env:
+        COMMIT_MESSAGE: ${{ inputs.message }}
+        PUSH_URL: ${{ inputs.push-url }}
+        TARGET_BRANCH: ${{ inputs.branch }}
       run: |
         set -euo pipefail
 
@@ -567,14 +571,23 @@ runs:
           exit 0
         fi
 
-        git commit -m "${{ inputs.message }}" -- README.md
+        git commit -m "$COMMIT_MESSAGE" -- README.md
 
-        if [ -n "${{ inputs.push-url }}" ]; then
-          git push "${{ inputs.push-url }}" "HEAD:${{ inputs.branch }}"
+        if [ -n "$PUSH_URL" ]; then
+          git push "$PUSH_URL" "HEAD:$TARGET_BRANCH"
         else
-          git push origin "HEAD:${{ inputs.branch }}"
+          git push origin "HEAD:$TARGET_BRANCH"
         fi
 ```
+
+**Why `env:` rather than `${{ }}` inside `run:`.** An expression interpolated into a shell
+body is substituted as raw text before the shell runs, so a branch name or commit message
+containing shell metacharacters would execute. `push-url` carries `DEPLOY_TOKEN`, which makes
+this the worst place in the repository to leave that pattern. Passing the values as
+environment variables and quoting them in the script removes the injection path entirely and
+keeps the token out of the rendered command line. Note the `working-directory:` interpolation
+above is unavoidable — it is a workflow-syntax field, not shell input, and GitHub evaluates it
+itself.
 
 - [ ] **Step 2: verify the action parses as YAML**
 
