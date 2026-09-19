@@ -114,6 +114,7 @@ runs:
 
           echo "Push to '$TARGET_BRANCH' was rejected because the branch advanced; rebasing and retrying ($attempt/3)."
           if ! git rebase FETCH_HEAD; then
+            git rebase --abort >/dev/null 2>&1 || true
             echo "::error::commit-readme: could not rebase the README commit onto the latest '$TARGET_BRANCH' tip."
             exit 1
           fi
