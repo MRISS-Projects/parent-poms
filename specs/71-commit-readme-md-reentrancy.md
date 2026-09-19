@@ -23,7 +23,10 @@ GitHub Action called by the four workflows that build with `-Ddeployment`. Re-en
 stops being a correctness problem because a replayed `process-resources` can only
 regenerate a file in the working tree, never commit one.
 
-**Tech stack.** Maven 3.9.16, `maven-resources-plugin`, `buildnumber-maven-plugin`,
+**Tech stack.** Maven — **3.9.9 in CI**, which every workflow here pins via
+`stCarolas/setup-maven` (`build.yml:60` and five others); the local measurements in §1 were taken
+on 3.9.16. Moving CI to 3.9.16 is `#59`, not this story. `maven-resources-plugin`,
+`buildnumber-maven-plugin`,
 `maven-scm-plugin` 2.1.0, GitHub Actions composite actions, POSIX shell.
 
 ---
@@ -40,7 +43,9 @@ regenerate a file in the working tree, never commit one.
   passes it, but it controls nothing once the execution it bound is gone. `build.yml` passed
   `-Dcommit.readme.phase=none` on two steps to disarm the commit; Task 5 removes both, since
   there is no longer anything to disarm.
-- Java 17, Maven 3.9.16 as pinned by the workflows.
+- Java 17. Maven **3.9.9** is what the workflows pin; local runs used 3.9.16. The fork behaviour
+  in §1.1 is a `maven-site-plugin` report-fork property, not version-specific, so the difference
+  does not affect the diagnosis — but do not describe 3.9.16 as the CI version.
 
 ---
 
@@ -912,8 +917,11 @@ export PATH="/c/Users/marce/apps/node-v24.21.0-win-x64:$PATH"
 for f in .github/workflows/*.yml .github/actions/commit-readme/action.yml; do
   node -e "require('fs').readFileSync('$f','utf8')" && echo "readable: $f"
 done
-echo "--- commit-readme-md must be gone from the POM ---"
-grep -c 'commit-readme-md' pom.xml || echo 0
+echo "--- the commit-readme-md EXECUTION must be gone from the POM (expect 0) ---"
+# Match the execution element, not the substring: the POM deliberately keeps explanatory
+# comments naming commit-readme-md (lines 80, 1020, 1115, 1125), so a plain substring count is
+# nonzero by design and would report a false failure.
+grep -c '<id>commit-readme-md</id>' pom.xml || echo 0
 echo "--- callers of the action (expect 4 uses: staging, release, hotfix, deploy-snapshot) ---"
 grep -rc 'actions/commit-readme' .github/workflows/ | grep -v ':0'
 ```

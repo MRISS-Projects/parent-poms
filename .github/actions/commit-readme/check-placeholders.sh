@@ -14,7 +14,15 @@
 # loosening the pattern.
 set -eu
 
-file="${1:?usage: check-placeholders.sh <file>}"
+# Checked explicitly rather than with ${1:?...}: a parameter-expansion error exits 2 under
+# dash (Ubuntu's /bin/sh, so GitHub runners) and 1 under Git Bash, which made the exit code
+# environment-dependent. CI caught that.
+if [ "$#" -lt 1 ] || [ -z "${1:-}" ]; then
+  echo "usage: check-placeholders.sh <file>" >&2
+  exit 1
+fi
+
+file="$1"
 
 if [ ! -f "$file" ]; then
   echo "check-placeholders: no such file: $file" >&2
