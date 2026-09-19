@@ -94,8 +94,16 @@ runs:
 
           printf '%s\n' "$push_output"
 
-          if ! printf '%s\n' "$push_output" | grep -Eq '\((fetch first|non-fast-forward)\)'; then
-            echo "::error::commit-readme: push to '$TARGET_BRANCH' failed for a reason other than a non-fast-forward update."
+          if ! fetch_output=$(git fetch --no-tags "$PUSH_REMOTE" "$TARGET_BRANCH" 2>&1); then
+            printf '%s\n' "$fetch_output"
+            echo "::error::commit-readme: push to '$TARGET_BRANCH' failed and the latest branch tip could not be fetched for inspection."
+            exit 1
+          fi
+
+          printf '%s\n' "$fetch_output"
+
+          if git merge-base --is-ancestor FETCH_HEAD HEAD; then
+            echo "::error::commit-readme: push to '$TARGET_BRANCH' failed for a reason other than the remote branch advancing."
             exit 1
           fi
 
@@ -104,7 +112,6 @@ runs:
             exit 1
           fi
 
-          echo "Push to '$TARGET_BRANCH' was rejected; fetching latest branch tip and retrying ($attempt/3)."
-          git fetch --no-tags "$PUSH_REMOTE" "$TARGET_BRANCH"
+          echo "Push to '$TARGET_BRANCH' was rejected because the branch advanced; rebasing and retrying ($attempt/3)."
           git rebase FETCH_HEAD
         done
