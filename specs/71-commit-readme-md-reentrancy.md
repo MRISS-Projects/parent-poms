@@ -56,11 +56,15 @@ conclusion **success**, commits `957fcf04` → `973ced8c` (corrupt) → `7afcb9b
 this repository's own `3.9.0-SNAPSHOT` deploy, and once in a DSH staging run on
 `staging-0.3.0-SNAPSHOT-RC`.
 
-### 1.1 What the issue got wrong
+### 1.1 What the issue got wrong, and what measurement corrected
 
 `#71` reads the failure stack as `maven-site-plugin:site` → `maven-jxr-plugin` →
 `maven-scm-plugin:checkin (commit-readme-md)` and attributes the re-entry to the `jxr`
-report. **That is not the forking mojo.** From `META-INF/maven/plugin.xml` in
+report. The mechanism — a report mojo forking a lifecycle past `process-resources` — is
+right. The attribution is wrong in two ways, both measured against DSH rather than reasoned
+about.
+
+**`jxr` itself cannot reach the README executions.** From `META-INF/maven/plugin.xml` in
 `maven-jxr-plugin-3.6.0.jar`:
 
 | Goal | `executePhase` | Replays `process-resources`? |
@@ -76,23 +80,97 @@ Maven's phase order is `generate-sources` → `process-sources` → `generate-re
 explicitly at `pom.xml:1060,1077`, the third via `${commit.readme.phase}`
 (`pom.xml:1103`), whose default is `process-resources` (`pom.xml:82`).
 
-So `jxr` cannot reach them and `aggregate`/`test-aggregate` can. **Three commits is one
-main-lifecycle pass plus two aggregate report forks** — a countable prediction, verified
-in Task 1.
+**It is two plugins, not one, and four forks, not three.** Measured: one `mvn -Ddeployment
+site` in DSH replays `copy-readme-md` **four** times in the root module, and only in the
+root module — no other module activates the profile, because only `./src/site/markdown/README.md`
+exists. The four forks are:
 
-This correction matters twice over. It names a real target instead of a guess, and it
-rules out the cheapest-looking fix: rebinding `commit-readme-md` to a later phase would
-not help, because a fork to `compile` or `test-compile` replays everything up to that
-phase, and any later phase is *further inside* a fork's reach, not outside it.
+| Log line | Forking mojo | Forked phase |
+|---|---|---|
+| 34 | `maven-jxr-plugin:aggregate` | `compile` |
+| 521 | `maven-jxr-plugin:test-aggregate` | `test-compile` |
+| 1078 | **`maven-javadoc-plugin:aggregate`** | `compile` |
+| 1565 | **`maven-javadoc-plugin:test-aggregate`** | `test-compile` |
 
-### 1.2 Why ordering cannot be the fix
+Maven states it outright: `Preparing maven-jxr-plugin:aggregate report requires 'compile'
+forked phase execution`. Javadoc's aggregate reports fork identically and the issue does
+not mention them.
 
-Within a forked lifecycle the three executions still run in POM declaration order, so
-`create-time-stamp` precedes `copy-readme-md` in every pass. Making that ordering more
-robust therefore addresses nothing that is actually broken, and leaves three commits
-standing — `#71`'s AC001 fails by construction. The defect is not *when* the commit
-happens relative to the timestamp; it is that a commit happens inside a lifecycle phase
-that Maven is free to replay.
+**Where the issue's "three" comes from.** Not from `site` alone. A staging run makes two
+separate Maven invocations — `clean deploy` (`project-staging.yml:203`) then `site-deploy`
+(`project-staging.yml:226`) — so the three commits span both. A `site`-only run has no main
+`process-resources` pass at all; every occurrence is a fork.
+
+The consequence for the fix: rebinding `commit-readme-md` to a later phase cannot help. A
+fork to `compile` or `test-compile` replays everything up to that phase, so any later phase
+is *further inside* a fork's reach, not outside it.
+
+### 1.2 Why ordering cannot be the fix either
+
+`create-time-stamp` precedes `copy-readme-md` in every pass — same phase, POM declaration
+order, and §1.3 shows it runs first and then short-circuits. Making that ordering "more
+robust", which is `#71`'s second suggested direction, therefore addresses nothing that is
+broken, and leaves the commits standing, so AC001 fails by construction. The defect is not
+*when* the commit happens relative to the timestamp; it is that a commit happens inside a
+lifecycle phase Maven is free to replay.
+
+### 1.3 How `${timestamp}` actually works — settled
+
+`buildnumber-maven-plugin` 3.3.0 logs
+**`Skipping because we are not in root module.`** for the root module, on every pass. It is
+not skipping anything. Disassembled from `CreateTimestampMojo.class`:
+
+```java
+public void execute() {
+    if (skip) { log.info("Skipping execution."); return; }
+
+    if (session.getCurrentProject().isExecutionRoot() && !executeRootOnly) {
+        log.info("Skipping because we are not in root module.");
+        // bytecode offsets 39-45: logs, then falls through to 50. There is NO return.
+    }
+
+    String ts = session.getTopLevelProject().getProperties().getProperty(timestampPropertyName);
+    if (ts != null) { log.debug("Using previously created timestamp."); return; }
+
+    ts = Utils.createTimestamp(timestampFormat, timezone);
+    for (MavenProject p : session.getProjectDependencyGraph().getSortedProjects()) {
+        p.getProperties().setProperty(timestampPropertyName, ts);
+    }
+}
+```
+
+Three facts follow, all confirmed in a `-X` run:
+
+1. **The message is a cosmetic bug with no effect.** It prints, then the mojo stores the
+   property anyway. This is why every committed `README.md` in this repository and in DSH
+   carries a real timestamp despite the log saying it was skipped. The guard's condition is
+   also inverted relative to its own message: `isExecutionRoot() && !executeRootOnly` logs
+   "we are not in root module" precisely when it *is* the root module.
+2. **The timestamp is minted once per Maven invocation** and written to every reactor
+   project; later executions short-circuit. Observed: `Storing timestamp property:
+   timestamp 20260919-153845` on the first fork, then `Using previously created timestamp.`
+   on forks two, three and four.
+3. **So two invocations mint two different values.** This explains something `#71` records
+   but does not account for: its two *good* commits read `20260918-224757` and
+   `20260918-225016`, 2m19s apart — one per Maven invocation, not one per fork.
+
+**What is still unproven, stated plainly.** The placeholder did **not** reproduce locally in
+six configurations — `site`, root-only `-N`, with and without `-Dbuild.number`, with `-X`.
+All four forks resolved the timestamp every time. So the precise trigger for the corrupt
+commit is CI-specific and remains unidentified.
+
+**The design does not depend on identifying it**, and that is deliberate rather than a
+concession. Removing every in-lifecycle commit means no pass can commit anything, whichever
+pass would have been the corrupt one; and the guard in §2.5 turns a silent corruption into a
+failed build. What the CI-only nature does change is where AC002's evidence comes from: Task
+6, not a local run. §2.3 says so.
+
+One asymmetry in the corrupt commit is consistent with the clone-visibility theory and worth
+recording for whoever revisits it: `973ced8c` read `0.3.0-SNAPSHOT - RC6 - ${timestamp}`, so
+`${build.number}` resolved while `${timestamp}` did not. `build.number` arrives as a
+user property (`-Dbuild.number=RC6`) and survives project cloning; `timestamp` is a project
+property written to `getSortedProjects()`, which a forked clone need not be among. Suggestive,
+not established — the local runs show clones resolving it fine.
 
 ---
 
@@ -146,7 +224,7 @@ once.
 | `#71` AC | How it is met |
 |---|---|
 | AC001 — one commit, not three | By construction: one commit step, outside the lifecycle |
-| AC002 — no placeholder committed *at any point* | Intermediate regenerations never reach git, plus the guard in §2.5 |
+| AC002 — no placeholder committed *at any point* | **The guard in §2.5 is load-bearing here**, not the architecture. Intermediate regenerations no longer reach git, which removes the observed failure mode, but §1.3 could not reproduce the placeholder locally — so the guard is what makes AC002 hold whatever the CI-specific trigger turns out to be. Evidence comes from Task 6, in CI. |
 | AC003 — a rejected README push does not fail the reactor naming `maven-site-plugin`/`maven-jxr-plugin` | By deletion: no `scm:checkin` runs during `site`, so a push cannot fail inside a report |
 | AC004 — verified on a real consuming staging run | Task 6 |
 
@@ -276,9 +354,15 @@ echo "--- forking report mojos ---"
 grep -nE 'maven-jxr-plugin.*(aggregate|jxr)' .logs/mvn-site-forkcount.log
 ```
 
-Expected: **3** `copy-readme-md` executions, and `aggregate` / `test-aggregate` present in
-the forking lines. If the count is not 3, stop and reconcile with §1.1 before continuing —
-the design's premise is that count.
+Expected: **4** `copy-readme-md` executions, and four `requires '<phase>' forked phase
+execution` lines naming `maven-jxr-plugin:aggregate`, `maven-jxr-plugin:test-aggregate`,
+`maven-javadoc-plugin:aggregate` and `maven-javadoc-plugin:test-aggregate`. If the count
+differs, stop and reconcile with §1.1 before continuing.
+
+**Measured 2026-09-19:** exactly that — 4 replays at log lines 58, 545, 1102, 1589, from the
+four forks at lines 34, 521, 1078, 1565. An earlier draft of this spec predicted 3 from `jxr`
+alone; both the count and the plugin set were wrong and §1.1 now carries the corrected
+version. The `-X` follow-up also settled the timestamp mechanism — see §1.3.
 
 - [ ] **Step 3: restore the working tree**
 
@@ -589,14 +673,14 @@ wait $MVN_PID; echo "maven exit=$?"
 
 echo "--- scm:checkin executions (expect 0) ---"
 grep -c 'maven-scm-plugin.*checkin' .logs/mvn-site-after.log || echo 0
-echo "--- copy-readme-md executions (expect 3, unchanged) ---"
+echo "--- copy-readme-md executions (expect 4, unchanged) ---"
 grep -c 'copy-readme-md' .logs/mvn-site-after.log
 echo "--- git state: README modified, nothing committed ---"
 git status --short README.md
 git log --oneline -1
 ```
 
-Expected: `0` checkins; `3` `copy-readme-md` — the forks still replay, which is the point,
+Expected: `0` checkins; `4` `copy-readme-md` — the forks still replay, which is the point,
 they are simply harmless now; `README.md` shown as modified; `git log` unchanged from
 before the run. Note this run is **not** passing `-Dcommit.readme.phase=none`, unlike
 Task 1 — nothing needs disarming any more.
