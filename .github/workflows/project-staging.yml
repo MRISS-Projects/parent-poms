@@ -201,6 +201,7 @@ jobs:
           set +e
           output=$(mvn -B -U \
             -Ddeployment \
+            -DintegrationTests \
             -Drelease.type=rcs \
             -Dbuild.number=RC${BUILD_NUM} \
             $GCP_FLAGS \
