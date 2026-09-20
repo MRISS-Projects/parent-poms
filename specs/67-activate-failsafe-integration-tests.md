@@ -6,7 +6,7 @@
 | Milestone | `3.9.0-SNAPSHOT` |
 | Branch | `issue-67-activate-failsafe-integration-tests`, cut from `master` |
 | Requesting project | `MRISS-Projects/dsh` — `#46`, Wave 0, `specs/product/PRD.md` §4 |
-| Spins off | one DSH issue (reclassification) and one parent-poms issue (`index.md`) — see §6 |
+| Spins off | [`dsh#112`](https://github.com/MRISS-Projects/dsh/issues/112) and [`#74`](https://github.com/MRISS-Projects/parent-poms/issues/74) — see §6 |
 
 > **For agentic workers:** implement this task-by-task. Steps use checkbox (`- [ ]`) syntax.
 > This repository has no Java production or test source anywhere in the reactor, so nothing
@@ -611,11 +611,11 @@ git commit -m "docs(#67): record the end-to-end verification evidence"
 
 ## 6. What this spins off
 
-Two issues come out of this work. Neither is opened without the human's approval, and neither
-belongs on the `3.9.0-SNAPSHOT` milestone — that milestone is being cleared so `3.9.0` can be
-released, and adding open issues to it works against that.
+Two issues came out of this work. Neither is on the `3.9.0-SNAPSHOT` milestone — that milestone is
+being cleared so `3.9.0` can be released, and adding open issues to it works against that.
+`3.10.0-SNAPSHOT` was opened here to hold the second one.
 
-### 6.1 DSH — reclassify the existing Spring-context tests
+### 6.1 DSH `#112` — reclassify the existing Spring-context tests
 
 Under D2, DSH already has integration tests in the wrong place. Measured:
 
@@ -643,7 +643,7 @@ exemption. The four worker mains are each `SpringApplication.run(...)` plus a lo
 the `jacoco.exec` the guard wants, and keeps the module in the gate. Only as a last resort, and
 only for a genuinely untestable class, is a module-level JaCoCo `<excludes>` entry acceptable.
 
-### 6.2 parent-poms — reshape `src/site/markdown/index.md`
+### 6.2 parent-poms `#74` — reshape `src/site/markdown/index.md`
 
 It is two lines. It wants to say what this repository is and how the three levels relate. Out of
 scope here; a milestone after `3.9.0`.
