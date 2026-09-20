@@ -658,3 +658,63 @@ scope here; a milestone after `3.9.0`.
 | `@{failsafeArgLine}` resolves to nothing and integration tests run without the agent | They still run, and still gate the build. Only `jacoco-it.exec` is lost, which nothing reads today. |
 | Plugin ordering inside `verify` puts `jacoco:check` after failsafe's `verify` | Irrelevant under D1: the two read different files. It is only load-bearing for the rejected single-exec design. |
 | The staging proof (§5 Step 7) needs a snapshot deploy of an unmerged branch | `deploy.yml` with `release_type: snapshots` does not bump a version, tag, or touch a milestone. It is the documented way to make an in-progress parent visible to a consumer. |
+
+---
+
+## 8. Verification
+
+Run 2026-09-20. Maven 3.9.16 locally (CI pins 3.9.9), JDK 17.0.20.1. DSH commit `fab55a69`
+plus the temporary proof, on the scratch branch `scratch-67-proof`, against
+`com.mriss.mriss-parent:products:3.9.0-SNAPSHOT` built from this branch.
+
+### The defect, reproduced before the fix
+
+With `TemporaryProofIT` present and the **unchanged** parent installed:
+`mvn -B -pl dsh-data -am clean install -DintegrationTests` exited `0`, ran 51 unit tests, and
+matched `TemporaryProofIT` **0 times** and `maven-failsafe-plugin` **0 times**. The test ran
+nowhere and nothing said so — §1.1, observed rather than argued.
+
+### Local runs
+
+| Step | Command | Exit | Evidence |
+|---|---|---|---|
+| Task 1.2 | `mvn -B clean install` (parent-poms) | `0` | `maven-failsafe-plugin` matched **0** times |
+| Task 1.3 | `mvn -B clean install -DintegrationTests` | `0` | `failsafe:3.5.5:integration-test`, `failsafe:3.5.5:verify` and `prepare-agent-integration` all present |
+| Task 2.2 | `grep -n integrationTests .github/workflows/project-staging.yml` | — | exactly one line, 204, in `Build and Deploy Staging Artifacts` |
+| Task 2.3 | `grep -rn integrationTests .github/workflows/` | — | that one line only; release, hotfix and stage untouched |
+| Task 3.2 | `git status --porcelain` | — | only `src/site/markdown/README.md`; root `README.md` untouched |
+| §5.1 | `mvn -B install` (parent-poms) | `0` | parent installed to `D:\.m2\repository` |
+| §5.2 | `mvn -B -pl dsh-data -am clean install` | `0` | 28 classes, gate met, only `jacoco.exec` |
+| §5.4 | same, no flag, IT present | `0` | `TemporaryProofIT` matched **0** times |
+| §5.5 | same `-DintegrationTests` | `0` | IT ran under failsafe; **both** `jacoco.exec` and `jacoco-it.exec` present |
+| §5.6 | same, assertion inverted to `assertNull` | **`1`** | `failsafe:3.5.5:verify (integration-tests) @ dsh-data`; the coverage gate passed immediately before it |
+| extra | `mvn -B clean install -DintegrationTests` (full reactor) | `0` | all 13 modules SUCCESS; `jacoco-it.exec` produced **only** in `dsh-data` |
+
+### D1: the gate did not move
+
+Measured from `dsh-data/target/site/jacoco/jacoco.csv`, generated from `jacoco.exec` alone:
+
+| | Baseline (§5.2) | With `-DintegrationTests` (§5.5) |
+|---|---|---|
+| LINE | 235/242 = `0.971074` | 235/242 = `0.971074` |
+| BRANCH | 81/82 = `0.987805` | 81/82 = `0.987805` |
+
+Identical. Integration coverage landed in `jacoco-it.exec` and `jacoco:check` never saw it —
+acceptance criterion 2, and the answer to the issue's second open question.
+
+### §5.7: staging
+
+- parent-poms `deploy.yml`, `release_type: snapshots`, on this branch —
+  [run 35540724375](https://github.com/MRISS-Projects/parent-poms/actions/runs/35540724375),
+  success; published `mriss-parent-3.9.0-20260920.220906-3.pom` (62 kB).
+- DSH `Staging` against `scratch-67-proof` —
+  [run 35541203622](https://github.com/MRISS-Projects/dsh/actions/runs/35541203622), success.
+  `-DintegrationTests` appears on the `clean deploy` invocation and **exactly once in the whole
+  25 331-line log**, so `site-deploy` did not receive it (D4). `TemporaryProofIT` ran on the
+  runner; 13 `failsafe:integration-test` executions; 8 modules reported
+  `All coverage checks have been met`.
+
+One caveat on the method, not the change: DSH pins `project-staging.yml@master`, so the staging
+run could only exercise Task 2 by temporarily repointing DSH's `staging.yml` at this branch. That
+pin lived on `scratch-67-proof` and died with it. Once this branch is merged and released, DSH
+picks the flag up from `master` with no change of its own.
