@@ -1156,5 +1156,52 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <id>integration-tests</id>
+            <!-- FR015: activated by -DintegrationTests property instead of -P to avoid Maven hierarchy merge bugs.
+                 Promotes maven-failsafe-plugin out of <pluginManagement> (FR013) into the build, which is the only
+                 thing that makes it execute. The second JaCoCo agent is not optional: maven-failsafe-plugin's
+                 argLine defaults to ${argLine} (its plugin descriptor, <argLine>${argLine}</argLine>), which is the
+                 very property jacoco:prepare-agent writes, and that agent appends to target/jacoco.exec. Without a
+                 separate agent and a separate exec file, integration coverage lands in the file jacoco:check reads
+                 and the 95% gate stops being a unit-test gate. -->
+            <activation>
+                <property>
+                    <name>integrationTests</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>prepare-agent-integration</id>
+                                <goals>
+                                    <goal>prepare-agent-integration</goal>
+                                </goals>
+                                <configuration>
+                                    <destFile>${project.build.directory}/jacoco-it.exec</destFile>
+                                    <propertyName>failsafeArgLine</propertyName>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <!-- @{...} rather than ${...} is deliberate: failsafe resolves it late, so it picks up a
+                             property written by prepare-agent-integration at pre-integration-test, and it resolves
+                             to the empty string instead of a literal when the property is absent - for instance
+                             under -Djacoco.skip=true. ${failsafeArgLine} would reach the forked JVM verbatim and
+                             fail it with an unrecognized option. -->
+                        <configuration>
+                            <argLine>@{failsafeArgLine}</argLine>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 </project>
