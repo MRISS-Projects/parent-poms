@@ -35,9 +35,11 @@ mvn -B -U clean install
 # Run a single test class in a specific module
 mvn -pl <module-path> -Dtest=SomeTest test
 
-# Integration tests only (naming convention: *IT.java or *IntegrationTest.java)
-mvn -B verify
-# (unit tests via surefire exclude *IT/*IntegrationTest; failsafe runs only those, bound to integration-test+verify)
+# Unit tests plus integration tests (naming convention: *IT.java or *IntegrationTest.java)
+mvn -B clean install -DintegrationTests
+# Without the flag, failsafe does not execute at all: it is declared in <pluginManagement> and
+# only the integration-tests profile (FR015) promotes it into the build. Surefire excludes
+# *IT/*IntegrationTest either way, so a test named that way runs only under the flag.
 
 # Generate the Maven site locally without publishing (mirrors the Build workflow)
 mvn -B -Ddeployment -Drelease-deployment \
@@ -51,6 +53,14 @@ exists but is inert, kept only for consumers that still pass it.
 
 There is no separate lint step; `maven-compiler-plugin` (Java 17 source/target) and `maven-surefire-plugin`
 are the only gates run on a plain `mvn install`.
+
+Integration tests never count toward the 95% `jacoco:check` gate. The `integration-tests`
+profile attaches a second JaCoCo agent writing `target/jacoco-it.exec`, and `jacoco:check` reads
+`target/jacoco.exec`. This is load-bearing: `maven-failsafe-plugin` defaults its `argLine` to
+`${argLine}`, the property `jacoco:prepare-agent` writes, so without the second agent the
+integration run appends straight into the file the gate measures. `project-staging.yml` passes
+`-DintegrationTests`, so staging is where integration tests are mandatory; what a product's
+integration tests *start* is that product's decision, not this repository's.
 
 ## Profiles (the core mechanism in this repo)
 
