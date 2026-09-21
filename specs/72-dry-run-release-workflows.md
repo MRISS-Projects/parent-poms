@@ -161,19 +161,79 @@ subsequent checkout both run for real against a local repository, so the rehears
 of the real path and needs one less bridge. AC003 explicitly admits redirection alongside
 suppression.
 
-### 1.4 What was not measured, and why
+### 1.4 Phases 11–17, measured in CI
 
-The probe stopped at phase 10 of 17. `run-preparation-goals` failed resolving
+The local probe stopped at phase 10 of 17: `run-preparation-goals` failed resolving
 `org.apache.maven.surefire:surefire-shared-utils:3.5.5` — absent from the local repository, and
-`central` returned `Connection reset`. That is an environment failure on the measuring machine, not
-a finding about the design.
+`central` returned `Connection reset`. An environment failure on the measuring machine, not a
+finding about the design.
 
-So phases 11–17 are **unmeasured**: whether dry-run `scm-commit-release`, `scm-tag` and
-`scm-commit-development` log the commands they skip, and whether `rewrite-poms-for-development`
-writes `pom.xml.next` files. Neither changes the design — the bridge consumes `pom.xml.tag` and
-`release.properties`, both confirmed present at phase 9 — but the first affects how the marker set
-reads next to the plugin's own output. **Task 1 measures it in CI**, where the reactor builds, and
-that is cheaper than a second 15-minute local build for one log line.
+Task 1 re-ran the identical command in CI. Two runs were needed and the first one is itself a
+finding, recorded in §1.5. The second completed all 17 phases:
+[run 35651368119](https://github.com/MRISS-Projects/parent-poms/actions/runs/35651368119),
+`completedPhase=end-release`.
+
+**1. Phases 11, 12 and 16 print a one-line summary, not the command they skip.**
+
+```text
+[INFO] 11/17 prepare:scm-commit-release dry-run
+[INFO] Full run would be commit 13 files with message: '[maven-release-plugin][skip] prepare release v0.3.0'
+[INFO] 12/17 prepare:scm-tag dry-run
+[INFO] Full run would tag working copy '/home/runner/work/parent-poms/parent-poms'
+[INFO] Not removing release POMs
+[INFO] Full run would commit 13 files with message: '[maven-release-plugin][skip] prepare for next development iteration'
+```
+
+Across the whole run the plugin executed exactly two git commands, both reads, both at phase 2
+`scm-check-modifications`: `'git' 'rev-parse' '--show-prefix'` and `'git' 'status' '--porcelain' '.'`.
+No commit, no tag, no push was executed **or echoed**. This settles the question §2.3 raised about
+how the marker set reads next to the plugin's own output: the plugin's wording is a prose summary
+in its own phrasing, which is exactly why our markers assert our intent independently of it. It
+also means `-DdryRun=true` suppresses the three write phases completely rather than deferring them.
+
+**2. `rewrite-poms-for-development` does write `pom.xml.next` files — 13 of them**, one per
+module, and phase 14 logs `Not removing release POMs`, so they survive the run. The bridge in §2.2
+consumes `pom.xml.tag`, never `.next`, and its `find` is anchored on `pom.xml.tag`, so the `.next`
+files are inert for this design. They are worth knowing about only because a future bridge that
+globbed `pom.xml.*` would silently pick up the *development* tree instead of the release one.
+
+**3. `run-preparation-goals` took 3m 35s** (20:31:28.88 → 20:35:03.60), and the whole
+`release:prepare` took 5m 36s, on a `ubuntu-latest` runner with a warm `actions/setup-java` Maven
+cache. Materially faster than §1.2's "budget the wall time accordingly" implied — the full
+rehearsals in Tasks 9 and 10 are dominated by `release:perform`'s site build, not by this.
+
+**4. §1.1 finding 4 needs one qualification.** `pom.xml` does stay at `0.3.0-SNAPSHOT` and nothing
+is committed, tagged or pushed. But the working tree is not quite untouched: `git status` afterwards
+reports `M README.md` alongside the untracked `pom.xml.{tag,next,releaseBackup}` triples. The
+forked `clean install` runs with `-Ddeployment -Drelease-deployment` from `<arguments>`, which
+activates the inherited `readme-generation` profile, and that regenerates `README.md` in place.
+Harmless here — the bridge builds its commit from `HEAD`'s tree with only `pom.xml` paths replaced,
+so a modified `README.md` is not in the tagged tree — but "the working tree is not rewritten" is
+too strong as §1.1 stated it.
+
+### 1.5 A finding about `project-release.yml`, not about the probe
+
+The first CI probe
+([run 35650261302](https://github.com/MRISS-Projects/parent-poms/actions/runs/35650261302))
+died at phase 10 too, for a new reason: every `dsh-rest-api` Spring context failed with
+`Circular placeholder reference 'mongo.port' in property definitions`.
+
+`dsh-data/src/main/resources/mongo.properties` carries `mongo.port=${mongo.port}`, filtered by
+`maven-resources-plugin`. With the property undefined, the filter leaves `${mongo.port}` as literal
+text and Spring rejects it as a self-reference. `MRISS-Projects/dsh`'s own `ci.yml` supplies
+`mongo.host`, `mongo.port`, `mongo.user` and `mongo.password` from the `github-packages` profile in
+the `settings.xml` it writes. The probe had copied its `settings.xml` from `project-release.yml` —
+which does not.
+
+**Neither `project-release.yml` nor `project-hotfix.yml` defines those properties**, and both run
+`clean install` through `<preparationGoals>`. `project-staging.yml` does define them, as five
+`mongo_*` inputs plus a `mongo:6` service container. So on the evidence of this run, a real release
+of `dsh` 0.3.0 fails inside `release:prepare`'s forked build, before it writes anything.
+
+This is out of `#72`'s scope and belongs in its own issue. It is recorded here because it is the
+first thing the rehearsal work surfaced, because it is the kind of failure `#72` exists to catch
+*before* a release rather than during one, and because **it blocks Tasks 9 and 10** — see the
+prerequisite note there.
 
 ---
 
@@ -362,6 +422,8 @@ A rehearsal is only worth the code if it produces a result those issues can quot
 ```text
 .github/actions/rehearsal-setup/action.yml
 .github/actions/rehearsal-setup/marker.sh                   # template copied to RUNNER_TEMP
+.github/actions/rehearsal-setup/marker.test.sh              # added during Task 2 — see below
+.github/actions/rehearsal-setup/snapshot-packages.sh        # added during Task 2 — see below
 .github/actions/rehearsal-tag/action.yml
 .github/actions/rehearsal-tag/build-release-tag.sh
 .github/actions/rehearsal-tag/build-release-tag.test.sh
@@ -376,8 +438,28 @@ specs/72-dry-run-release-workflows.md                       # this spec
 ```
 
 `build-release-tag.sh` and `assert-markers.sh` carry real logic and are written test-first,
-following `check-placeholders.test.sh` from `#71`. `assert-no-writes.sh` and `marker.sh` are thin
-enough that their verification is the demonstration run.
+following `check-placeholders.test.sh` from `#71`. `assert-no-writes.sh` is thin enough that its
+verification is the demonstration run.
+
+Two files the plan did not name:
+
+- **`snapshot-packages.sh`.** §2.4's package-registry snapshot has to be taken twice, by
+  `rehearsal-setup` before the run and by `rehearsal-verify` after it, and the two must be the
+  identical script or the diff compares two different questions. A composite action cannot address
+  a sibling action's `action_path`, so `rehearsal-setup` installs it into `$RUNNER_TEMP` alongside
+  `marker.sh` and both callers run that copy.
+
+- **`marker.test.sh`.** §3 had put `marker.sh` on the "thin enough" list. It is not, and the
+  reason is the inactive branch rather than the active one: `marker.sh` is called from steps that
+  run during every real release, so if it ever printed or wrote anything with `RH_ACTIVE` empty,
+  a real release's log would stop matching today's — which "Global constraints" forbids. That
+  property deserves a test rather than a demonstration run, since the demonstration runs are all
+  rehearsals and never exercise the inactive branch at all. Deleting the `RH_ACTIVE` guard trips
+  three of its assertions.
+
+`rehearsal-setup` and `rehearsal-verify` also take a `token` input that §2.1 and §2.4 do not
+mention. Composite actions receive no secrets implicitly, and the package-registry snapshot needs
+`read:packages`, so `DEPLOY_TOKEN` is passed explicitly.
 
 ---
 
@@ -483,7 +565,74 @@ empty.
 justified. This is the gate on the whole change: if a real release's commands are not identical,
 stop and redesign rather than proceed.
 
+#### Task 8 results
+
+Expanded with the values `rehearsal-setup`'s `else` branch writes for `dry_run: false` —
+`RH_ACTIVE`, `RH_RELEASE_DRYRUN`, `RH_SCM_LOCAL_URL`, `RH_SCMPUBLISH_DRYRUN` and
+`RH_GIT_PUSH_DRYRUN` empty, `RH_TAG_SOURCE=origin` — then compared against
+`git show master:<path>`. **Every command line on `master` appears verbatim in the expanded
+branch, in both workflows.** The gate passes.
+
+`project-release.yml` — nine modified lines:
+
+| Line on the branch | Expansion with `dry_run: false` | vs `master` |
+|---|---|---|
+| `mvn -B $RH_RELEASE_DRYRUN \` (`release:prepare`) | `mvn -B \` | identical |
+| `mvn -B $RH_RELEASE_DRYRUN \` (`release:perform`) | `mvn -B \` | identical |
+| `mvn -B $RH_SCM_LOCAL_URL -Dbranch=… scm:branch` | `mvn -B -Dbranch=… scm:branch` | identical |
+| `mvn -B $RH_SCM_LOCAL_URL \` (`scm:checkout`) | `mvn -B \` | identical |
+| `mvn -B $RH_SCM_LOCAL_URL -Dmessage="…" scm:checkin` | `mvn -B -Dmessage="…" scm:checkin` | identical |
+| `git fetch $RH_TAG_SOURCE "refs/tags/…"` | `git fetch origin "refs/tags/…"` | identical |
+| `git push $RH_GIT_PUSH_DRYRUN "$REPO_URL" master` | `git push "$REPO_URL" master` | identical |
+| `mvn -B $RH_SCMPUBLISH_DRYRUN \` (`site-deploy`) | `mvn -B \` | identical |
+| `git push $RH_GIT_PUSH_DRYRUN "$REPO_URL" --delete …` | `git push "$REPO_URL" --delete …` | identical |
+
+`project-hotfix.yml` — five modified lines: `release:prepare` and `release:perform` via
+`$RH_RELEASE_DRYRUN`, the `git fetch` via `$RH_TAG_SOURCE`, the `git push … master` via
+`$RH_GIT_PUSH_DRYRUN`, and `site-deploy` via `$RH_SCMPUBLISH_DRYRUN`. All five expand to `master`'s
+text.
+
+Three added command lines in `project-release.yml` do not appear on `master`:
+
+```text
+modified=$(git status --porcelain '*pom.xml' | wc -l)
+total=$(git ls-files '*pom.xml' | wc -l)
+git status --porcelain '*pom.xml'
+```
+
+All three are inside the `if [ -n "${RH_ACTIVE:-}" ]` guard around the `#69` evidence line of
+§2.6, which a real release skips in its entirety. Everything else `#72` adds is a new step, and a
+new step cannot change an existing command — §8's question is only whether the existing commands
+still read the same, and they do.
+
+`RH_TAG_SOURCE` is the single variable that is non-empty in a real release, exactly as §2.1
+predicted, and its real-release value is the literal `origin` the line used to hardcode.
+
 ### Task 9: Demonstrate — `project-release.yml` — `#72` AC006
+
+> **Two prerequisites the plan did not anticipate. Both were found while building Tasks 1–8.**
+>
+> **(a) The Mongo properties — blocking, and not this issue's to fix.** §1.5. A rehearsal runs
+> `release:prepare`, whose `<preparationGoals>` is `clean install`, and that build fails on
+> `dsh` today because `project-release.yml`'s `settings.xml` does not define `mongo.host`,
+> `mongo.port`, `mongo.user` and `mongo.password`. It fails at phase 10, before the bridge, before
+> any marker after `release-prepare`, so the rehearsal would be inconclusive rather than negative
+> — the same reason Task 10 refuses to run against tag `dsh-0.2.4`. Not fixable inside `#72`
+> without widening it into a second change to the release workflows; needs its own issue and a
+> decision on whether `project-release.yml` gains `mongo_*` inputs like `project-staging.yml` has,
+> or the estate stops filtering connection settings into `mongo.properties`.
+>
+> **(b) The `uses:` refs are pinned to `@master`.** `project-release.yml` and `project-hotfix.yml`
+> reach their composite actions as `MRISS-Projects/parent-poms/.github/actions/<name>@master` —
+> the pattern `#71` established for `commit-readme`, and the only one available, because inside a
+> reusable workflow `./.github/actions/...` resolves against the *consumer's* checkout, which is
+> the product repository. `uses:` cannot be templated, so dispatching the workflow at
+> `@issue-72-dry-run-release-workflows` still loads `rehearsal-setup`, `rehearsal-tag`,
+> `rehearsal-verify` and the new `commit-readme` input from `master`, where none of them exist
+> yet. The demonstration runs therefore need a temporary commit flipping those four refs to the
+> branch, and a commit flipping them back before merge. Record both SHAs in the results block; the
+> flip is mechanical and changes nothing else, but the demonstration did not run against the exact
+> bytes that merge.
 
 - [ ] On DSH, create a scratch branch carrying a `release.yml` that wires `dry_run` and points
       `uses:` at `MRISS-Projects/parent-poms/.github/workflows/project-release.yml@issue-72-dry-run-release-workflows`.
