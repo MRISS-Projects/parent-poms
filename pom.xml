@@ -1156,5 +1156,61 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <id>integration-tests</id>
+            <!-- FR015: activated by -DintegrationTests property instead of -P to avoid Maven hierarchy merge bugs.
+                 Promotes maven-failsafe-plugin out of <pluginManagement> (FR013) into the build, which is the only
+                 thing that makes it execute. The second JaCoCo agent is not optional: maven-failsafe-plugin's
+                 argLine defaults to ${argLine} (its plugin descriptor, <argLine>${argLine}</argLine>), which is the
+                 very property jacoco:prepare-agent writes, and that agent appends to target/jacoco.exec. Without a
+                 separate agent and a separate exec file, integration coverage lands in the file jacoco:check reads
+                 and the 95% gate stops being a unit-test gate. -->
+            <activation>
+                <property>
+                    <name>integrationTests</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>prepare-agent-integration</id>
+                                <goals>
+                                    <goal>prepare-agent-integration</goal>
+                                </goals>
+                                <!-- propertyName is load-bearing, not decoration. This goal's descriptor documents
+                                     its fallback as "argLine" for jar packaging - the very property the unit agent
+                                     writes. Delete this line and the integration agent overwrites the unit argLine,
+                                     which is precisely the contamination this profile exists to prevent. destFile
+                                     below restates the goal's documented default and is kept only for symmetry. -->
+                                <configuration>
+                                    <destFile>${project.build.directory}/jacoco-it.exec</destFile>
+                                    <propertyName>failsafeArgLine</propertyName>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <!-- @{...} is surefire/failsafe's late replacement, resolved when the mojo runs rather
+                             than during model interpolation, and it is the form both plugins document. It is a
+                             safe default rather than a fix for a failure observed here: measured on failsafe
+                             3.5.5 with JaCoCo 0.8.13, ${failsafeArgLine} produces a byte-identical
+                             jacoco-it.exec, because prepare-agent-integration sets a project property before
+                             failsafe executes. -Djacoco.skip=true does not leave the property undefined either -
+                             JaCoCo still runs the goal and logs "failsafeArgLine set to empty". Keep @{...} for
+                             the case where the property arrives by a path interpolated earlier; the line that
+                             actually guards the coverage gate is propertyName above. -->
+                        <configuration>
+                            <argLine>@{failsafeArgLine}</argLine>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 </project>

@@ -4,7 +4,23 @@
 
 ## Version
 
-3.9.0-SNAPSHOT - 27 - 20260919-191335
+3.9.0-SNAPSHOT - 28 - 20260920-221209
+
+## Build from Sources
+
+```bash
+# Unit tests only. This is the ordinary build, and the one the 95% coverage gate measures.
+mvn -B clean install
+
+# Unit tests, then integration tests.
+mvn -B clean install -DintegrationTests
+```
+
+Integration tests are the classes named `*IT.java` or `*IntegrationTest.java`; by convention
+they live in an `integration` package under `src/test/java`. They run only when
+`-DintegrationTests` is passed, and on every staging build. Their coverage is collected
+separately, in `target/jacoco-it.exec`, and is deliberately not counted toward the coverage
+gate — that gate measures unit tests.
 
 ## Code Based Site
 
