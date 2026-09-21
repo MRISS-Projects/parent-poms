@@ -1,0 +1,31 @@
+name: Rehearsal tag bridge
+description: >
+  Build, locally, the release tag and the target/checkout that a dry-run release:prepare and
+  release:perform do not create, so the steps after them stay reachable. Rehearsal only —
+  guarded by `if: inputs.dry_run` at the call site. See
+  specs/72-dry-run-release-workflows.md §2.2.
+
+runs:
+  using: composite
+  steps:
+    - name: Build the release tag from the dry run's pom.xml.tag tree
+      shell: bash
+      run: ${{ github.action_path }}/build-release-tag.sh
+
+    - name: Materialise target/checkout from the tag
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        TAG="$(sed -n 's/^scm\.tag=//p' release.properties | head -1)"
+
+        # release:perform would have cloned the tag from the remote into this directory, and
+        # four later steps cd into it. Cloning the workspace reproduces that without a remote
+        # read, and leaves target/checkout's origin pointing at the workspace — which is what
+        # makes the redirected scm:branch and scm:checkout in the next steps work.
+        rm -rf target/checkout
+        git clone --quiet --branch "$TAG" "$GITHUB_WORKSPACE" target/checkout
+
+        echo "rehearsal-tag: target/checkout is at $(git -C target/checkout rev-parse --short HEAD) ($TAG)"
+        echo "rehearsal-tag: root pom version there is" \
+          "$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' target/checkout/pom.xml | head -2 | tail -1)"

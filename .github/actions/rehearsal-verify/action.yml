@@ -1,0 +1,66 @@
+name: Rehearsal verify
+description: >
+  Close a rehearsal: assert the declared write points all announced themselves exactly once,
+  and assert against the live remote that the run changed nothing. Called with
+  `if: always()` so a rehearsal that dies halfway still reports whether it wrote something
+  first. See specs/72-dry-run-release-workflows.md §2.3/§2.4.
+
+inputs:
+  dry_run:
+    description: "'true' when the run being closed is a rehearsal. Anything else is a no-op."
+    required: true
+  git_project:
+    description: 'Target repository name, e.g. dsh'
+    required: true
+  declared_markers:
+    description: >
+      Whitespace-separated marker ids this workflow declares. Set equality is enforced, so a
+      write point added without a marker — or a marker added without declaring it — fails.
+    required: true
+  current_version:
+    description: 'The release version being rehearsed, without -SNAPSHOT, e.g. 0.3.0'
+    required: true
+  dispatch_branch:
+    description: 'The branch the run was dispatched against. Must still exist afterwards.'
+    required: true
+  hotfix_branch:
+    description: >
+      The hotfix branch the run would have created. Must NOT exist afterwards. Empty for
+      project-hotfix.yml, which creates no branch.
+    required: false
+    default: ''
+  token:
+    description: 'Token for the package-registry snapshot. Needs read:packages.'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # Both steps carry an explicit always(). A step `if:` without a status function gets an
+    # implicit success(), which would skip these exactly when they are most needed — the
+    # call site is `if: always()` precisely so that a rehearsal which died halfway still
+    # reports whether it wrote something first, and by then the job status is failure.
+    - name: Assert rehearsal completeness
+      if: ${{ always() && inputs.dry_run == 'true' }}
+      shell: bash
+      env:
+        DECLARED_MARKERS: ${{ inputs.declared_markers }}
+      run: |
+        "${{ github.action_path }}/assert-markers.sh" \
+          "$RUNNER_TEMP/rehearsal-markers" \
+          "$DECLARED_MARKERS"
+
+    # Not chained behind the completeness check: if the marker set is wrong we still want to
+    # know whether the remote was touched, and that is the more important of the two answers.
+    - name: Assert the rehearsal wrote nothing
+      if: ${{ always() && inputs.dry_run == 'true' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        GIT_PROJECT: ${{ inputs.git_project }}
+        CURRENT_VERSION: ${{ inputs.current_version }}
+        DISPATCH_BRANCH: ${{ inputs.dispatch_branch }}
+        HOTFIX_BRANCH: ${{ inputs.hotfix_branch }}
+      run: |
+        "${{ github.action_path }}/assert-no-writes.sh" \
+          "$GIT_PROJECT" "$CURRENT_VERSION" "$DISPATCH_BRANCH" "$HOTFIX_BRANCH"
