@@ -756,3 +756,31 @@ the thing holding the design up. **`<propertyName>` is.** Its descriptor documen
 `argLine` — the unit agent's property — so removing it as "redundant" would silently restore the
 contamination in §1.2 while leaving every build green. The comment in Task 1 now says so, because
 that is the line a future reviewer is most likely to delete.
+
+### 8.2 Review round 1 — PR [`#75`](https://github.com/MRISS-Projects/parent-poms/pull/75)
+
+2026-09-21. Pulled from GitHub, not from recollection.
+
+| | |
+|---|---|
+| CI | `build` **SUCCESS**, 7m25s — [run 35548385585](https://github.com/MRISS-Projects/parent-poms/actions/runs/35548385585) |
+| Review | `copilot-pull-request-reviewer`, state `COMMENTED`, "Approval recommended" |
+| Effort | **Lite** — self-reported in the review body |
+| Findings | none |
+| Threads | 0 opened, so none to reply to or resolve |
+| Commit reviewed | `0cc7f904`, which was `HEAD` — no finding could be stale |
+
+Nothing to triage and nothing to fix, so this round changed no code.
+
+**Read the zero-findings result for what it is.** The review arrived automatically about three
+minutes after the PR opened, which means it ran at the repository or organization default rather
+than at a level chosen for this PR; the body confirms **Lite**. Lite is described by GitHub as
+cost-efficient and targeted. Zero findings at that level, on a change to shared build
+infrastructure that every consuming product inherits, is weak evidence that there was nothing to
+find — not strong evidence that the change is correct.
+
+The substantive review of this change was the local one in §8.1, and it did find something: a
+committed comment asserting a failure mode that measurement disproved. That is the calibration to
+carry forward. If a later reader wants real review assurance on a change at this level of the
+hierarchy, request **Balanced** explicitly on the PR; it is a human action at every layer and
+cannot be selected from a workflow or a file in this repository.
