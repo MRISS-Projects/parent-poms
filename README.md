@@ -4,7 +4,7 @@
 
 ## Version
 
-3.9.0-SNAPSHOT - 28 - 20260920-221209
+3.9.0-SNAPSHOT - 29 - 20260921-011233
 
 ## Build from Sources
 
@@ -29,6 +29,12 @@ Snapshot: https://mriss-projects.github.io/parent-poms/snapshots
 Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
+
+### Version 3.9.0-SNAPSHOT
+
+| # | Type | Summary | Assignee | Reporter | Updated |
+| --- | ---- | ------- | -------- | -------- | ------- |
+| [67](https://github.com/MRISS-Projects/parent-poms/issues/67) | task | Activate failsafe behind a -DintegrationTests profile | null | mriss | 9/21/26 |
 
 ### Version 3.8.0
 
