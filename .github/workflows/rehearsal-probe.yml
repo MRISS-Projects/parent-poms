@@ -80,6 +80,23 @@ jobs:
                       <id>github-packages</id>
                       <properties>
                           <github.personal.token>${env.DEPLOY_TOKEN}</github.personal.token>
+                          <!-- Copied from MRISS-Projects/dsh .github/workflows/ci.yml.
+                               dsh-data/src/main/resources/mongo.properties filters
+                               mongo.port from a Maven property; with the property
+                               undefined, maven-resources-plugin leaves ${mongo.port}
+                               literal and every dsh-rest-api Spring context fails with
+                               "Circular placeholder reference 'mongo.port'". Run 35650261302
+                               hit exactly that and never reached phase 11, which is what
+                               this probe exists to measure.
+
+                               NOTE, and it is not a note about this probe: neither
+                               project-release.yml nor project-hotfix.yml defines these, and
+                               both run `clean install` through <preparationGoals>. A real
+                               release of dsh 0.3.0 fails here too. Tracked separately. -->
+                          <mongo.host>localhost</mongo.host>
+                          <mongo.port>27017</mongo.port>
+                          <mongo.user>dshuser</mongo.user>
+                          <mongo.password>dshpass</mongo.password>
                       </properties>
                       <repositories>
                           <repository>
@@ -126,8 +143,13 @@ jobs:
         if: always()
         run: |
           echo "=== phase markers, with timestamps from the -B log where present ==="
-          grep -nE 'phases:|Checking in modified POMs|Tagging release|scm-commit|scm-tag|Executing: /bin/sh|Working directory' prepare.log \
-            | tail -80 || true
+          grep -nE 'phases:|Checking in modified POMs|Tagging release|Transforming|scm-commit|scm-tag|Full run would be|Executing: /bin/sh|Working directory' prepare.log \
+            | sed -n '1,40p;/run-preparation-goals/,$p' || true
+
+          echo
+          echo "=== everything the log says after run-preparation-goals finished (phases 11-17) ==="
+          awk '/Executing goals .clean install/ { seen = 1 } seen && /^\[INFO\] (Checking|Tagging|Transforming|Not|Full|Cleaning|Release|Executing|Working)/' prepare.log \
+            | tail -60 || true
 
           echo
           echo "=== git commands the plugin echoed (dry run logs them rather than running them) ==="
