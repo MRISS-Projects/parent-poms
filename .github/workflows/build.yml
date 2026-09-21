@@ -72,6 +72,34 @@ jobs:
       - name: Test the README placeholder guard
         run: sh .github/actions/commit-readme/check-placeholders.test.sh
 
+      # #72: the rehearsal scripts are the other unit-testable pieces of the release path,
+      # and a rehearsal is the one thing that never happens on a normal build — so without
+      # this their first exercise would be a rehearsal someone dispatched by hand.
+      - name: Test the rehearsal scripts
+        run: |
+          set -euo pipefail
+          for t in .github/actions/rehearsal-*/*.test.sh; do
+            echo "--- $t"
+            sh "$t"
+          done
+
+      # #72: every .sh under .github/actions is invoked directly by an action.yml or a
+      # workflow step, so it needs git mode 100755. A development box with core.fileMode
+      # false — any Windows checkout — commits 100644 silently, and `chmod +x` there changes
+      # nothing git records. The failure then lands six minutes into a release as
+      # "Permission denied", which is where MRISS-Projects/dsh run 35660420977 found it.
+      - name: Check the action scripts are executable
+        run: |
+          set -euo pipefail
+          bad=$(git ls-files -s .github/actions/ | grep -E '\.sh$' | grep -v '^100755 ' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::action scripts committed without the executable bit:"
+            echo "$bad"
+            echo "Fix with: git update-index --chmod=+x <file>"
+            exit 1
+          fi
+          echo "All action scripts are mode 100755."
+
       # #71: the reusable workflows must reach the commit-readme action by a @master ref.
       # A relative ./ path does not work there — it resolves against the CALLER's workspace
       # (proven by MRISS-Projects/dsh run 35463833006) — so the reference is qualified, and
