@@ -107,21 +107,29 @@ jobs:
       # pointing that ref at a task branch; merging one would break every consumer's release
       # the moment the branch is deleted, silently and at release time. This fails the build
       # instead, so a task-branch pin cannot reach master.
-      - name: Check the commit-readme action is pinned to master
+      #
+      # #72 widened this from commit-readme to EVERY action in this repository. The three
+      # rehearsal actions are reached the same way and carry the same hazard, and #72's own
+      # demonstration runs needed exactly the task-branch pin this forbids — the guard caught
+      # that flip at run 35660362564, which is the guard working. Naming one action was only
+      # ever an artefact of one action existing.
+      - name: Check this repository's actions are pinned to master
         run: |
           set -euo pipefail
           # Matches only real 'uses:' lines, so this check does not flag its own pattern.
           # Trailing comments and surrounding quotes are stripped before comparing, so a
           # correctly pinned but quoted or annotated reference is not a false positive.
-          bad=$(grep -rnE '^[[:space:]]*uses:[[:space:]]*.{0,2}\S*actions/commit-readme@' .github/workflows/ \
+          bad=$(grep -rnE '^[[:space:]]*uses:[[:space:]]*.{0,2}MRISS-Projects/parent-poms/\.github/actions/\S*@' .github/workflows/ \
                 | sed -e 's/[[:space:]]*#.*$//' -e "s/[\"']//g" -e 's/[[:space:]]*$//' \
                 | grep -v '@master$' || true)
           if [ -n "$bad" ]; then
-            echo "::error::commit-readme action pinned to a non-master ref:"
+            echo "::error::parent-poms action pinned to a non-master ref:"
             echo "$bad"
+            echo "A task-branch pin breaks every consumer's release the moment the branch is"
+            echo "deleted, silently and at release time. Flip it back before merging."
             exit 1
           fi
-          echo "All commit-readme references are pinned to @master."
+          echo "All parent-poms action references are pinned to @master."
 
       # Configure Maven settings so it can read from the GitHub Packages registry
       # (https://maven.pkg.github.com/MRISS-Projects/maven-repo) where

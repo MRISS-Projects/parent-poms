@@ -669,6 +669,84 @@ predicted, and its real-release value is the literal `origin` the line used to h
 **Verify:** the run is green, eight markers appear exactly once each, and the independent check
 agrees with `assert-no-writes`.
 
+#### Task 9 results — the machinery works; the run is red on `#69`
+
+[`dsh` run 35662168807](https://github.com/MRISS-Projects/dsh/actions/runs/35662168807), dispatched
+against scratch branch `rehearsal-72-release` with `current_version: 0.3.0`,
+`next_development_version: 0.4.0-SNAPSHOT`, `hotfix_branch: 0.3.x`,
+`initial_hotfix_version: 0.3.1-SNAPSHOT`, `dry_run: true`.
+
+Everything `#72` builds behaved correctly. The bridge:
+
+```text
+rehearsal-tag: tagged 3f979dda as v0.3.0 from 13 pom.xml.tag file(s).
+rehearsal-tag: target/checkout is at 3f979dda (v0.3.0)
+rehearsal-tag: root pom version there is 0.3.0
+```
+
+Both redirections resolved to the workspace rather than the remote, which is the §1.3 claim about
+`scm:branch` and `scm:checkout` proven rather than argued:
+
+```text
+[INFO] Executing: ... cd '.../target/checkout' && 'git' 'push' 'file:///home/runner/work/dsh/dsh' 'refs/heads/0.3.x'
+[INFO] Executing: ... cd '.../target'          && 'git' 'clone' '--branch' '0.3.x' 'file:///home/runner/work/dsh/dsh' 'checkout'
+```
+
+Four markers fired before the failure: `release-prepare`, `release-perform-deploy`, `scm-branch`,
+`scm-checkin-hotfix-version`. `assert-markers` then correctly named the four that did not —
+`commit-readme`, `merge-to-master`, `remove-rc-branch`, `site-deploy`.
+
+`assert-no-writes` passed in full, and `if: always()` is why it ran at all:
+
+```text
+  heads: unchanged (13 entries)
+  tags: unchanged (12 entries)
+  packages: unchanged (25 entries)
+  tag v0.3.0: absent, as it must be
+  branch 0.3.x: absent, as it must be
+  branch rehearsal-72-release: still present, as it must be
+  registry: no package carries version 0.3.0
+rehearsal: the remote is byte-for-byte as it was before the run.
+```
+
+Independently confirmed from a shell: `git ls-remote --heads` and `--tags` both diff identical
+against the pre-run snapshots, and neither `v0.3.0` nor `0.3.x` exists on the remote.
+
+##### What it found: `#69`, measured and then fatal
+
+```text
+REHEARSAL evidence for #69: versions:set modified 1 of 13 pom.xml file(s).
+```
+
+**`#69` predicted 1 of 13. It is 1 of 13.** §2.6 said that number in a run log would settle the
+question; it does.
+
+The consequence is worse than `#69`'s title suggests, and the rehearsal is what exposed it.
+`versions:set` moved the root POM to `0.3.1-SNAPSHOT` and left all 12 modules declaring
+`<parent><version>0.3.0</version>`, which now exists in no repository. The very next command,
+`mvn scm:checkin`, therefore cannot build the project model:
+
+```text
+[ERROR] Non-resolvable parent POM for com.mriss.products.dsh:dsh-data:0.3.0:
+        com.mriss.products:dsh:pom:0.3.0 (absent)
+```
+
+— repeated for all 12. **A real release would fail at the same step**, having already pushed the
+tag and deployed the artifacts to the registry. A rehearsal reaches it having done neither.
+
+##### Status of AC006 for this workflow
+
+Task 9 cannot go green while `#69` is open, and §7 puts *fixing* `#69` out of scope. Of the eight
+declared markers, six are demonstrated — four here and `merge-to-master` plus `site-deploy` in
+Task 10, which exercises the identical steps. `commit-readme` is demonstrated in Task 10.
+`remove-rc-branch` is release-only and sits downstream of the failure, so it remains the one
+declared write point no run has exercised.
+
+This is left for the human to settle: restate AC006 as AC002 and AC003 were restated, and re-run
+Task 9 as `#69`'s own validation — which is exactly the relationship §2.6 and §7 describe — or fix
+`#69` first and re-run. **The run being red here is the feature working**, not the feature failing:
+a rehearsal that went green through a release path this broken would be the alarming outcome.
+
 ### Task 10: Demonstrate — `project-hotfix.yml`
 
 - [ ] `project-hotfix.yml`'s `Validate version` requires FIX > 0, and DSH has no hotfix line —
@@ -685,6 +763,71 @@ agrees with `assert-no-writes`.
 
 **Verify:** the run is green, five markers, and `git ls-remote --heads origin` after deletion
 matches the pre-Task-10 listing.
+
+#### Task 10 results — green
+
+[`dsh` run 35665353914](https://github.com/MRISS-Projects/dsh/actions/runs/35665353914), 15m 16s,
+dispatched against scratch branch `rehearsal-72-hotfix` (cut from the RC, all 13 POMs at
+`0.3.1-SNAPSHOT`, plus the `mongo.*` defaults of §1.5).
+
+All five declared markers, each exactly once:
+
+```text
+REHEARSAL release-prepare: would commit the release POMs, tag v0.3.1 and push both
+REHEARSAL release-perform-deploy: would check out the tag and deploy the artifacts to the registry
+REHEARSAL merge-to-master: would push the merge of v0.3.1 to master
+REHEARSAL site-deploy: would publish the generated site to gh-pages
+REHEARSAL commit-readme: would commit and push the generated README.md to master
+rehearsal: all 5 declared write point(s) announced exactly once.
+```
+
+The bridge:
+
+```text
+rehearsal-tag: tagged 526639f6 as v0.3.1 from 13 pom.xml.tag file(s).
+rehearsal-tag: target/checkout is at 526639f6 (v0.3.1)
+rehearsal-tag: root pom version there is 0.3.1
+rehearsal-tag: release-version artifacts installed to the local repository.
+```
+
+`assert-no-writes`:
+
+```text
+rehearsal: package listing served by /orgs/MRISS-Projects/packages?package_type=maven
+  heads: unchanged (14 entries)
+  tags: unchanged (12 entries)
+  packages: unchanged (25 entries)
+  tag v0.3.1: absent, as it must be
+  branch rehearsal-72-hotfix: still present, as it must be
+  registry: no package carries version 0.3.1
+rehearsal: the remote is byte-for-byte as it was before the run.
+```
+
+**Independently confirmed from a shell**, not only by the run's own assertion: `git ls-remote
+--heads origin` diffs identical against the pre-run snapshot; `refs/tags/v0.3.1` is absent; and
+`gh-pages` is still `848e39a8`, the same SHA it carried before Task 9 — after a real `site-deploy`
+executed under `-Dscmpublish.dryRun=true`. That last one is AC002's `gh-pages` clause, proven
+rather than argued.
+
+The merge into `master` ran for real and only its push was suppressed, which is the property §2.2
+needed and the one `#65` will be validated by.
+
+**AC005, in full.** The scratch branch was deleted with
+
+```bash
+git push origin --delete rehearsal-72-hotfix
+```
+
+and `git ls-remote --heads origin` afterwards matches the pre-Task-10 listing exactly, apart from
+that branch. Nothing else outlived the runner.
+
+**Two runs were needed.** The first,
+[35663430328](https://github.com/MRISS-Projects/dsh/actions/runs/35663430328), reached
+`Generate README.md on Master` and died on
+`Could not find artifact com.mriss.products.dsh:dsh-data:jar:0.3.1`. That is the §1.3 correction
+recorded above: `release:perform`'s `deploy` has a local half the rest of the workflow depends on,
+and suppressing the whole goal left the release-version artifacts built nowhere. Its
+`assert-no-writes` passed too, so even the failed run proved it had written nothing.
 
 ### Task 11: Report on `#72`, `#69` and `#65`
 
