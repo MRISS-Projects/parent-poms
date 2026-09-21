@@ -1,9 +1,17 @@
 name: Rehearsal tag bridge
 description: >
-  Build, locally, the release tag and the target/checkout that a dry-run release:prepare and
-  release:perform do not create, so the steps after them stay reachable. Rehearsal only —
-  guarded by `if: inputs.dry_run` at the call site. See
-  specs/72-dry-run-release-workflows.md §2.2.
+  Build, locally, the release tag, the target/checkout and the installed release-version
+  artifacts that a dry-run release:prepare and release:perform do not produce, so the steps
+  after them stay reachable. Rehearsal only — guarded by `if: inputs.dry_run` at the call
+  site. See specs/72-dry-run-release-workflows.md §2.2.
+
+inputs:
+  site_deployment_url:
+    description: >
+      Passed through to the local install so it matches the <arguments> a real
+      release:perform would have forked with.
+    required: false
+    default: 'file:///tmp/sites'
 
 runs:
   using: composite
@@ -29,3 +37,33 @@ runs:
         echo "rehearsal-tag: target/checkout is at $(git -C target/checkout rev-parse --short HEAD) ($TAG)"
         echo "rehearsal-tag: root pom version there is" \
           "$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' target/checkout/pom.xml | head -2 | tail -1)"
+
+    # release:perform's goal is `deploy`, which is `install` plus an upload. The rehearsal
+    # suppresses the whole goal, so nothing ever builds the artifacts at the RELEASE version:
+    # dry-run prepare leaves the working POMs on their -SNAPSHOT version, so its
+    # <preparationGoals> `clean install` installs SNAPSHOTs. Every later step that resolves
+    # an inter-module dependency then fails —
+    # MRISS-Projects/dsh run 35663430328 died in 'Generate README.md on Master' with
+    # "Could not find artifact com.mriss.products.dsh:dsh-data:jar:0.3.1".
+    #
+    # So the rehearsal performs the local half of `deploy` and omits only the upload, which
+    # is exactly what specs/72's goal statement asks for: every local operation executes for
+    # real, every remote write is suppressed.
+    #
+    # -DskipTests is a deliberate, stated deviation from what `deploy` would run. The tests
+    # have already executed once in this rehearsal, in prepare's <preparationGoals> fork,
+    # against the same sources; running them a second time would add most of ten minutes to
+    # answer a question already answered. It also disarms the coverage-data guard along with
+    # jacoco, which is the documented behaviour of that flag.
+    - name: Install the release-version artifacts that perform would have deployed
+      shell: bash
+      working-directory: target/checkout
+      run: |
+        set -euo pipefail
+        mvn -B -DskipTests \
+          -Ddeployment \
+          -Drelease-deployment \
+          -Dproduct-release-deployment \
+          -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
+          install
+        echo "rehearsal-tag: release-version artifacts installed to the local repository."

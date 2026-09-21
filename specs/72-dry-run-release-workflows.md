@@ -142,6 +142,14 @@ Supporting evidence for each flag:
   The goals (by default at least `deploy`) will not be executed."* So `release:perform` in dry run
   neither creates `target/checkout` nor deploys — both halves matter, the first because four later
   steps `cd` into that directory.
+- **`release:perform` also deletes what the bridge consumes, and does so in dry run.** Not visible
+  in the descriptor: `perform` has no `clean` parameter in 3.1.1, which is all this section
+  originally checked. The cleanup is not a parameter, it is unconditional — the `clean` goal's own
+  description says it is *"done automatically after a successful `release:perform`"*.
+  [dsh run 35661237973](https://github.com/MRISS-Projects/dsh/actions/runs/35661237973) logged
+  `Cleaning up after release...` and left the bridge with no `release.properties` and none of the
+  13 `pom.xml.tag` files. §1's measurement could not have caught this: it only ever ran
+  `release:prepare`. **This is why the bridge runs between `prepare` and `perform`** — see §2.2.
 - `maven-scm-plugin` 2.1.0: `branch` exposes `pushChanges` **and** `remoteBranching`, `checkin`
   exposes `pushChanges`, and both expose `connectionUrl` / `developerConnectionUrl`. The
   `<pluginManagement>` entry at `pom.xml:356-360` carries only `<version>` — no `<configuration>` —
@@ -297,8 +305,19 @@ disk. `#65` asks whether `git merge -X ours` plus a `versions:set` fixup preserv
 changes — also local; only the closing `git push` touches a remote. So a mode that suppresses only
 the remote half exercises both completely, provided the local half has refs to stand on.
 
-A new step, guarded `if: inputs.dry_run`, calls `.github/actions/rehearsal-tag` immediately after
-`Maven Release`:
+**Correction to where it goes.** This section originally said "immediately after `Maven Release`".
+That is wrong, and running it proved so: `release:perform` finishes by deleting `release.properties`
+and every `pom.xml.tag` — the two things the bridge consumes — and it does that under
+`-DdryRun=true` as well (§1.3). So `Maven Release` is split in two, and the bridge runs between
+`release:prepare` and `release:perform`. Nothing it produces is then at risk: the tag is a git ref,
+which Maven's cleanup cannot touch, and `target/checkout` survives for exactly the reason a real
+release's does — `perform` creates it, cleans, and the next step `cd`s into it.
+
+The split moves a step boundary, not a command. Task 8's gate was re-run after it and still finds
+every one of `master`'s command lines verbatim in the expanded branch.
+
+A new step, guarded `if: inputs.dry_run`, calls `.github/actions/rehearsal-tag` between
+`release:prepare` and `release:perform`:
 
 1. Read `scm.tag` from `release.properties` (§1.1 finding 2) — `v0.3.0`.
 2. Build a commit whose tree is `HEAD` with every `pom.xml` replaced by its `pom.xml.tag`.
