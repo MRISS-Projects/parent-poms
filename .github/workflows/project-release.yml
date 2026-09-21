@@ -169,8 +169,6 @@ jobs:
 
       - name: Maven Release
         run: |
-          SITE_URL="${{ inputs.site_deployment_url }}"
-
           mvn -B \
             -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.next_development_version }} \
             -Dbuild.CURRENT_VERSION_NUMBER=${{ inputs.current_version }} \
@@ -184,21 +182,36 @@ jobs:
             -Dbuild.CURRENT_VERSION_NUMBER=${{ inputs.current_version }} \
             release:prepare
 
+      # #72 §2.2 — the one rehearsal-only step. `release:prepare -DdryRun=true` creates no
+      # tag and `release:perform -DdryRun=true` creates no target/checkout, so without this
+      # every step below is unreachable rather than merely skipped, and #69's versions:set
+      # and #65's merge-back would never execute. It builds both locally, out of the
+      # pom.xml.tag tree the dry run already wrote to disk, and pushes nothing.
+      #
+      # IT RUNS BETWEEN prepare AND perform, which is the whole reason the Maven release is
+      # two steps rather than one. `release:perform` finishes with release:clean — "done
+      # automatically after a successful release:perform", per that goal's own description —
+      # and it does so in dry run too. MRISS-Projects/dsh run 35661237973 logged "Cleaning up
+      # after release..." and the bridge, then placed after the whole thing, found
+      # release.properties and all 13 pom.xml.tag files already deleted.
+      #
+      # Nothing the bridge produces is at risk from that cleanup: the tag is a git ref, and
+      # target/checkout survives for the same reason a real release's does — perform creates
+      # it, cleans, and the next step cd's into it.
+      - name: Rehearsal tag bridge
+        if: ${{ inputs.dry_run }}
+        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-tag@issue-72-dry-run-release-workflows
+
+      - name: Maven Release Perform
+        run: |
+          SITE_URL="${{ inputs.site_deployment_url }}"
+
           bash "$RUNNER_TEMP/rehearsal-marker.sh" release-perform-deploy \
             "check out the tag and deploy the artifacts to the registry"
 
           mvn -B $RH_RELEASE_DRYRUN \
             -Dsite.deployment.personal.main="${SITE_URL}" \
             release:perform
-
-      # #72 §2.2 — the one rehearsal-only step. `release:prepare -DdryRun=true` creates no
-      # tag and `release:perform -DdryRun=true` creates no target/checkout, so without this
-      # every step below is unreachable rather than merely skipped, and #69's versions:set
-      # and #65's merge-back would never execute. It builds both locally, out of the
-      # pom.xml.tag tree the dry run already wrote to disk, and pushes nothing.
-      - name: Rehearsal tag bridge
-        if: ${{ inputs.dry_run }}
-        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-tag@issue-72-dry-run-release-workflows
 
       - name: Create Hotfix Branch
         run: |

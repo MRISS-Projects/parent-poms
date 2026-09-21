@@ -163,17 +163,20 @@ jobs:
 
           mvn -B $RH_RELEASE_DRYRUN release:prepare
 
+      # #72 §2.2 — the one rehearsal-only step. See project-release.yml for why it exists,
+      # and for why it must sit between prepare and perform rather than after both.
+      - name: Rehearsal tag bridge
+        if: ${{ inputs.dry_run }}
+        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-tag@issue-72-dry-run-release-workflows
+
+      - name: Maven Release Perform
+        run: |
           bash "$RUNNER_TEMP/rehearsal-marker.sh" release-perform-deploy \
             "check out the tag and deploy the artifacts to the registry"
 
           mvn -B $RH_RELEASE_DRYRUN \
             -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
             release:perform
-
-      # #72 §2.2 — the one rehearsal-only step. See project-release.yml for why it exists.
-      - name: Rehearsal tag bridge
-        if: ${{ inputs.dry_run }}
-        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-tag@issue-72-dry-run-release-workflows
 
       - name: Merge Release Tag to Master
         run: |
