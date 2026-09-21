@@ -247,6 +247,11 @@ false "Common commands" block corrected.
                                 <goals>
                                     <goal>prepare-agent-integration</goal>
                                 </goals>
+                                <!-- propertyName is load-bearing, not decoration. This goal's descriptor documents
+                                     its fallback as "argLine" for jar packaging - the very property the unit agent
+                                     writes. Delete this line and the integration agent overwrites the unit argLine,
+                                     which is precisely the contamination this profile exists to prevent. destFile
+                                     below restates the goal's documented default and is kept only for symmetry. -->
                                 <configuration>
                                     <destFile>${project.build.directory}/jacoco-it.exec</destFile>
                                     <propertyName>failsafeArgLine</propertyName>
@@ -257,11 +262,15 @@ false "Common commands" block corrected.
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                        <!-- @{...} rather than ${...} is deliberate: failsafe resolves it late, so it picks up a
-                             property written by prepare-agent-integration at pre-integration-test, and it resolves
-                             to the empty string instead of a literal when the property is absent - for instance
-                             under -Djacoco.skip=true. ${failsafeArgLine} would reach the forked JVM verbatim and
-                             fail it with an unrecognized option. -->
+                        <!-- @{...} is surefire/failsafe's late replacement, resolved when the mojo runs rather
+                             than during model interpolation, and it is the form both plugins document. It is a
+                             safe default rather than a fix for a failure observed here: measured on failsafe
+                             3.5.5 with JaCoCo 0.8.13, ${failsafeArgLine} produces a byte-identical
+                             jacoco-it.exec, because prepare-agent-integration sets a project property before
+                             failsafe executes. -Djacoco.skip=true does not leave the property undefined either -
+                             JaCoCo still runs the goal and logs "failsafeArgLine set to empty". Keep @{...} for
+                             the case where the property arrives by a path interpolated earlier; the line that
+                             actually guards the coverage gate is propertyName above. -->
                         <configuration>
                             <argLine>@{failsafeArgLine}</argLine>
                         </configuration>
@@ -655,7 +664,7 @@ scope here; a milestone after `3.9.0`.
 | Risk | Why it is acceptable |
 |---|---|
 | A product with an existing `*IT.java` starts running it on staging without warning | No such file exists in DSH. The flag is opt-in everywhere except staging, and staging is exactly where the gate is wanted (D4). |
-| `@{failsafeArgLine}` resolves to nothing and integration tests run without the agent | They still run, and still gate the build. Only `jacoco-it.exec` is lost, which nothing reads today. |
+| `@{failsafeArgLine}` resolves to nothing and integration tests run without the agent | They still run, and still gate the build. Only `jacoco-it.exec` is lost, which nothing reads today. Measured during review (§8.1): the property is never actually absent, because JaCoCo sets it even when skipped. |
 | Plugin ordering inside `verify` puts `jacoco:check` after failsafe's `verify` | Irrelevant under D1: the two read different files. It is only load-bearing for the rejected single-exec design. |
 | The staging proof (§5 Step 7) needs a snapshot deploy of an unmerged branch | `deploy.yml` with `release_type: snapshots` does not bump a version, tag, or touch a milestone. It is the documented way to make an in-progress parent visible to a consumer. |
 
@@ -718,3 +727,32 @@ One caveat on the method, not the change: DSH pins `project-staging.yml@master`,
 run could only exercise Task 2 by temporarily repointing DSH's `staging.yml` at this branch. That
 pin lived on `scratch-67-proof` and died with it. Once this branch is merged and released, DSH
 picks the flag up from `master` with no change of its own.
+
+### 8.1 Correction found in review: the `@{...}` rationale was wrong
+
+The comment originally shipped on the failsafe plugin claimed that `${failsafeArgLine}` "would
+reach the forked JVM verbatim and fail it with an unrecognized option", citing
+`-Djacoco.skip=true` as the case where the property is absent. Both halves are false, and the
+measurement is cheap, so it was made rather than argued.
+
+| Run | `argLine` form | `-Djacoco.skip` | Result |
+|---|---|---|---|
+| A | `@{failsafeArgLine}` | `true` | exit `0`, IT ran |
+| B | `${failsafeArgLine}` | `true` | exit `0`, IT ran |
+| B2 | `${failsafeArgLine}` | absent | exit `0`, IT ran, `jacoco-it.exec` **128 240 bytes — byte-identical to the `@{...}` run** |
+
+Two things came out of it:
+
+- **The property is never absent.** With `-Djacoco.skip=true` JaCoCo still executes the goal and
+  logs `failsafeArgLine set to empty`, which is exactly the case the plugin's own skip path exists
+  to cover. So neither form can degrade into a literal here.
+- **`${...}` works.** Plugin parameters are resolved when the mojo executes, against project
+  properties, and `prepare-agent-integration` has set the property by then. B2's agent attached
+  and wrote the same exec file.
+
+`@{...}` is kept, because it is the form surefire, failsafe and JaCoCo all document and it stays
+correct if the property ever arrives by a path interpolated earlier. But it is a safe default, not
+the thing holding the design up. **`<propertyName>` is.** Its descriptor documents the fallback as
+`argLine` — the unit agent's property — so removing it as "redundant" would silently restore the
+contamination in §1.2 while leaving every build green. The comment in Task 1 now says so, because
+that is the line a future reviewer is most likely to delete.

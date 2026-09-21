@@ -1181,6 +1181,11 @@
                                 <goals>
                                     <goal>prepare-agent-integration</goal>
                                 </goals>
+                                <!-- propertyName is load-bearing, not decoration. This goal's descriptor documents
+                                     its fallback as "argLine" for jar packaging - the very property the unit agent
+                                     writes. Delete this line and the integration agent overwrites the unit argLine,
+                                     which is precisely the contamination this profile exists to prevent. destFile
+                                     below restates the goal's documented default and is kept only for symmetry. -->
                                 <configuration>
                                     <destFile>${project.build.directory}/jacoco-it.exec</destFile>
                                     <propertyName>failsafeArgLine</propertyName>
@@ -1191,11 +1196,15 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                        <!-- @{...} rather than ${...} is deliberate: failsafe resolves it late, so it picks up a
-                             property written by prepare-agent-integration at pre-integration-test, and it resolves
-                             to the empty string instead of a literal when the property is absent - for instance
-                             under -Djacoco.skip=true. ${failsafeArgLine} would reach the forked JVM verbatim and
-                             fail it with an unrecognized option. -->
+                        <!-- @{...} is surefire/failsafe's late replacement, resolved when the mojo runs rather
+                             than during model interpolation, and it is the form both plugins document. It is a
+                             safe default rather than a fix for a failure observed here: measured on failsafe
+                             3.5.5 with JaCoCo 0.8.13, ${failsafeArgLine} produces a byte-identical
+                             jacoco-it.exec, because prepare-agent-integration sets a project property before
+                             failsafe executes. -Djacoco.skip=true does not leave the property undefined either -
+                             JaCoCo still runs the goal and logs "failsafeArgLine set to empty". Keep @{...} for
+                             the case where the property arrives by a path interpolated earlier; the line that
+                             actually guards the coverage gate is propertyName above. -->
                         <configuration>
                             <argLine>@{failsafeArgLine}</argLine>
                         </configuration>
