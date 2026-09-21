@@ -48,7 +48,7 @@ jobs:
       # #72. See the identical step in project-release.yml. Every RH_* variable is empty in
       # a real hotfix, so each command below expands to exactly what it was before #72.
       - name: Rehearsal setup
-        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-setup@master
+        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-setup@issue-72-dry-run-release-workflows
         with:
           dry_run: ${{ inputs.dry_run }}
           git_project: ${{ inputs.git_project }}
@@ -173,7 +173,7 @@ jobs:
       # #72 §2.2 — the one rehearsal-only step. See project-release.yml for why it exists.
       - name: Rehearsal tag bridge
         if: ${{ inputs.dry_run }}
-        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-tag@master
+        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-tag@issue-72-dry-run-release-workflows
 
       - name: Merge Release Tag to Master
         run: |
@@ -223,7 +223,7 @@ jobs:
             process-resources
 
       - name: Commit generated README.md on Master
-        uses: MRISS-Projects/parent-poms/.github/actions/commit-readme@master
+        uses: MRISS-Projects/parent-poms/.github/actions/commit-readme@issue-72-dry-run-release-workflows
         with:
           branch: master
           working-directory: target/checkout
@@ -232,7 +232,7 @@ jobs:
 
       - name: Rehearsal verify
         if: always()
-        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-verify@master
+        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-verify@issue-72-dry-run-release-workflows
         with:
           dry_run: ${{ inputs.dry_run }}
           git_project: ${{ inputs.git_project }}

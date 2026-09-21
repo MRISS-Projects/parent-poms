@@ -67,7 +67,7 @@ jobs:
       # command below expands to exactly what it was before #72 — proven line by line in
       # specs/72-dry-run-release-workflows.md §8.
       - name: Rehearsal setup
-        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-setup@master
+        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-setup@issue-72-dry-run-release-workflows
         with:
           dry_run: ${{ inputs.dry_run }}
           git_project: ${{ inputs.git_project }}
@@ -198,7 +198,7 @@ jobs:
       # pom.xml.tag tree the dry run already wrote to disk, and pushes nothing.
       - name: Rehearsal tag bridge
         if: ${{ inputs.dry_run }}
-        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-tag@master
+        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-tag@issue-72-dry-run-release-workflows
 
       - name: Create Hotfix Branch
         run: |
@@ -295,7 +295,7 @@ jobs:
             process-resources
 
       - name: Commit generated README.md on Master
-        uses: MRISS-Projects/parent-poms/.github/actions/commit-readme@master
+        uses: MRISS-Projects/parent-poms/.github/actions/commit-readme@issue-72-dry-run-release-workflows
         with:
           branch: master
           working-directory: target/checkout
@@ -317,7 +317,7 @@ jobs:
       # whether it wrote something first.
       - name: Rehearsal verify
         if: always()
-        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-verify@master
+        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-verify@issue-72-dry-run-release-workflows
         with:
           dry_run: ${{ inputs.dry_run }}
           git_project: ${{ inputs.git_project }}
