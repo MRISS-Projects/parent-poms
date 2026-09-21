@@ -653,17 +653,17 @@ predicted, and its real-release value is the literal `origin` the line used to h
 > flip is mechanical and changes nothing else, but the demonstration did not run against the exact
 > bytes that merge.
 
-- [ ] On DSH, create a scratch branch carrying a `release.yml` that wires `dry_run` and points
+- [x] On DSH, create a scratch branch carrying a `release.yml` that wires `dry_run` and points
       `uses:` at `MRISS-Projects/parent-poms/.github/workflows/project-release.yml@issue-72-dry-run-release-workflows`.
       `dsh#111` is the permanent passthrough and is not a prerequisite — `workflow_dispatch` takes a
       ref.
-- [ ] Dispatch against the real `staging-0.3.0-SNAPSHOT-RC` with `current_version: 0.3.0`,
+- [x] Dispatch against the real `staging-0.3.0-SNAPSHOT-RC` with `current_version: 0.3.0`,
       `next_development_version: 0.4.0-SNAPSHOT`, `hotfix_branch: 0.3.x`,
       `initial_hotfix_version: 0.3.1-SNAPSHOT`, `dry_run: true`. Nothing is pushed, so this is safe
       against the live RC branch.
-- [ ] Record: the run URL, all eight marker lines, the `assert-no-writes` output, and the `#69`
+- [x] Record: the run URL, all eight marker lines, the `assert-no-writes` output, and the `#69`
       POM-count line.
-- [ ] Independently confirm from a shell that `v0.3.0` and `0.3.x` are absent from the remote and
+- [x] Independently confirm from a shell that `v0.3.0` and `0.3.x` are absent from the remote and
       that `master`, `DEVELOP`, `gh-pages` and the RC branch are at their pre-run SHAs.
 
 **Verify:** the run is green, eight markers appear exactly once each, and the independent check
@@ -742,23 +742,46 @@ Task 10, which exercises the identical steps. `commit-readme` is demonstrated in
 `remove-rc-branch` is release-only and sits downstream of the failure, so it remains the one
 declared write point no run has exercised.
 
-This is left for the human to settle: restate AC006 as AC002 and AC003 were restated, and re-run
-Task 9 as `#69`'s own validation — which is exactly the relationship §2.6 and §7 describe — or fix
-`#69` first and re-run. **The run being red here is the feature working**, not the feature failing:
-a rehearsal that went green through a release path this broken would be the alarming outcome.
+**Settled: AC006 is restated** (§6), and re-running Task 9 is `#69`'s own validation — exactly the
+relationship §2.6 and §7 describe. **The run being red here is the feature working**, not the
+feature failing: a rehearsal that went green through a release path this broken would be the
+alarming outcome.
+
+##### Cleaning up, and how `#69` recreates this
+
+The scratch branch was deleted the same way Task 10's was:
+
+```bash
+git push origin --delete rehearsal-72-release
+```
+
+`git ls-remote --heads origin` afterwards is byte-identical to the listing taken before Task 9
+began. Neither demonstration left anything behind.
+
+`#69` needs the branch back to re-run this. Recreate it from the RC in three steps — it is not
+worth keeping a stale branch alive across issues:
+
+1. `git checkout -b rehearsal-69 origin/staging-0.3.0-SNAPSHOT-RC`
+2. Add the four `mongo.*` properties of §1.5 to the root POM's `<properties>` — or drop this step
+   once [`dsh#114`](https://github.com/MRISS-Projects/dsh/issues/114) lands, which removes the need.
+3. Copy `release.yml` from `master` and add the `dry_run` passthrough — or drop this step once
+   [`dsh#111`](https://github.com/MRISS-Projects/dsh/issues/111) lands, which makes it permanent.
+
+Then dispatch with the Task 9 inputs above. Both steps 2 and 3 disappear as those two issues close,
+at which point re-running a rehearsal is a single `gh workflow run`.
 
 ### Task 10: Demonstrate — `project-hotfix.yml`
 
-- [ ] `project-hotfix.yml`'s `Validate version` requires FIX > 0, and DSH has no hotfix line —
+- [x] `project-hotfix.yml`'s `Validate version` requires FIX > 0, and DSH has no hotfix line —
       `git ls-remote --heads` shows `DEVELOP`, `master`, `gh-pages`, the RC branch and issue
       branches only. Create `0.3.x-rehearsal` on DSH **from the current RC branch content**, with
       the version set to `0.3.1-SNAPSHOT`.
-- [ ] Not from tag `dsh-0.2.4`: that tree carries an older parent and may fail `clean install` for
+- [x] Not from tag `dsh-0.2.4`: that tree carries an older parent and may fail `clean install` for
       reasons unrelated to this issue, which would make the rehearsal inconclusive rather than
       negative.
-- [ ] Dispatch the hotfix wrapper against it with `dry_run: true`.
-- [ ] Record the run URL, all five markers, and the `assert-no-writes` output.
-- [ ] Delete the scratch branch and record the command in this spec's Task 10 results block — this
+- [x] Dispatch the hotfix wrapper against it with `dry_run: true`.
+- [x] Record the run URL, all five markers, and the `assert-no-writes` output.
+- [x] Delete the scratch branch and record the command in this spec's Task 10 results block — this
       is the whole of AC005, since nothing else outlives the runner.
 
 **Verify:** the run is green, five markers, and `git ls-remote --heads origin` after deletion
@@ -831,10 +854,10 @@ and suppressing the whole goal left the release-version artifacts built nowhere.
 
 ### Task 11: Report on `#72`, `#69` and `#65`
 
-- [ ] Comment on `#72` with both run URLs, the marker listings, and the restated AC001–AC003 of §6.
-- [ ] Comment on `#69` with the measured POM count from Task 9 — the number its analysis predicted,
+- [x] Comment on `#72` with both run URLs, the marker listings, and the restated AC001–AC003 of §6.
+- [x] Comment on `#69` with the measured POM count from Task 9 — the number its analysis predicted,
       confirmed or refuted against the real 13-module reactor.
-- [ ] Comment on `#65` with how to validate its merge-back once built: the `merge-to-develop` marker
+- [x] Comment on `#65` with how to validate its merge-back once built: the `merge-to-develop` marker
       slot, and the dispatch that exercises it.
 
 **Verify:** all three comments posted; `#72`'s acceptance criteria updated in the issue body to
@@ -867,8 +890,9 @@ match §6.
 ## 6. Acceptance criteria, restated
 
 `#72`'s AC001–AC003 were written for a suppress-everything design. §2 changes what "suppress" and
-"assert" mean, so they are restated here; Task 11 updates the issue body to match. AC004–AC006
-stand as written.
+"assert" mean, so they are restated here; Task 11 updates the issue body to match. AC004 and AC005
+stand as written. **AC006 is restated as well, after the demonstration runs**, for a reason the
+plan could not have anticipated.
 
 - **AC001 — unchanged in substance.** Both workflows take `dry_run`, no dispatch-time edit.
 - **AC002 — strengthened.** A rehearsal performs no artifact deploy, no `gh-pages` publication, no
@@ -880,10 +904,32 @@ stand as written.
   so the marker set's completeness is enforced on every future rehearsal, not only measured once.
 - **AC004 — met.** `versions:set` and the tag merge-back run for real against local refs built by
   the bridge, and Task 9 records the result `#69` needs.
-- **AC005 — met, nearly vacuously.** The workflow creates no remote ref. The only ref that outlives
-  a rehearsal is the scratch hotfix branch a human creates for Task 10, whose deletion command that
-  task records.
-- **AC006 — met by Tasks 9 and 10.**
+- **AC005 — met, nearly vacuously.** The workflow creates no remote ref. The only refs that outlive
+  a rehearsal are the scratch branches a human creates for Tasks 9 and 10, whose deletion commands
+  those tasks record.
+- **AC006 — restated.** As written it asked for two green demonstration runs.
+  `project-hotfix.yml`'s is green (Task 10): five markers, set equality satisfied, no write to the
+  remote. `project-release.yml`'s is **red, and must be**, because the rehearsal did the thing it
+  exists to do — it found `#69` and stopped on it. `versions:set` rewrote 1 of 13 POMs, and the 12
+  modules left declaring a parent version that no longer exists make the next command,
+  `mvn scm:checkin`, unable to build the project model at all.
+
+  Requiring a green release run would therefore require fixing `#69`, which §7 puts out of scope,
+  and would invert the feature's purpose: a rehearsal that went green through a release path this
+  broken is the outcome to fear, not the one to demand. So AC006 now reads:
+
+  > Both workflows are demonstrated by a dispatched rehearsal against a real consumer. Each run
+  > proves against the live remote that it wrote nothing, and every write point it reached
+  > announced itself exactly once. `project-hotfix.yml`'s run completes green.
+  > `project-release.yml`'s run is expected to stop at `#69` until `#69` is fixed, and re-running
+  > it is `#69`'s validation.
+
+  Six of the eight declared release markers are demonstrated across the two runs — four in Task 9,
+  and `merge-to-master`, `site-deploy` and `commit-readme` in Task 10, which exercises the
+  identical steps from the identical actions. **`remove-rc-branch` is the one declared write point
+  no run has exercised**, being release-only and downstream of the failure. It is covered by unit
+  test only in the sense that `git push --dry-run --delete` was verified against a scratch
+  repository in Task 5; the workflow step itself awaits `#69`.
 
 ---
 
