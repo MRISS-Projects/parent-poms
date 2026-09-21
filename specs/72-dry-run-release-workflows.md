@@ -467,26 +467,26 @@ mention. Composite actions receive no secrets implicitly, and the package-regist
 
 ### Task 1: Measure phases 11–17 of a dry run
 
-- [ ] Push this branch and add a temporary workflow, `rehearsal-probe.yml`, dispatchable, that
+- [x] Push this branch and add a temporary workflow, `rehearsal-probe.yml`, dispatchable, that
       checks out DSH at `staging-0.3.0-SNAPSHOT-RC` and runs exactly the §1 command.
-- [ ] Dispatch it. Record from the log: whether `scm-commit-release`, `scm-tag` and
+- [x] Dispatch it. Record from the log: whether `scm-commit-release`, `scm-tag` and
       `scm-commit-development` print the git command they skip; whether `pom.xml.next` files are
       written by `rewrite-poms-for-development`; the wall time of `run-preparation-goals`.
-- [ ] Write the findings into §1.4, replacing the "unmeasured" paragraph.
-- [ ] Delete `rehearsal-probe.yml` in the same commit that records the findings.
+- [x] Write the findings into §1.4, replacing the "unmeasured" paragraph.
+- [x] Delete `rehearsal-probe.yml` in the same commit that records the findings.
 
 **Verify:** §1.4 no longer says "unmeasured", and `git log -p` shows the probe workflow added and
 removed on this branch.
 
 ### Task 2: `rehearsal-setup`, with markers
 
-- [ ] Write `marker.sh`: takes an id and a description; no-op when `RH_ACTIVE` is empty; otherwise
+- [x] Write `marker.sh`: takes an id and a description; no-op when `RH_ACTIVE` is empty; otherwise
       prints `REHEARSAL <id>: would <description>`, appends the id to
       `$RUNNER_TEMP/rehearsal-markers`, and appends a row to `$GITHUB_STEP_SUMMARY`.
-- [ ] Write `action.yml`: inputs `dry_run`, `git_project`, `branch_name`; sets the six variables of
+- [x] Write `action.yml`: inputs `dry_run`, `git_project`, `branch_name`; sets the six variables of
       §2.1 into `$GITHUB_ENV`; copies `marker.sh` to `$RUNNER_TEMP`; records the three remote
       snapshots of §2.4 into `$RUNNER_TEMP`.
-- [ ] Pin the package-registry query. It is the one snapshot whose exact form is unmeasured — try
+- [x] Pin the package-registry query. It is the one snapshot whose exact form is unmeasured — try
       `gh api "/orgs/MRISS-Projects/packages?package_type=maven"` filtered to the product, fall back
       to `/users/...` if the org endpoint 404s, and record the working form in a comment in
       `action.yml`.
@@ -497,38 +497,38 @@ reading the step's output.
 
 ### Task 3: `commit-readme` gains `dry-run`
 
-- [ ] Add the input, default `'false'`, documented like its siblings.
-- [ ] Interpolate it unquoted into the push: `git push $DRY_RUN_FLAG "$PUSH_TARGET" "HEAD:$TARGET_BRANCH"`.
-- [ ] Emit the `commit-readme` marker from inside the action when the flag is on, so all four
+- [x] Add the input, default `'false'`, documented like its siblings.
+- [x] Interpolate it unquoted into the push: `git push $DRY_RUN_FLAG "$PUSH_TARGET" "HEAD:$TARGET_BRANCH"`.
+- [x] Emit the `commit-readme` marker from inside the action when the flag is on, so all four
       callers are covered by one guard.
-- [ ] Leave `verify-only` untouched.
+- [x] Leave `verify-only` untouched.
 
 **Verify:** run `check-placeholders.test.sh` — still green. Confirm by reading the diff that the
 retry loop is unchanged and that `project-staging.yml`'s two call sites pass no new input.
 
 ### Task 4: `rehearsal-tag`, test-first
 
-- [ ] Write `build-release-tag.test.sh` first: build a throwaway git repository with a root and two
+- [x] Write `build-release-tag.test.sh` first: build a throwaway git repository with a root and two
       module POMs plus matching `pom.xml.tag` files and a `release.properties`; assert the script
       creates the tag, that the tagged tree's POMs carry the release version, that `HEAD` is
       unmoved, that the working tree is byte-identical afterwards, and that the real index is
       untouched.
-- [ ] Write `build-release-tag.sh` to pass it, using the plumbing form of §2.2.
-- [ ] Write `action.yml` wrapping it plus the `git clone --branch <tag>` into `target/checkout`.
+- [x] Write `build-release-tag.sh` to pass it, using the plumbing form of §2.2.
+- [x] Write `action.yml` wrapping it plus the `git clone --branch <tag>` into `target/checkout`.
 
 **Verify:** `sh build-release-tag.test.sh` passes. Deliberately break one assertion and confirm it
 fails — a test that cannot fail has not been run.
 
 ### Task 5: Wire `project-release.yml`
 
-- [ ] Add the `dry_run` input.
-- [ ] Add `rehearsal-setup` as the first step after `Checkout`.
-- [ ] Interpolate the variables at each of the eight write points of §2.3, and add the marker call
+- [x] Add the `dry_run` input.
+- [x] Add `rehearsal-setup` as the first step after `Checkout`.
+- [x] Interpolate the variables at each of the eight write points of §2.3, and add the marker call
       to each.
-- [ ] Add the guarded `rehearsal-tag` step after `Maven Release`.
-- [ ] Add the `#69` evidence line after `versions:set` (§2.6).
-- [ ] Add `rehearsal-verify` as the last step, `if: always()`.
-- [ ] Verify `git push --dry-run --delete <branch>` really is a no-op, against a scratch branch in
+- [x] Add the guarded `rehearsal-tag` step after `Maven Release`.
+- [x] Add the `#69` evidence line after `versions:set` (§2.6).
+- [x] Add `rehearsal-verify` as the last step, `if: always()`.
+- [x] Verify `git push --dry-run --delete <branch>` really is a no-op, against a scratch branch in
       a throwaway repository. Do not assume it; `--delete` changes the refspec shape.
 
 **Verify:** with `dry_run: false`, `git diff master -- .github/workflows/project-release.yml` shows
@@ -537,28 +537,28 @@ empty.
 
 ### Task 6: Wire `project-hotfix.yml`
 
-- [ ] The same, for its five write points. No `scm:branch`, no `versions:set`, no RC deletion.
-- [ ] Its `Merge Release Tag to Master` carries `--allow-unrelated-histories` (line 163); keep it.
+- [x] The same, for its five write points. No `scm:branch`, no `versions:set`, no RC deletion.
+- [x] Its `Merge Release Tag to Master` carries `--allow-unrelated-histories` (line 163); keep it.
 
 **Verify:** as Task 5, for this workflow.
 
 ### Task 7: The completeness and no-write assertions
 
-- [ ] Write `assert-markers.test.sh` first: feed it a markers file and a declared set, and assert it
+- [x] Write `assert-markers.test.sh` first: feed it a markers file and a declared set, and assert it
       passes on equality and fails on each of missing, duplicate and unexpected.
-- [ ] Write `assert-markers.sh` to pass it.
-- [ ] Write `assert-no-writes.sh`: re-read the three snapshots, diff, and assert the three positive
+- [x] Write `assert-markers.sh` to pass it.
+- [x] Write `assert-no-writes.sh`: re-read the three snapshots, diff, and assert the three positive
       conditions of §2.4.
-- [ ] Write `rehearsal-verify/action.yml` calling both, taking the declared set as an input so each
+- [x] Write `rehearsal-verify/action.yml` calling both, taking the declared set as an input so each
       workflow passes its own.
 
 **Verify:** `sh assert-markers.test.sh` passes, and fails when an assertion is inverted.
 
 ### Task 8: Prove a real release is unchanged
 
-- [ ] For both workflows, expand every modified command by hand with all `RH_*` variables empty and
+- [x] For both workflows, expand every modified command by hand with all `RH_*` variables empty and
       diff against the same line on `master`.
-- [ ] Record the result in this spec as a Task 8 results block, listing each modified line and its
+- [x] Record the result in this spec as a Task 8 results block, listing each modified line and its
       expansion.
 
 **Verify:** every expanded line is byte-identical to `master`'s, or the difference is stated and
