@@ -11,12 +11,19 @@
 #
 # Two halves:
 #   1. the before/after diff — heads, tags and package versions must be identical;
-#   2. positive assertions — the release tag is absent, the hotfix branch is absent, the
-#      dispatched branch is still present, and no package carries the release version.
+#   2. positive assertions — the release tag is absent, the hotfix branch is absent, and the
+#      dispatched branch is still present.
 #
-# The diff alone would pass if both snapshots failed to be taken, which is why
-# snapshot-packages.sh fails hard rather than writing an empty file, and why (1) and (2)
-# are both here.
+# FAIL CLOSED ON EVERY READ. This script's whole job is to say "nothing was written", so the
+# worst defect it can have is to say that without having looked. PR #77's review found exactly
+# that: each positive assertion re-queried the remote as `git ls-remote ... | grep -q .`, which
+# cannot tell "no such ref" from "the read failed", so an auth or network error reported the
+# release tag absent and the run clean. The same flaw hid a second hole: a repository with no
+# tags has an empty 'before' snapshot, a failed 'after' read is also empty, and the two diffed
+# equal. Now each kind of ref is read exactly once, its exit status is checked on its own rather
+# than through a pipe, and the positive assertions consult that verified snapshot instead of
+# asking the remote again. A read that failed makes every assertion depending on it fail as
+# unproven — never pass. assert-no-writes.test.sh covers each path.
 #
 # One accepted false-failure mode: a human pushing to the repository during the run makes
 # the snapshots differ and fails the rehearsal. That is the safe direction to fail in, and
@@ -37,24 +44,61 @@ status=0
 note() { echo "  $*"; }
 bad()  { echo "::error::rehearsal: $*" >&2; status=1; }
 
+# read_refs <heads|tags> <output-file>
+# The exit status of `git ls-remote` is taken on its own. Piped straight into `sort`, a failure
+# would still leave a well-formed — empty — file behind, which is precisely how an unreachable
+# remote used to pass as an untouched one.
+read_refs() {
+  local kind="$1" out="$2" raw
+  raw="$(mktemp)"
+  if ! git ls-remote "--$kind" origin > "$raw" 2> "$raw.err"; then
+    bad "could not read the remote's ${kind} (git ls-remote exited non-zero). Every assertion" \
+        "about ${kind} is unproven, so the rehearsal fails rather than reporting them clean."
+    sed 's/^/  /' "$raw.err" >&2
+    rm -f "$raw" "$raw.err"
+    return 1
+  fi
+  sort "$raw" > "$out"
+  rm -f "$raw" "$raw.err"
+}
+
+# has_ref <snapshot-file> <full-ref-name>
+# Exact comparison on the ref column, never a regex: the version's dots are literal, and a
+# lookalike such as v0x3x0 must not count as v0.3.0. An annotated tag appears twice in
+# ls-remote output, once peeled with ^{}; either form means the tag exists.
+has_ref() {
+  awk -v r="$2" '$2 == r || $2 == r "^{}" { found = 1 } END { exit !found }' "$1"
+}
+
 # --- 1. the before/after diff ------------------------------------------------------
 
-git ls-remote --heads origin | sort > "$RUNNER_TEMP/rehearsal-heads.after"
-git ls-remote --tags  origin | sort > "$RUNNER_TEMP/rehearsal-tags.after"
-"$RUNNER_TEMP/rehearsal-snapshot-packages.sh" "$project" "$RUNNER_TEMP/rehearsal-packages.after" \
-  || bad "the package-registry snapshot could not be retaken; the artifact-deploy assertion is unproven."
+heads_ok=0; tags_ok=0
+read_refs heads "$RUNNER_TEMP/rehearsal-heads.after" && heads_ok=1
+read_refs tags  "$RUNNER_TEMP/rehearsal-tags.after"  && tags_ok=1
+
+packages_ok=0
+if "$RUNNER_TEMP/rehearsal-snapshot-packages.sh" "$project" "$RUNNER_TEMP/rehearsal-packages.after"; then
+  packages_ok=1
+else
+  bad "the package-registry snapshot could not be retaken; the artifact-deploy assertion is unproven."
+fi
 
 for what in heads tags packages; do
+  case "$what" in
+    heads)    ok=$heads_ok ;;
+    tags)     ok=$tags_ok ;;
+    packages) ok=$packages_ok ;;
+  esac
+  # Already reported as a failed read. Diffing what it left behind would at best repeat that,
+  # and at worst — an empty 'before' against an empty 'after' — report it unchanged.
+  [ "$ok" -eq 1 ] || continue
+
   before="$RUNNER_TEMP/rehearsal-${what}.before"
   after="$RUNNER_TEMP/rehearsal-${what}.after"
 
   if [ ! -f "$before" ]; then
     bad "no '${what}' snapshot was taken before the run, so nothing can be compared." \
         "rehearsal-setup did not complete."
-    continue
-  fi
-  if [ ! -f "$after" ]; then
-    bad "the '${what}' snapshot could not be retaken after the run."
     continue
   fi
 
@@ -67,35 +111,49 @@ for what in heads tags packages; do
 done
 
 # --- 2. positive assertions --------------------------------------------------------
+#
+# Each reads the snapshot verified above. None asks the remote a second time.
 
+heads_after="$RUNNER_TEMP/rehearsal-heads.after"
+tags_after="$RUNNER_TEMP/rehearsal-tags.after"
 release_tag="v${current_version}"
 
-if git ls-remote --tags origin "refs/tags/${release_tag}" | grep -q .; then
-  bad "the release tag '${release_tag}' exists on the remote. release:prepare was not suppressed."
+if [ "$tags_ok" -eq 1 ]; then
+  if has_ref "$tags_after" "refs/tags/${release_tag}"; then
+    bad "the release tag '${release_tag}' exists on the remote. release:prepare was not suppressed."
+  else
+    note "tag ${release_tag}: absent, as it must be"
+  fi
 else
-  note "tag ${release_tag}: absent, as it must be"
+  bad "tag ${release_tag}: unproven — the remote's tags could not be read."
 fi
 
 if [ -n "$hotfix_branch" ]; then
-  if git ls-remote --heads origin "refs/heads/${hotfix_branch}" | grep -q .; then
-    bad "the hotfix branch '${hotfix_branch}' exists on the remote. scm:branch was not redirected."
+  if [ "$heads_ok" -eq 1 ]; then
+    if has_ref "$heads_after" "refs/heads/${hotfix_branch}"; then
+      bad "the hotfix branch '${hotfix_branch}' exists on the remote. scm:branch was not redirected."
+    else
+      note "branch ${hotfix_branch}: absent, as it must be"
+    fi
   else
-    note "branch ${hotfix_branch}: absent, as it must be"
+    bad "branch ${hotfix_branch}: unproven — the remote's heads could not be read."
   fi
 fi
 
-if git ls-remote --heads origin "refs/heads/${dispatch_branch}" | grep -q .; then
-  note "branch ${dispatch_branch}: still present, as it must be"
+if [ "$heads_ok" -eq 1 ]; then
+  if has_ref "$heads_after" "refs/heads/${dispatch_branch}"; then
+    note "branch ${dispatch_branch}: still present, as it must be"
+  else
+    bad "the branch the run was dispatched against, '${dispatch_branch}', is gone from the" \
+        "remote. The 'Remove RC Branch' step deleted it for real."
+  fi
 else
-  bad "the branch the run was dispatched against, '${dispatch_branch}', is gone from the" \
-      "remote. The 'Remove RC Branch' step deleted it for real."
+  bad "branch ${dispatch_branch}: unproven — the remote's heads could not be read."
 fi
 
-# The package snapshot is already on disk, so the deploy assertion costs no extra API call.
-# It is stated positively as well as by diff because a diff of two identical failures would
-# pass without having inspected anything.
+# Kept from before this fix, and replaced in the next commit: see PR #77's review, F1.
 packages_after="$RUNNER_TEMP/rehearsal-packages.after"
-if [ -f "$packages_after" ]; then
+if [ "$packages_ok" -eq 1 ] && [ -f "$packages_after" ]; then
   if awk -v v="$current_version" '$2 == v { found = 1 } END { exit !found }' "$packages_after"; then
     packages_before="$RUNNER_TEMP/rehearsal-packages.before"
     if [ -f "$packages_before" ] && awk -v v="$current_version" '$2 == v { found = 1 } END { exit !found }' "$packages_before"; then
