@@ -1,11 +1,25 @@
 #!/usr/bin/env bash
-# Record the product's package versions in the GitHub Packages Maven registry.
+# Record every Maven package version in the organisation's GitHub Packages registry.
 #
 #   snapshot-packages.sh <git_project> <output_file>
 #
 # rehearsal-setup runs it before the rehearsal and rehearsal-verify runs it again after;
 # assert-no-writes.sh diffs the two. A rehearsal must publish no artifact, so the two files
 # must be identical. See specs/72-dry-run-release-workflows.md §2.4.
+#
+# EVERY PACKAGE, NOT THE PRODUCT'S. An earlier revision kept only packages whose name contained
+# git_project. PR #77's review (F1) showed why that is wrong: a consumer whose Maven
+# coordinates do not contain its repository name matches nothing, both snapshots come out empty,
+# and a real deploy is invisible to the diff. Guessing package names from a repository name is a
+# mapping this repository has no way to get right for every consumer, so it does not try. A deploy
+# of any artifact, under any name, adds a line.
+#
+# The cost is one versions request per package in the organisation, twice per rehearsal. The
+# accepted false-failure mode widens to match: another product publishing during the run fails the
+# rehearsal, the same safe direction as a human pushing to the repository during it.
+#
+# git_project is used only to label the log. It is kept in the signature so the two callers and
+# the actions that feed them did not change inside a review round.
 #
 # ENDPOINT — specs/72 Task 2 left the exact form open. The organisation endpoint is tried
 # first and the user endpoint is the documented fallback, because GitHub serves an
@@ -46,18 +60,9 @@ fi
 
 echo "rehearsal: package listing served by ${endpoint}"
 
-# Over-inclusive on purpose. A substring match can pick up a package merely named after the
-# project, which costs nothing in a before/after diff, whereas a too-narrow groupId filter
-# would silently drop the package a deploy actually created.
-mapfile -t names < <(
-  printf '%s' "$packages_json" \
-    | jq -r --arg p "$project" '.[] | select(.name | contains($p)) | .name' \
-    | sort -u
-)
+mapfile -t names < <(printf '%s' "$packages_json" | jq -r '.[] | .name' | sort -u)
 
-if [ "${#names[@]}" -eq 0 ]; then
-  echo "rehearsal: no Maven package in ${org} matches '${project}' yet; snapshot is empty."
-fi
+echo "rehearsal: snapshotting all ${#names[@]} Maven package(s) in ${org} for the ${project} rehearsal"
 
 : > "$output"
 for name in "${names[@]:-}"; do

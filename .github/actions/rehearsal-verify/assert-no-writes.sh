@@ -12,7 +12,7 @@
 # Two halves:
 #   1. the before/after diff — heads, tags and package versions must be identical;
 #   2. positive assertions — the release tag is absent, the hotfix branch is absent, and the
-#      dispatched branch is still present.
+#      dispatched branch is still present. None for the registry; see the note at the end.
 #
 # FAIL CLOSED ON EVERY READ. This script's whole job is to say "nothing was written", so the
 # worst defect it can have is to say that without having looked. PR #77's review found exactly
@@ -151,23 +151,12 @@ else
   bad "branch ${dispatch_branch}: unproven — the remote's heads could not be read."
 fi
 
-# Kept from before this fix, and replaced in the next commit: see PR #77's review, F1.
-packages_after="$RUNNER_TEMP/rehearsal-packages.after"
-if [ "$packages_ok" -eq 1 ] && [ -f "$packages_after" ]; then
-  if awk -v v="$current_version" '$2 == v { found = 1 } END { exit !found }' "$packages_after"; then
-    packages_before="$RUNNER_TEMP/rehearsal-packages.before"
-    if [ -f "$packages_before" ] && awk -v v="$current_version" '$2 == v { found = 1 } END { exit !found }' "$packages_before"; then
-      bad "version '${current_version}' was already published to the registry before this" \
-          "run started. The rehearsal cannot prove anything about a deploy of a version that" \
-          "already exists — rehearse an unreleased version."
-    else
-      bad "version '${current_version}' appeared in the package registry during the run." \
-          "release:perform deployed for real."
-    fi
-  else
-    note "registry: no package carries version ${current_version}"
-  fi
-fi
+# There is deliberately no positive assertion for the registry. An earlier revision also checked
+# that no package carried the release version. Once the snapshot covers every package in the
+# organisation (PR #77's review, F1), that check would fail whenever an unrelated product was
+# legitimately at the same version number — a false failure with no connection to this run. And
+# it adds nothing: the snapshot is now complete and fail-closed, so a deploy under any name adds a
+# line, and the diff above already fails on any added line.
 
 if [ "$status" -eq 0 ]; then
   echo "rehearsal: the remote is byte-for-byte as it was before the run."

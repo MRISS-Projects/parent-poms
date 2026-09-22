@@ -50,13 +50,22 @@ eee	refs/tags/dsh-0.2.4^{}'
 
 # Each case gets a RUNNER_TEMP holding the 'before' snapshots rehearsal-setup would have
 # written, plus a snapshot-packages stub that reproduces an unchanged registry.
+#
+# setup_case <name> <heads-before> <tags-before> [<packages-before>]
+# The snapshot-packages stub writes PKG_AFTER when the case sets it, and otherwise reproduces
+# the 'before' registry unchanged.
+PKGS_BEFORE='com.mriss.products.dsh 0.2.4'
 setup_case() {
   dir="$TMP/$1"
   mkdir -p "$dir"
   printf '%s\n' "$2" | sort > "$dir/rehearsal-heads.before"
   if [ -n "$3" ]; then printf '%s\n' "$3" | sort > "$dir/rehearsal-tags.before"; else : > "$dir/rehearsal-tags.before"; fi
-  printf 'com.mriss.products.dsh 0.2.4\n' > "$dir/rehearsal-packages.before"
-  printf '#!/bin/sh\ncp "%s/rehearsal-packages.before" "$2"\n' "$dir" > "$dir/rehearsal-snapshot-packages.sh"
+  printf '%s\n' "${4:-$PKGS_BEFORE}" | LC_ALL=C sort > "$dir/rehearsal-packages.before"
+  cat > "$dir/rehearsal-snapshot-packages.sh" <<STUB
+#!/bin/sh
+if [ -n "\${PKG_AFTER:-}" ]; then printf '%s\n' "\$PKG_AFTER" | LC_ALL=C sort > "\$2"
+else cp "$dir/rehearsal-packages.before" "\$2"; fi
+STUB
   chmod +x "$dir/rehearsal-snapshot-packages.sh"
   echo "$dir"
 }
@@ -146,6 +155,29 @@ hhh	refs/tags/v0x3x0")"
 run_case lookalike "$HEADS_BEFORE" "$TAGS_BEFORE
 hhh	refs/tags/v0x3x0" ""
 expect_rc   "a lookalike tag is not mistaken for the release tag" 0
+
+# --- the registry (PR #77 review, F1) ------------------------------------------------
+
+# A deploy under any name must show. The snapshot now covers every package in the
+# organisation, so this includes a consumer whose package names share nothing with its
+# repository name — the case a name filter made invisible.
+CASE_DIR="$(setup_case pkg_deployed "$HEADS_BEFORE" "$TAGS_BEFORE")"
+# Exported rather than prefixed to the call: an assignment prefixed to a shell FUNCTION is not
+# reliably exported to the processes it starts under dash, which is /bin/sh on the runners.
+PKG_AFTER="$PKGS_BEFORE
+com.example.unrelated-name.core 0.3.0"; export PKG_AFTER
+run_case pkg_deployed "$HEADS_BEFORE" "$TAGS_BEFORE" ""
+unset PKG_AFTER
+expect_rc   "a deployed package version fails the run" 1
+expect_says "a deployed package version is named" "com.example.unrelated-name.core 0.3.0"
+
+# The other half of F1. With every package in the snapshot, an UNRELATED product may already
+# be at the release version number. That is not a write by this run and must not fail it —
+# the positive "no package carries this version" check an earlier revision had would have.
+CASE_DIR="$(setup_case pkg_same_version "$HEADS_BEFORE" "$TAGS_BEFORE" "$PKGS_BEFORE
+com.mriss.products.mail-processor 0.3.0")"
+run_case pkg_same_version "$HEADS_BEFORE" "$TAGS_BEFORE" ""
+expect_rc   "an unrelated package already at the release version does not fail the run" 0
 
 # project-hotfix.yml creates no branch and passes an empty hotfix_branch.
 CASE_DIR="$(setup_case no_hotfix "$HEADS_BEFORE" "$TAGS_BEFORE")"
