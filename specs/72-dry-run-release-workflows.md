@@ -976,3 +976,57 @@ plan could not have anticipated.
   proves hard to maintain.
 - **`#59`**, the Maven 3.9.9 → 3.9.16 bump. §1's measurements were taken on 3.9.9, the pinned CI
   version, so nothing here depends on the bump.
+
+---
+
+## 8. Review round 1 — PR #77
+
+[PR #77](https://github.com/MRISS-Projects/parent-poms/pull/77), reviewed by GitHub Copilot at the
+repository default effort level (the review arrived automatically, so it was not a per-PR choice).
+Five findings on head `8b4165c6`; four valid, one declined with evidence.
+
+| # | Finding | Verdict | Commit |
+|---|---|---|---|
+| F1 | The registry snapshot filtered packages by the repository's name | valid | `66466b28` |
+| F2 | A failed `git ls-remote` read as "the ref is absent" | valid | `9428b4fe` |
+| F3 | The executable-bit gate also matches `*.test.sh` | declined; comment corrected | `64bdc98c` |
+| F4 | The `/users/` fallback left every versions request on `/orgs/` | valid | `5ccbfc0a` |
+| F5 | The global constraints claimed `build.yml` was untouched | valid | `98aba58f` |
+
+**F2 is the one that matters, and it invalidates a claim this spec made.** §3 had called
+`assert-no-writes.sh` too thin to test. Reproduced with a stub `git` that fails auth, the script
+printed `fatal: Authentication failed`, then `tag v0.3.0: absent, as it must be`, then
+`the remote is byte-for-byte as it was before the run`, and exited 0 — **the entire AC002 guarantee,
+asserted from a read that never happened.** Both demonstration runs in Tasks 9 and 10 were green on
+exactly this code, which is the point: a demonstration run only exercises the happy path.
+
+The review's diagnosis was right and incomplete. It did not name the second hole: a repository with
+no tags has an empty `before` snapshot, a failed `after` read is also empty, and the two diff equal.
+
+**F1 and F4 were re-verified live**, because both only run against the registry and no unit test can
+reach that. [`dsh` run 35762708262](https://github.com/MRISS-Projects/dsh/actions/runs/35762708262),
+green, five markers, remote byte-for-byte unchanged, confirmed independently from a shell. The
+numbers settle F1 on their own:
+
+```text
+rehearsal: package listing served by /orgs/MRISS-Projects/packages?package_type=maven
+rehearsal: snapshotting all 50 Maven package(s) in MRISS-Projects for the dsh rehearsal
+rehearsal: 267 package version(s) recorded in rehearsal-packages.before
+  packages: unchanged (267 entries)
+```
+
+**267 versions across 50 packages, where the filtered snapshot recorded 25.** The name filter was
+watching 9% of the registry and reporting the other 91% as proven untouched.
+
+That run used a throwaway branch, `rehearsal-72-verify`, cut from the PR head and differing from it
+only in the eight `uses:` refs the `@master` pin requires — so the PR branch carried no temporary
+flip this time, unlike Tasks 9 and 10. Both scratch branches are deleted and both remotes are back
+to their pre-run listings.
+
+**What the round changed about how this work is tested.** Two suites were added, and between them
+they close the gap that let F1 and F2 ship: `assert-no-writes.test.sh` (21 assertions, stub `git`)
+and `snapshot-packages.test.sh` (9 assertions, stub `gh`). Run against three revisions the latter
+isolates the two registry fixes cleanly — before F1 it fails the name-filter test and both fallback
+tests, at F1 only the two fallback tests, at F4 none. It also caught a defect in F4 itself before
+it was committed: an edit left `${base}` used and never defined, which `bash -n` passes and `set -u`
+would have surfaced only at run time.
