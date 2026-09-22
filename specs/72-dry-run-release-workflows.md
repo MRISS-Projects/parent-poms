@@ -52,9 +52,17 @@ what every workflow here pins via `stCarolas/setup-maven`; the §1 measurements 
   `master`, not `DEVELOP`, not any branch or tag on the product repository. The single exception is
   the scratch hotfix branch a human creates by hand to demonstrate `project-hotfix.yml` (Task 10),
   which is not created by the workflow.
-- **`project-staging.yml`, `project-stage.yml`, `deploy.yml` and `build.yml` are not touched**,
-  beyond `commit-readme` gaining an input that defaults to off. `#72` scopes rehearsal to release
-  and hotfix.
+- **`project-staging.yml`, `project-stage.yml` and `deploy.yml` are not touched**, beyond
+  `commit-readme` gaining an input that defaults to off. `#72` scopes rehearsal to release and
+  hotfix.
+- **`build.yml` was touched, and this constraint originally said it would not be.** The plan
+  listed it with the three above. Building found three reasons to change it, none of which alters
+  what `build.yml` builds, and each adds a check rather than relaxing one. It now runs the
+  rehearsal test suites, because a rehearsal is the one thing a normal build never does; it fails
+  on any `.sh` under `.github/actions` that is not mode `100755`, because the scripts were first
+  committed non-executable (Task 9, attempt 1); and its `@master` pin check covers every action in
+  this repository rather than naming `commit-readme`, because the three rehearsal actions carry the
+  identical hazard. PR #77's review pointed out the contradiction.
 - Profiles are activated by `-D<name>`, never `-P`.
 - The README commit message stays exactly `Auto-generated README.md [skip jenkins]`, byte for byte.
 
@@ -394,7 +402,9 @@ automatable, and this spec does that instead — §6 restates AC002 to match.
 - `git ls-remote --heads origin` — one snapshot covering `master`, `DEVELOP`, `gh-pages` and the
   RC branch at once
 - `git ls-remote --tags origin`
-- the product's package-version list from the registry
+- every Maven package version in the organisation's registry — not only the product's. PR #77's
+  review (F1) showed a filter on the product's name hides a deploy by any consumer whose
+  coordinates do not contain its repository name. See `snapshot-packages.sh`.
 
 `rehearsal-verify` re-reads all three at the end, `if: always()`, and fails on any difference, plus
 asserts positively that tag `v<current_version>` is absent, the hotfix branch is absent, and the RC
@@ -443,6 +453,7 @@ A rehearsal is only worth the code if it produces a result those issues can quot
 .github/actions/rehearsal-setup/marker.sh                   # template copied to RUNNER_TEMP
 .github/actions/rehearsal-setup/marker.test.sh              # added during Task 2 — see below
 .github/actions/rehearsal-setup/snapshot-packages.sh        # added during Task 2 — see below
+.github/actions/rehearsal-setup/snapshot-packages.test.sh   # added in PR #77's review round
 .github/actions/rehearsal-tag/action.yml
 .github/actions/rehearsal-tag/build-release-tag.sh
 .github/actions/rehearsal-tag/build-release-tag.test.sh
@@ -450,15 +461,26 @@ A rehearsal is only worth the code if it produces a result those issues can quot
 .github/actions/rehearsal-verify/assert-markers.sh
 .github/actions/rehearsal-verify/assert-markers.test.sh
 .github/actions/rehearsal-verify/assert-no-writes.sh
+.github/actions/rehearsal-verify/assert-no-writes.test.sh   # added in PR #77's review round
 .github/actions/commit-readme/action.yml                    # modified: dry-run input
 .github/workflows/project-release.yml                       # modified
 .github/workflows/project-hotfix.yml                        # modified
+.github/workflows/build.yml                                 # modified — see Global constraints
 specs/72-dry-run-release-workflows.md                       # this spec
 ```
 
 `build-release-tag.sh` and `assert-markers.sh` carry real logic and are written test-first,
-following `check-placeholders.test.sh` from `#71`. `assert-no-writes.sh` is thin enough that its
-verification is the demonstration run.
+following `check-placeholders.test.sh` from `#71`.
+
+**This section originally went on to say `assert-no-writes.sh` was "thin enough that its
+verification is the demonstration run". That was wrong, and it is the most instructive mistake in
+this spec.** A demonstration run only ever exercises the happy path, and a script whose whole job
+is to fail closed is defined by its failure paths. PR #77's review found that a failed
+`git ls-remote` read as "the ref is absent": reproduced with a stub `git` that fails auth, the
+script printed `fatal: Authentication failed`, then `tag v0.3.0: absent, as it must be`, then
+`the remote is byte-for-byte as it was before the run`, and exited 0. Both demonstration runs were
+green on exactly this code. `assert-no-writes.test.sh` and `snapshot-packages.test.sh` now cover
+every read that can fail, each against a stub on `PATH`.
 
 Two files the plan did not name:
 
@@ -509,6 +531,12 @@ removed on this branch.
       `gh api "/orgs/MRISS-Projects/packages?package_type=maven"` filtered to the product, fall back
       to `/users/...` if the org endpoint 404s, and record the working form in a comment in
       `action.yml`.
+
+      **Outcome.** Both demonstration runs measured `/orgs/`, so it is pinned and the `/users/`
+      fallback is gone. PR #77's review (F4) found the fallback switched only the listing while
+      every versions request stayed on `/orgs/`, so it could never have worked; for an
+      organisation it could never have been taken either. "Filtered to the product" did not
+      survive the same review (F1): the snapshot covers every package.
 
 **Verify:** the `$GITHUB_ENV` block is emitted with every variable empty when `dry_run` is false —
 assert by dispatching the probe workflow of Task 1 with the action wired and `dry_run: false`, and
