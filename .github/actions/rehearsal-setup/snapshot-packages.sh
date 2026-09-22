@@ -21,11 +21,16 @@
 # git_project is used only to label the log. It is kept in the signature so the two callers and
 # the actions that feed them did not change inside a review round.
 #
-# ENDPOINT — specs/72 Task 2 left the exact form open. The organisation endpoint is tried
-# first and the user endpoint is the documented fallback, because GitHub serves an
-# organisation's packages from /orgs/{org}/packages and a user account's from
-# /users/{user}/packages, and MRISS-Projects is an organisation. The form that answered is
-# echoed into the run log, so the demonstration runs in specs/72 Tasks 9 and 10 pin it.
+# ENDPOINT — pinned to /orgs/, because it was measured. specs/72 Task 2 left the exact form open
+# and asked for the working one to be recorded once found: it tried /orgs/{org}/packages first
+# with /users/{user}/packages as a fallback. Both demonstration runs logged "package listing
+# served by /orgs/MRISS-Projects/packages?package_type=maven" (dsh runs 35662168807 and
+# 35665353914). MRISS-Projects is an organisation, so that is the form that applies.
+#
+# The fallback was removed rather than repaired. PR #77's review (F4) found it switched only the
+# listing to /users/, leaving the versions request below hard-coded to /orgs/ — so if the fallback
+# had ever been taken, every versions request would have failed. It never was taken, and could not
+# be for an organisation. Dead code with a latent defect is better deleted than fixed.
 #
 # Failure is deliberately hard. If the snapshot could not be taken, the before/after diff
 # would compare two empty files and pass while proving nothing — the one outcome worse than
@@ -41,24 +46,18 @@ project="$1"
 output="$2"
 org=MRISS-Projects
 
-packages_json=''
-endpoint=''
-for candidate in "/orgs/${org}/packages?package_type=maven" "/users/${org}/packages?package_type=maven"; do
-  if packages_json="$(gh api --paginate "$candidate" 2>/dev/null)"; then
-    endpoint="$candidate"
-    break
-  fi
-done
+# The listing and every versions request below are built from this one base, so they cannot
+# disagree about which endpoint they are talking to — the defect F4 found.
+base="/orgs/${org}"
 
-if [ -z "$endpoint" ]; then
-  echo "::error::rehearsal: could not list Maven packages for '${org}'. Both" \
-       "/orgs/${org}/packages and /users/${org}/packages failed. DEPLOY_TOKEN needs the" \
-       "read:packages scope. Refusing to continue: an empty snapshot would let the" \
+if ! packages_json="$(gh api --paginate "${base}/packages?package_type=maven")"; then
+  echo "::error::rehearsal: could not list Maven packages at ${base}/packages. DEPLOY_TOKEN" \
+       "needs the read:packages scope. Refusing to continue: an empty snapshot would let the" \
        "before/after diff pass without having inspected the registry." >&2
   exit 1
 fi
 
-echo "rehearsal: package listing served by ${endpoint}"
+echo "rehearsal: package listing served by ${base}/packages?package_type=maven"
 
 mapfile -t names < <(printf '%s' "$packages_json" | jq -r '.[] | .name' | sort -u)
 
@@ -69,7 +68,7 @@ for name in "${names[@]:-}"; do
   [ -n "$name" ] || continue
   # The package name goes in a path segment. Dots are legal there; a slash is not, and a
   # Maven package name cannot contain one.
-  gh api --paginate "/orgs/${org}/packages/maven/${name}/versions" \
+  gh api --paginate "${base}/packages/maven/${name}/versions" \
     --jq '.[] | .name' 2>/dev/null \
     | sed "s|^|${name} |" >> "$output" || {
       echo "::error::rehearsal: could not list versions of package '${name}'." >&2
