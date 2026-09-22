@@ -83,11 +83,20 @@ jobs:
             sh "$t"
           done
 
-      # #72: every .sh under .github/actions is invoked directly by an action.yml or a
-      # workflow step, so it needs git mode 100755. A development box with core.fileMode
-      # false — any Windows checkout — commits 100644 silently, and `chmod +x` there changes
-      # nothing git records. The failure then lands six minutes into a release as
-      # "Permission denied", which is where MRISS-Projects/dsh run 35660420977 found it.
+      # #72: every .sh under .github/actions must be git mode 100755. A development box with
+      # core.fileMode false — any Windows checkout — commits 100644 silently, and `chmod +x`
+      # there changes nothing git records. When the script is one an action executes directly,
+      # the failure lands six minutes into a release as "Permission denied", which is where
+      # MRISS-Projects/dsh run 35660420977 found it.
+      #
+      # The rule is deliberately uniform, not "scripts an action executes directly". Not every
+      # .sh here needs the bit: the *.test.sh suites run as `sh <file>`, and marker.sh and
+      # snapshot-packages.sh are executed from copies that rehearsal-setup chmods itself. But
+      # which scripts are executed directly is a fact about the call sites, it moves whenever
+      # they do, and it is not reliably readable off the tree — getting exactly that wrong is how
+      # this bug shipped. A uniform rule has no list to fall out of date, and costs a file that
+      # did not strictly need +x nothing. (PR #77's review suggested narrowing it; this is why
+      # it was not.)
       - name: Check the action scripts are executable
         run: |
           set -euo pipefail
