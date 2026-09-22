@@ -16,6 +16,11 @@ on:
         required: false
         default: 'file:///tmp/sites'
         description: 'Site staging path. Default: file:///tmp/sites'
+      dry_run:
+        type: boolean
+        required: false
+        default: false
+        description: 'Rehearse the run: no remote write, every suppression announced'
     secrets:
       DEPLOY_TOKEN:
         required: true
@@ -38,6 +43,16 @@ jobs:
           repository: MRISS-Projects/${{ inputs.git_project }}
           ref: ${{ inputs.branch_name }}
           fetch-depth: 0
+          token: ${{ secrets.DEPLOY_TOKEN }}
+
+      # #72. See the identical step in project-release.yml. Every RH_* variable is empty in
+      # a real hotfix, so each command below expands to exactly what it was before #72.
+      - name: Rehearsal setup
+        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-setup@master
+        with:
+          dry_run: ${{ inputs.dry_run }}
+          git_project: ${{ inputs.git_project }}
+          branch_name: ${{ inputs.branch_name }}
           token: ${{ secrets.DEPLOY_TOKEN }}
 
       - name: Set up JDK 17
@@ -142,8 +157,26 @@ jobs:
       - name: Maven Release
         run: |
           mvn -B release:clean
-          mvn -B release:prepare
-          mvn -B \
+
+          bash "$RUNNER_TEMP/rehearsal-marker.sh" release-prepare \
+            "commit the release POMs, tag v${HOTFIX_RELEASE_NUMBER} and push both"
+
+          mvn -B $RH_RELEASE_DRYRUN release:prepare
+
+      # #72 §2.2 — the one rehearsal-only step. See project-release.yml for why it exists,
+      # and for why it must sit between prepare and perform rather than after both.
+      - name: Rehearsal tag bridge
+        if: ${{ inputs.dry_run }}
+        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-tag@master
+        with:
+          site_deployment_url: ${{ inputs.site_deployment_url }}
+
+      - name: Maven Release Perform
+        run: |
+          bash "$RUNNER_TEMP/rehearsal-marker.sh" release-perform-deploy \
+            "check out the tag and deploy the artifacts to the registry"
+
+          mvn -B $RH_RELEASE_DRYRUN \
             -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
             release:perform
 
@@ -158,15 +191,25 @@ jobs:
 
           cd target/checkout
 
-          git fetch origin "refs/tags/${CURRENT_TAG}:refs/tags/${CURRENT_TAG}"
+          # See project-release.yml: RH_TAG_SOURCE holds the literal 'origin' this line used
+          # to hardcode, so a real hotfix's expansion is unchanged.
+          git fetch $RH_TAG_SOURCE "refs/tags/${CURRENT_TAG}:refs/tags/${CURRENT_TAG}"
 
+          # --allow-unrelated-histories is this workflow's own and stays: a hotfix line can
+          # be cut from a tag whose history master does not contain.
           git merge -s recursive -X theirs --allow-unrelated-histories "$CURRENT_TAG"
-          git push "$REPO_URL" master
+
+          bash "$RUNNER_TEMP/rehearsal-marker.sh" merge-to-master \
+            "push the merge of ${CURRENT_TAG} to master"
+
+          git push $RH_GIT_PUSH_DRYRUN "$REPO_URL" master
 
       - name: Deploy Site to gh-pages
         run: |
           cd target/checkout
-          mvn -B \
+          bash "$RUNNER_TEMP/rehearsal-marker.sh" site-deploy \
+            "publish the generated site to gh-pages"
+          mvn -B $RH_SCMPUBLISH_DRYRUN \
             -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
             -Ddeployment \
             -Drelease-deployment \
@@ -190,3 +233,25 @@ jobs:
           branch: master
           working-directory: target/checkout
           push-url: https://x-access-token:${{ secrets.DEPLOY_TOKEN }}@github.com/MRISS-Projects/${{ inputs.git_project }}.git
+          dry-run: ${{ inputs.dry_run }}
+
+      - name: Rehearsal verify
+        if: always()
+        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-verify@master
+        with:
+          dry_run: ${{ inputs.dry_run }}
+          git_project: ${{ inputs.git_project }}
+          # Read by the 'Read hotfix release number' step above. This workflow takes no
+          # version input; the version it releases is whatever the branch's POM says.
+          current_version: ${{ env.HOTFIX_RELEASE_NUMBER }}
+          dispatch_branch: ${{ inputs.branch_name }}
+          # Empty: project-hotfix.yml creates no branch, so there is none to assert absent.
+          hotfix_branch: ''
+          token: ${{ secrets.DEPLOY_TOKEN }}
+          # Five, not eight: no scm:branch, no versions:set checkin, no RC deletion.
+          declared_markers: >-
+            release-prepare
+            release-perform-deploy
+            merge-to-master
+            site-deploy
+            commit-readme

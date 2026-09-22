@@ -1,0 +1,102 @@
+name: Rehearsal setup
+description: >
+  Resolve the dry_run input into the RH_* flag variables every guarded write point
+  interpolates, install the marker script, and snapshot the remote so the run can prove
+  afterwards that it changed nothing. See specs/72-dry-run-release-workflows.md §2.1/§2.4.
+
+inputs:
+  dry_run:
+    description: "'true' rehearses the run. Anything else is a real release."
+    required: true
+  git_project:
+    description: 'Target repository name, e.g. dsh'
+    required: true
+  branch_name:
+    description: 'The RC or hotfix branch the run was dispatched against'
+    required: true
+  token:
+    description: >
+      Token used for the package-registry snapshot. Needs read:packages. Composite
+      actions receive no secrets implicitly, so the caller passes DEPLOY_TOKEN here.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve the rehearsal flag variables
+      shell: bash
+      env:
+        DRY_RUN: ${{ inputs.dry_run }}
+      run: |
+        set -euo pipefail
+
+        # Every variable below is EMPTY in a real release, so `mvn -B $RH_RELEASE_DRYRUN
+        # release:prepare` expands to exactly the text in master today. That property is the
+        # whole safety argument for putting a rehearsal mode in the release workflows; it is
+        # re-checked by hand in specs/72 Task 8.
+        #
+        # RH_TAG_SOURCE is the one exception: it is non-empty in a real release because the
+        # command it feeds already names `origin` there. Its real-release value is the literal
+        # string the workflow used to hardcode, so that expansion is identical too.
+        if [ "$DRY_RUN" = "true" ]; then
+          # $GITHUB_WORKSPACE is expanded HERE, not left as literal text. A value written to
+          # $GITHUB_ENV is substituted into the call site as a single expansion; bash does not
+          # then re-expand what came out of it, so a stored '$GITHUB_WORKSPACE' would reach
+          # Maven verbatim.
+          LOCAL_SCM="scm:git:file://${GITHUB_WORKSPACE}"
+          {
+            echo "RH_ACTIVE=1"
+            echo "RH_RELEASE_DRYRUN=-DdryRun=true"
+            echo "RH_SCM_LOCAL_URL=-DdeveloperConnectionUrl=${LOCAL_SCM} -DconnectionUrl=${LOCAL_SCM}"
+            echo "RH_SCMPUBLISH_DRYRUN=-Dscmpublish.dryRun=true"
+            echo "RH_GIT_PUSH_DRYRUN=--dry-run"
+            echo "RH_TAG_SOURCE=${GITHUB_WORKSPACE}"
+          } >> "$GITHUB_ENV"
+        else
+          {
+            echo "RH_ACTIVE="
+            echo "RH_RELEASE_DRYRUN="
+            echo "RH_SCM_LOCAL_URL="
+            echo "RH_SCMPUBLISH_DRYRUN="
+            echo "RH_GIT_PUSH_DRYRUN="
+            echo "RH_TAG_SOURCE=origin"
+          } >> "$GITHUB_ENV"
+        fi
+
+        echo "--- \$GITHUB_ENV block written by rehearsal-setup (dry_run=${DRY_RUN}) ---"
+        tail -6 "$GITHUB_ENV"
+
+    - name: Install the rehearsal scripts
+      shell: bash
+      run: |
+        set -euo pipefail
+        cp "${{ github.action_path }}/marker.sh" "$RUNNER_TEMP/rehearsal-marker.sh"
+        # snapshot-packages.sh is installed rather than called in place because
+        # rehearsal-verify must run the identical script to produce the 'after' half of the
+        # diff, and a composite action cannot address a sibling action's action_path.
+        cp "${{ github.action_path }}/snapshot-packages.sh" "$RUNNER_TEMP/rehearsal-snapshot-packages.sh"
+        chmod +x "$RUNNER_TEMP/rehearsal-marker.sh" "$RUNNER_TEMP/rehearsal-snapshot-packages.sh"
+        # Start from a clean slate so a re-run on a reused runner cannot inherit ids.
+        rm -f "$RUNNER_TEMP/rehearsal-markers"
+
+    - name: Snapshot the remote before anything runs
+      if: ${{ inputs.dry_run == 'true' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        GIT_PROJECT: ${{ inputs.git_project }}
+        BRANCH_NAME: ${{ inputs.branch_name }}
+      run: |
+        set -euo pipefail
+
+        # One `ls-remote --heads` covers master, DEVELOP, gh-pages and the RC branch at once,
+        # so there is no list of branch names to keep in step with the workflows.
+        git ls-remote --heads origin | sort > "$RUNNER_TEMP/rehearsal-heads.before"
+        git ls-remote --tags  origin | sort > "$RUNNER_TEMP/rehearsal-tags.before"
+
+        echo "heads before: $(wc -l < "$RUNNER_TEMP/rehearsal-heads.before")"
+        echo "tags  before: $(wc -l < "$RUNNER_TEMP/rehearsal-tags.before")"
+        echo "rehearsing against branch: $BRANCH_NAME"
+
+        "$RUNNER_TEMP/rehearsal-snapshot-packages.sh" \
+          "$GIT_PROJECT" "$RUNNER_TEMP/rehearsal-packages.before"

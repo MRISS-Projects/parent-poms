@@ -72,6 +72,43 @@ jobs:
       - name: Test the README placeholder guard
         run: sh .github/actions/commit-readme/check-placeholders.test.sh
 
+      # #72: the rehearsal scripts are the other unit-testable pieces of the release path,
+      # and a rehearsal is the one thing that never happens on a normal build — so without
+      # this their first exercise would be a rehearsal someone dispatched by hand.
+      - name: Test the rehearsal scripts
+        run: |
+          set -euo pipefail
+          for t in .github/actions/rehearsal-*/*.test.sh; do
+            echo "--- $t"
+            sh "$t"
+          done
+
+      # #72: every .sh under .github/actions must be git mode 100755. A development box with
+      # core.fileMode false — any Windows checkout — commits 100644 silently, and `chmod +x`
+      # there changes nothing git records. When the script is one an action executes directly,
+      # the failure lands six minutes into a release as "Permission denied", which is where
+      # MRISS-Projects/dsh run 35660420977 found it.
+      #
+      # The rule is deliberately uniform, not "scripts an action executes directly". Not every
+      # .sh here needs the bit: the *.test.sh suites run as `sh <file>`, and marker.sh and
+      # snapshot-packages.sh are executed from copies that rehearsal-setup chmods itself. But
+      # which scripts are executed directly is a fact about the call sites, it moves whenever
+      # they do, and it is not reliably readable off the tree — getting exactly that wrong is how
+      # this bug shipped. A uniform rule has no list to fall out of date, and costs a file that
+      # did not strictly need +x nothing. (PR #77's review suggested narrowing it; this is why
+      # it was not.)
+      - name: Check the action scripts are executable
+        run: |
+          set -euo pipefail
+          bad=$(git ls-files -s .github/actions/ | grep -E '\.sh$' | grep -v '^100755 ' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::action scripts committed without the executable bit:"
+            echo "$bad"
+            echo "Fix with: git update-index --chmod=+x <file>"
+            exit 1
+          fi
+          echo "All action scripts are mode 100755."
+
       # #71: the reusable workflows must reach the commit-readme action by a @master ref.
       # A relative ./ path does not work there — it resolves against the CALLER's workspace
       # (proven by MRISS-Projects/dsh run 35463833006) — so the reference is qualified, and
@@ -79,21 +116,29 @@ jobs:
       # pointing that ref at a task branch; merging one would break every consumer's release
       # the moment the branch is deleted, silently and at release time. This fails the build
       # instead, so a task-branch pin cannot reach master.
-      - name: Check the commit-readme action is pinned to master
+      #
+      # #72 widened this from commit-readme to EVERY action in this repository. The three
+      # rehearsal actions are reached the same way and carry the same hazard, and #72's own
+      # demonstration runs needed exactly the task-branch pin this forbids — the guard caught
+      # that flip at run 35660362564, which is the guard working. Naming one action was only
+      # ever an artefact of one action existing.
+      - name: Check this repository's actions are pinned to master
         run: |
           set -euo pipefail
           # Matches only real 'uses:' lines, so this check does not flag its own pattern.
           # Trailing comments and surrounding quotes are stripped before comparing, so a
           # correctly pinned but quoted or annotated reference is not a false positive.
-          bad=$(grep -rnE '^[[:space:]]*uses:[[:space:]]*.{0,2}\S*actions/commit-readme@' .github/workflows/ \
+          bad=$(grep -rnE '^[[:space:]]*uses:[[:space:]]*.{0,2}MRISS-Projects/parent-poms/\.github/actions/\S*@' .github/workflows/ \
                 | sed -e 's/[[:space:]]*#.*$//' -e "s/[\"']//g" -e 's/[[:space:]]*$//' \
                 | grep -v '@master$' || true)
           if [ -n "$bad" ]; then
-            echo "::error::commit-readme action pinned to a non-master ref:"
+            echo "::error::parent-poms action pinned to a non-master ref:"
             echo "$bad"
+            echo "A task-branch pin breaks every consumer's release the moment the branch is"
+            echo "deleted, silently and at release time. Flip it back before merging."
             exit 1
           fi
-          echo "All commit-readme references are pinned to @master."
+          echo "All parent-poms action references are pinned to @master."
 
       # Configure Maven settings so it can read from the GitHub Packages registry
       # (https://maven.pkg.github.com/MRISS-Projects/maven-repo) where

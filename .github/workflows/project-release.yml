@@ -32,6 +32,11 @@ on:
         required: false
         default: 'file:///tmp/sites'
         description: 'Site staging path. Default: file:///tmp/sites'
+      dry_run:
+        type: boolean
+        required: false
+        default: false
+        description: 'Rehearse the run: no remote write, every suppression announced'
     secrets:
       DEPLOY_TOKEN:
         required: true
@@ -54,6 +59,19 @@ jobs:
           repository: MRISS-Projects/${{ inputs.git_project }}
           ref: ${{ inputs.branch_name }}
           fetch-depth: 0
+          token: ${{ secrets.DEPLOY_TOKEN }}
+
+      # #72. Resolves dry_run into the RH_* variables the write points below interpolate,
+      # installs the marker script, and snapshots the remote so the run can prove afterwards
+      # that it changed nothing. Every RH_* variable is empty in a real release, so each
+      # command below expands to exactly what it was before #72 — proven line by line in
+      # specs/72-dry-run-release-workflows.md §8.
+      - name: Rehearsal setup
+        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-setup@master
+        with:
+          dry_run: ${{ inputs.dry_run }}
+          git_project: ${{ inputs.git_project }}
+          branch_name: ${{ inputs.branch_name }}
           token: ${{ secrets.DEPLOY_TOKEN }}
 
       - name: Set up JDK 17
@@ -151,32 +169,67 @@ jobs:
 
       - name: Maven Release
         run: |
-          SITE_URL="${{ inputs.site_deployment_url }}"
-
           mvn -B \
             -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.next_development_version }} \
             -Dbuild.CURRENT_VERSION_NUMBER=${{ inputs.current_version }} \
             release:clean
 
-          mvn -B \
+          bash "$RUNNER_TEMP/rehearsal-marker.sh" release-prepare \
+            "commit the release POMs, tag v${{ inputs.current_version }} and push both"
+
+          mvn -B $RH_RELEASE_DRYRUN \
             -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.next_development_version }} \
             -Dbuild.CURRENT_VERSION_NUMBER=${{ inputs.current_version }} \
             release:prepare
 
-          mvn -B \
+      # #72 §2.2 — the one rehearsal-only step. `release:prepare -DdryRun=true` creates no
+      # tag and `release:perform -DdryRun=true` creates no target/checkout, so without this
+      # every step below is unreachable rather than merely skipped, and #69's versions:set
+      # and #65's merge-back would never execute. It builds both locally, out of the
+      # pom.xml.tag tree the dry run already wrote to disk, and pushes nothing.
+      #
+      # IT RUNS BETWEEN prepare AND perform, which is the whole reason the Maven release is
+      # two steps rather than one. `release:perform` finishes with release:clean — "done
+      # automatically after a successful release:perform", per that goal's own description —
+      # and it does so in dry run too. MRISS-Projects/dsh run 35661237973 logged "Cleaning up
+      # after release..." and the bridge, then placed after the whole thing, found
+      # release.properties and all 13 pom.xml.tag files already deleted.
+      #
+      # Nothing the bridge produces is at risk from that cleanup: the tag is a git ref, and
+      # target/checkout survives for the same reason a real release's does — perform creates
+      # it, cleans, and the next step cd's into it.
+      - name: Rehearsal tag bridge
+        if: ${{ inputs.dry_run }}
+        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-tag@master
+        with:
+          site_deployment_url: ${{ inputs.site_deployment_url }}
+
+      - name: Maven Release Perform
+        run: |
+          SITE_URL="${{ inputs.site_deployment_url }}"
+
+          bash "$RUNNER_TEMP/rehearsal-marker.sh" release-perform-deploy \
+            "check out the tag and deploy the artifacts to the registry"
+
+          mvn -B $RH_RELEASE_DRYRUN \
             -Dsite.deployment.personal.main="${SITE_URL}" \
             release:perform
 
       - name: Create Hotfix Branch
         run: |
           cd target/checkout
-          mvn -B -Dbranch=${{ inputs.hotfix_branch }} scm:branch
+          bash "$RUNNER_TEMP/rehearsal-marker.sh" scm-branch \
+            "push the new hotfix branch ${{ inputs.hotfix_branch }} to the remote"
+          mvn -B $RH_SCM_LOCAL_URL -Dbranch=${{ inputs.hotfix_branch }} scm:branch
 
       - name: Checkout Hotfix Branch and Set Initial Version
         run: |
           rm -rf target/checkout
 
-          mvn -B \
+          # scm:checkout is a read, so it gets the redirected URL but no marker: under a
+          # rehearsal the hotfix branch exists only in the workspace repository, which is
+          # where the redirected scm:branch above just pushed it.
+          mvn -B $RH_SCM_LOCAL_URL \
             -DscmVersion=${{ inputs.hotfix_branch }} \
             -DscmVersionType=branch \
             -DcheckoutDirectory=target/checkout \
@@ -186,7 +239,26 @@ jobs:
 
           mvn -B -DprocessAllModules=true -DnewVersion=${{ inputs.initial_hotfix_version }} versions:set
 
-          mvn -B -Dmessage="[maven-release-plugin] set hotfix version ${{ inputs.initial_hotfix_version }}" scm:checkin
+          # #69's question, answered by the run rather than by reading the plugin: does
+          # versions:set -DprocessAllModules=true rewrite one POM or all of them? #69's
+          # analysis predicts 1 of 13. Rehearsal-only, because in a real release this
+          # directory is a fresh checkout whose diff is the same measurement but whose log
+          # nobody reads.
+          if [ -n "${RH_ACTIVE:-}" ]; then
+            modified=$(git status --porcelain '*pom.xml' | wc -l)
+            total=$(git ls-files '*pom.xml' | wc -l)
+            echo "REHEARSAL evidence for #69: versions:set modified ${modified} of ${total} pom.xml file(s)."
+            git status --porcelain '*pom.xml'
+            {
+              echo "- **#69 evidence** — \`versions:set -DprocessAllModules=true\` modified" \
+                   "\`${modified}\` of \`${total}\` POM files."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          bash "$RUNNER_TEMP/rehearsal-marker.sh" scm-checkin-hotfix-version \
+            "push the ${{ inputs.initial_hotfix_version }} version change to ${{ inputs.hotfix_branch }}"
+
+          mvn -B $RH_SCM_LOCAL_URL -Dmessage="[maven-release-plugin] set hotfix version ${{ inputs.initial_hotfix_version }}" scm:checkin
 
       - name: Merge Release Tag to Master
         run: |
@@ -199,15 +271,27 @@ jobs:
 
           cd target/checkout
 
-          git fetch origin "refs/tags/${CURRENT_TAG}:refs/tags/${CURRENT_TAG}"
+          # RH_TAG_SOURCE is the one flag variable that is non-empty in a real release: it
+          # holds the literal 'origin' this line used to hardcode, so the expansion is
+          # unchanged. Under a rehearsal it names the workspace, where the bridge built the
+          # tag — the remote does not have it and must not.
+          git fetch $RH_TAG_SOURCE "refs/tags/${CURRENT_TAG}:refs/tags/${CURRENT_TAG}"
 
+          # The merge itself runs for real in both modes. It is a local operation, and it is
+          # the operation #65 is about, so suppressing it would defeat the rehearsal.
           git merge -s recursive -X theirs "$CURRENT_TAG"
-          git push "$REPO_URL" master
+
+          bash "$RUNNER_TEMP/rehearsal-marker.sh" merge-to-master \
+            "push the merge of ${CURRENT_TAG} to master"
+
+          git push $RH_GIT_PUSH_DRYRUN "$REPO_URL" master
 
       - name: Deploy Site to gh-pages
         run: |
           cd target/checkout
-          mvn -B \
+          bash "$RUNNER_TEMP/rehearsal-marker.sh" site-deploy \
+            "publish the generated site to gh-pages"
+          mvn -B $RH_SCMPUBLISH_DRYRUN \
             -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
             -Ddeployment \
             -Drelease-deployment \
@@ -231,8 +315,40 @@ jobs:
           branch: master
           working-directory: target/checkout
           push-url: https://x-access-token:${{ secrets.DEPLOY_TOKEN }}@github.com/MRISS-Projects/${{ inputs.git_project }}.git
+          dry-run: ${{ inputs.dry_run }}
 
       - name: Remove RC Branch
         run: |
           REPO_URL="https://x-access-token:${DEPLOY_TOKEN}@github.com/MRISS-Projects/${{ inputs.git_project }}.git"
-          git push "$REPO_URL" --delete ${{ inputs.branch_name }}
+          bash "$RUNNER_TEMP/rehearsal-marker.sh" remove-rc-branch \
+            "delete the RC branch ${{ inputs.branch_name }} from the remote"
+          # Verified against a scratch repository rather than assumed: --delete changes the
+          # refspec shape, and --dry-run still prints " - [deleted] <branch>" while leaving
+          # the ref in place. That printed line is precisely why the marker above exists
+          # instead of trusting git's own output.
+          git push $RH_GIT_PUSH_DRYRUN "$REPO_URL" --delete ${{ inputs.branch_name }}
+
+      # if: always() — a rehearsal that dies halfway is exactly when you need to know
+      # whether it wrote something first.
+      - name: Rehearsal verify
+        if: always()
+        uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-verify@master
+        with:
+          dry_run: ${{ inputs.dry_run }}
+          git_project: ${{ inputs.git_project }}
+          current_version: ${{ inputs.current_version }}
+          dispatch_branch: ${{ inputs.branch_name }}
+          hotfix_branch: ${{ inputs.hotfix_branch }}
+          token: ${{ secrets.DEPLOY_TOKEN }}
+          # Set equality is enforced against this list. When #65 adds the merge into
+          # DEVELOP, its marker id must be added here or the rehearsal fails — which is the
+          # point: a write point added without a marker becomes a build failure.
+          declared_markers: >-
+            release-prepare
+            release-perform-deploy
+            scm-branch
+            scm-checkin-hotfix-version
+            merge-to-master
+            site-deploy
+            commit-readme
+            remove-rc-branch

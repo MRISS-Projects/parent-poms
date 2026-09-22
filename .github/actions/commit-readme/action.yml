@@ -31,6 +31,16 @@ inputs:
       ${issues.text.list} unresolved without failing the build.
     required: false
     default: 'false'
+  dry-run:
+    description: >
+      'true' commits locally but passes --dry-run to the push, and announces the
+      suppression with the `commit-readme` rehearsal marker. Guarded here rather than at
+      the call sites because the push below is a retry loop: a guard that had neutralised
+      only its first attempt would have left two live. project-staging.yml (both call
+      sites) and deploy.yml pass nothing and are unaffected. See
+      specs/72-dry-run-release-workflows.md §2.5.
+    required: false
+    default: 'false'
 
 runs:
   using: composite
@@ -48,6 +58,7 @@ runs:
         COMMIT_MESSAGE: ${{ inputs.message }}
         PUSH_URL: ${{ inputs.push-url }}
         TARGET_BRANCH: ${{ inputs.branch }}
+        DRY_RUN: ${{ inputs.dry-run }}
       run: |
         set -euo pipefail
 
@@ -63,6 +74,20 @@ runs:
         # unknown' after artifacts and the site are already published.
         git config user.name  >/dev/null 2>&1 || git config user.name  "github-actions[bot]"
         git config user.email >/dev/null 2>&1 || git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        # Empty in a real release, so the `git push` below expands to exactly the text this
+        # action carried before #72. Interpolated unquoted on purpose: `git push ""` passes
+        # an empty argument and fails.
+        DRY_RUN_FLAG=
+        if [ "$DRY_RUN" = "true" ]; then
+          DRY_RUN_FLAG=--dry-run
+          # Emitted before the unchanged-README early exit below, not after. The rehearsal's
+          # completeness check is set equality: a run where README.md happened not to change
+          # would otherwise report `commit-readme` as a missing marker rather than as the
+          # suppressed write it is.
+          bash "$RUNNER_TEMP/rehearsal-marker.sh" commit-readme \
+            "commit and push the generated README.md to $TARGET_BRANCH"
+        fi
 
         git add README.md
 
@@ -85,7 +110,7 @@ runs:
         fi
 
         for attempt in 1 2 3; do
-          if push_output=$(git push "$PUSH_TARGET" "HEAD:$TARGET_BRANCH" 2>&1); then
+          if push_output=$(git push $DRY_RUN_FLAG "$PUSH_TARGET" "HEAD:$TARGET_BRANCH" 2>&1); then
             printf '%s\n' "$push_output"
             exit 0
           fi
