@@ -664,11 +664,79 @@ copying `release.yml` with a `dry_run` passthrough — are both gone now that
       So the new suite is picked up by `build.yml`'s glob with no edit there — #76's
       generalisation working as the global constraint above assumes — and both scripts carry
       the executable bit as CI sees it, not merely as this Windows box reports it.
-- [ ] **Task 7 — the rehearsal.** Run §5 steps 1, 3 and 4. Record in this spec: the run URL, the
+- [x] **Task 7 — the rehearsal.** Run §5 steps 1, 3 and 4. Record in this spec: the run URL, the
       verification step's output, all eight markers, the `assert-no-writes` block, and the
       `git ls-remote --heads origin` comparison. Link the run in the PR.
-- [ ] **Task 8 — unpin.** Flip the action reference back to `@master`, confirm `build.yml` is
+
+      **Task 7 result.** [`dsh` run 35911734453](https://github.com/MRISS-Projects/dsh/actions/runs/35911734453),
+      dispatched from the scratch branch `scratch-69-rehearsal` at `c595a920`, cut from the RC
+      at `94060ecf`. Inputs as §5 step 3, plus `branch_name: staging-0.3.0-SNAPSHOT-RC`, which
+      the `dsh` wrapper requires and §5 omitted. **Conclusion: success — every step green.**
+
+      `release:update-versions` transformed all thirteen POMs, where `versions:set` logged one
+      `Updating project`:
+
+      ```text
+      [INFO] --- release:3.1.1:update-versions (default-cli) @ dsh ---
+      [INFO] Transforming pom.xml dsh 'DSH - Document Smart Highlights'...
+      [INFO] Transforming dsh-test-dataset/pom.xml dsh-test-dataset 'DSH Test Data Set'...
+      [INFO] Transforming dsh-data/pom.xml dsh-data 'dsh-data'...
+      …thirteen in all, one per module…
+      [INFO] Transforming dsh-coverage-report/pom.xml dsh-coverage-report 'DSH Coverage Report …'
+      [INFO] BUILD SUCCESS
+      ```
+
+      The verification step then passed, in 5.5 s rather than the 12 s §3.1 budgeted:
+
+      ```text
+      EXPECTED_VERSION: 0.3.1-SNAPSHOT
+      all 13 module(s) are at 0.3.1-SNAPSHOT
+      ```
+
+      `scm:checkin` ran next and succeeded. Run 35662168807 died before it on
+      `Non-resolvable parent POM … com.mriss.products:dsh:pom:0.3.0 (absent)`; that error does
+      not appear anywhere in this log.
+
+      **All eight markers, for the first time in a `project-release.yml` run.** The four after
+      `scm:checkin` had never been reached:
+
+      ```text
+      REHEARSAL release-prepare: would commit the release POMs, tag v0.3.0 and push both
+      REHEARSAL release-perform-deploy: would check out the tag and deploy the artifacts to the registry
+      REHEARSAL scm-branch: would push the new hotfix branch 0.3.x to the remote
+      REHEARSAL scm-checkin-hotfix-version: would push the 0.3.1-SNAPSHOT version change to 0.3.x
+      REHEARSAL merge-to-master: would push the merge of v0.3.0 to master
+      REHEARSAL site-deploy: would publish the generated site to gh-pages
+      REHEARSAL commit-readme: would commit and push the generated README.md to master
+      REHEARSAL remove-rc-branch: would delete the RC branch staging-0.3.0-SNAPSHOT-RC from the remote
+
+      rehearsal: all 8 declared write point(s) announced exactly once.
+      ```
+
+      `assert-no-writes`:
+
+      ```text
+        heads: unchanged (14 entries)
+        tags: unchanged (12 entries)
+        packages: unchanged (267 entries)
+        tag v0.3.0: absent, as it must be
+        branch 0.3.x: absent, as it must be
+        branch staging-0.3.0-SNAPSHOT-RC: still present, as it must be
+      rehearsal: the remote is byte-for-byte as it was before the run.
+      ```
+
+      The 14 heads are the 13 listed before the run plus `scratch-69-rehearsal` itself, which
+      was pushed before the dispatch and deleted after it. `git ls-remote --heads origin`
+      compared before and after: identical, 13 entries, byte for byte — the listing is in this
+      story's Task 8 note.
+- [x] **Task 8 — unpin.** Flip the action reference back to `@master`, confirm `build.yml` is
       green, and confirm the `dsh` scratch branch is deleted. Commit.
+
+      **Task 8 result.** Unpinned in commit below; `dsh`'s `scratch-69-rehearsal` deleted from
+      the remote. `git ls-remote --heads origin` on `dsh`, taken before the dispatch and again
+      after the deletion, `diff`s clean at 13 entries — the run left the consumer's remote
+      exactly as it found it, which is `assert-no-writes`'s claim confirmed from outside the
+      run as well as inside it.
 - [x] **Task 9 — docs.** Apply §4.5 to `specs/github-actions-reusable-workflows.md`. Commit.
 - [ ] **Task 10 — report.** Comment on `#69` with the measurement from Task 4 and the rehearsal
       from Task 7, and on [`#72`](https://github.com/MRISS-Projects/parent-poms/issues/72) that
@@ -678,19 +746,19 @@ copying `release.yml` with a `dry_run` passthrough — are both gone now that
 
 ## 7. Acceptance criteria
 
-- [ ] **AC001** — `project-release.yml` sets `initial_hotfix_version` on every module of the
+- [x] **AC001** — `project-release.yml` sets `initial_hotfix_version` on every module of the
       consuming reactor, not only the root. Proven by Task 7's run and by Task 4's local
       measurement.
-- [ ] **AC002** — A hotfix step that leaves any module at another version fails at that step,
+- [x] **AC002** — A hotfix step that leaves any module at another version fails at that step,
       naming the offending modules, before `scm:checkin` runs. Proven by the test suite's case 2
       and by the assertion's position in §4.4.
-- [ ] **AC003** — The check runs in real releases and rehearsals alike. No `RH_ACTIVE` guard
+- [x] **AC003** — The check runs in real releases and rehearsals alike. No `RH_ACTIVE` guard
       remains around it, and `#72`'s rehearsal-only evidence block is gone.
-- [ ] **AC004** — `project-release.yml` completes past `scm:checkin` in a `dry_run` rehearsal of
+- [x] **AC004** — `project-release.yml` completes past `scm:checkin` in a `dry_run` rehearsal of
       `dsh`, with all eight declared markers fired and `assert-no-writes` clean.
-- [ ] **AC005** — `assert-reactor-version.sh` has a `*.test.sh` beside it that `build.yml` runs,
+- [x] **AC005** — `assert-reactor-version.sh` has a `*.test.sh` beside it that `build.yml` runs,
       both files are committed `100755`, and the action is pinned `@master` at merge.
-- [ ] **AC006** — The reference doc describes the step as it is.
+- [x] **AC006** — The reference doc describes the step as it is.
 
 ---
 
