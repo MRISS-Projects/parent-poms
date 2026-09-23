@@ -117,6 +117,117 @@ else
   diff "$TMP/one.expected" "$TMP/one.xml" | sed 's/^/       /'
 fi
 
+# --- Case 4: several properties, in input order -----------------------------------------------
+make_settings "$TMP/four.xml"
+render 'mongo.host=localhost
+mongo.port=27017
+mongo.user=dshuser
+mongo.password=dshpass' "$TMP/four.xml"
+check "four properties exit 0" 0 $?
+check "four properties render in input order" \
+  "mongo.host mongo.port mongo.user mongo.password" \
+  "$(sed -n 's/^ *<\(mongo\.[a-z]*\)>.*/\1/p' "$TMP/four.xml" | tr '\n' ' ' | sed 's/ $//')"
+
+# --- Case 5: surrounding whitespace -----------------------------------------------------------
+make_settings "$TMP/spaces.xml"
+render '   mongo.port=27017   ' "$TMP/spaces.xml"
+check "a line padded with spaces renders trimmed" \
+  "                <mongo.port>27017</mongo.port>" \
+  "$(grep 'mongo.port' "$TMP/spaces.xml")"
+
+# --- Case 6: CRLF input -----------------------------------------------------------------------
+make_settings "$TMP/crlf.xml"
+render "$(printf 'mongo.port=27017\r')" "$TMP/crlf.xml"
+check "a trailing carriage return is stripped" \
+  "                <mongo.port>27017</mongo.port>" \
+  "$(tr -d '\r' < "$TMP/crlf.xml" | grep 'mongo.port')"
+check "no carriage return survives into the file" "0" \
+  "$(tr -cd '\r' < "$TMP/crlf.xml" | wc -c | tr -d ' ')"
+
+# --- Case 7: XML-significant characters in the value ------------------------------------------
+make_settings "$TMP/escape.xml"
+render 'app.query=a<b & c>d' "$TMP/escape.xml"
+check "a value's XML characters are escaped" \
+  "                <app.query>a&lt;b &amp; c&gt;d</app.query>" \
+  "$(grep 'app.query' "$TMP/escape.xml")"
+
+make_settings "$TMP/amp.xml"
+render 'app.entity=already &amp; escaped' "$TMP/amp.xml"
+check "an ampersand is escaped once, not twice" \
+  "                <app.entity>already &amp;amp; escaped</app.entity>" \
+  "$(grep 'app.entity' "$TMP/amp.xml")"
+
+# --- Case 8: a value containing '=' -----------------------------------------------------------
+make_settings "$TMP/equals.xml"
+render 'flyway.url=jdbc:postgresql://h/db?user=x&ssl=true' "$TMP/equals.xml"
+check "the line splits at the first = only" \
+  "                <flyway.url>jdbc:postgresql://h/db?user=x&amp;ssl=true</flyway.url>" \
+  "$(grep 'flyway.url' "$TMP/equals.xml")"
+
+# --- Case 9: an empty value -------------------------------------------------------------------
+make_settings "$TMP/empty-value.xml"
+render 'mongo.user=' "$TMP/empty-value.xml"
+check "an empty value renders an empty element" \
+  "                <mongo.user></mongo.user>" \
+  "$(grep 'mongo.user' "$TMP/empty-value.xml")"
+
+# --- Cases 10-11: invalid lines ---------------------------------------------------------------
+# Each also asserts the file is untouched: a rejected block must not half-render (case 15).
+expect_rejected() {
+  description="$1"; block="$2"; needle="$3"
+  make_settings "$TMP/reject.xml"
+  cp "$TMP/reject.xml" "$TMP/reject.before"
+  render "$block" "$TMP/reject.xml"
+  status=$?
+  if [ "$status" -eq 0 ]; then
+    fail "$description (expected a non-zero exit, got 0)"
+  else
+    pass "$description"
+  fi
+  if grep -q "$needle" "$TMP/stdout" "$TMP/stderr"; then
+    pass "$description - the message names the offending line"
+  else
+    fail "$description - the message names the offending line"
+    sed 's/^/       /' "$TMP/stdout" "$TMP/stderr"
+  fi
+  if diff -q "$TMP/reject.xml" "$TMP/reject.before" >/dev/null 2>&1; then
+    pass "$description - the settings file is untouched"
+  else
+    fail "$description - the settings file is untouched"
+  fi
+}
+
+expect_rejected "a line with no = is rejected" 'mongo.port' 'mongo.port'
+expect_rejected "a name containing a space is rejected" 'mongo port=1' 'mongo port=1'
+expect_rejected "a name containing XML syntax is rejected" 'a><b=1' 'a><b=1'
+expect_rejected "a good line after a bad one still rejects the block" 'bad line
+mongo.port=27017' 'bad line'
+
+# --- Cases 12-14: the file itself -------------------------------------------------------------
+make_settings "$TMP/no-marker.xml"
+grep -v 'MAVEN_PROPERTIES' "$TMP/no-marker.xml" > "$TMP/no-marker.tmp"
+mv "$TMP/no-marker.tmp" "$TMP/no-marker.xml"
+cp "$TMP/no-marker.xml" "$TMP/no-marker.before"
+render 'mongo.port=27017' "$TMP/no-marker.xml"
+check "a missing marker exits non-zero" 1 $?
+if diff -q "$TMP/no-marker.xml" "$TMP/no-marker.before" >/dev/null 2>&1; then
+  pass "a missing marker leaves the file untouched"
+else
+  fail "a missing marker leaves the file untouched"
+fi
+
+make_settings "$TMP/two-markers.xml"
+sed 's/.*MAVEN_PROPERTIES.*/&\n&/' "$TMP/two-markers.xml" > "$TMP/two-markers.tmp"
+mv "$TMP/two-markers.tmp" "$TMP/two-markers.xml"
+render 'mongo.port=27017' "$TMP/two-markers.xml"
+check "a duplicated marker exits non-zero" 1 $?
+
+render 'mongo.port=27017' "$TMP/does-not-exist.xml"
+check "a missing settings file exits non-zero" 1 $?
+
+sh "$SCRIPT" >/dev/null 2>&1
+check "no settings file argument exits non-zero" 1 $?
+
 if [ "$failures" -eq 0 ]; then
   echo "All render-properties tests passed."
 else

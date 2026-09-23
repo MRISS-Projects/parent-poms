@@ -37,20 +37,36 @@ indent="$(sed -n "s/^\\([ 	]*\\)$MARKER[ 	]*\$/\\1/p" "$SETTINGS")"
 
 rendered="$SETTINGS.rendered.$$"
 count_file="$SETTINGS.count.$$"
+input="$SETTINGS.input.$$"
 : > "$rendered"
 : > "$count_file"
+printf '%s\n' "${MAVEN_PROPERTIES:-}" > "$input"
 
-printf '%s\n' "${MAVEN_PROPERTIES:-}" | while IFS= read -r line; do
+# Read from a file, not a pipe: a pipeline would put this loop in a subshell, where `exit 1` on
+# a rejected line would end the subshell and let the script carry on and render the rest.
+lineno=0
+while IFS= read -r line; do
+  lineno=$((lineno + 1))
   line="$(printf '%s' "$line" | tr -d '\r' | sed 's/^[ 	]*//; s/[ 	]*$//')"
   [ -n "$line" ] || continue
   case "$line" in '#'*) continue ;; esac
 
+  # A name becomes an XML tag in a file the release build trusts, so it is rejected rather than
+  # escaped. The alphabet is what Maven property names actually use.
+  if ! printf '%s' "$line" | grep -Eq '^[A-Za-z0-9._-]+='; then
+    echo "::error::render-properties.sh: line $lineno is not a valid name=value pair: $line"
+    rm -f "$rendered" "$count_file" "$input"
+    exit 1
+  fi
+
   name="${line%%=*}"
   value="${line#*=}"
+  # & first, or the escapes introduced by < and > would be escaped again.
+  value="$(printf '%s' "$value" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')"
 
   printf '%s<%s>%s</%s>\n' "$indent" "$name" "$value" "$name" >> "$rendered"
   printf '%s\n' "$name" >> "$count_file"
-done
+done < "$input"
 
 # Write beside the target and move into place, so a failure above never leaves a half-rendered
 # settings.xml - valid XML with properties missing, which fails later and further away.
@@ -74,4 +90,4 @@ else
   sed 's/^/  - /' "$count_file"
 fi
 
-rm -f "$rendered" "$count_file"
+rm -f "$rendered" "$count_file" "$input"
