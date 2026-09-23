@@ -173,8 +173,13 @@ check "an empty value renders an empty element" \
 
 # --- Cases 10-11: invalid lines ---------------------------------------------------------------
 # Each also asserts the file is untouched: a rejected block must not half-render (case 15).
+#
+# The message must locate the bad line without quoting it. PR #79 review, thread 4082708674: the
+# block is where a consumer puts its passwords, so echoing a rejected line into the Actions log
+# publishes one. The earlier version of this helper asserted the opposite - that the message
+# named the offending line - which is how the leak got written and stayed green.
 expect_rejected() {
-  description="$1"; block="$2"; needle="$3"
+  description="$1"; block="$2"; lineno="$3"
   make_settings "$TMP/reject.xml"
   cp "$TMP/reject.xml" "$TMP/reject.before"
   render "$block" "$TMP/reject.xml"
@@ -184,10 +189,10 @@ expect_rejected() {
   else
     pass "$description"
   fi
-  if grep -q "$needle" "$TMP/stdout" "$TMP/stderr"; then
-    pass "$description - the message names the offending line"
+  if grep -q "line $lineno" "$TMP/stdout" "$TMP/stderr"; then
+    pass "$description - the message names the line number"
   else
-    fail "$description - the message names the offending line"
+    fail "$description - the message names the line number"
     sed 's/^/       /' "$TMP/stdout" "$TMP/stderr"
   fi
   if diff -q "$TMP/reject.xml" "$TMP/reject.before" >/dev/null 2>&1; then
@@ -197,11 +202,37 @@ expect_rejected() {
   fi
 }
 
-expect_rejected "a line with no = is rejected" 'mongo.port' 'mongo.port'
-expect_rejected "a name containing a space is rejected" 'mongo port=1' 'mongo port=1'
-expect_rejected "a name containing XML syntax is rejected" 'a><b=1' 'a><b=1'
+expect_rejected "a line with no = is rejected" 'mongo.port' 1
+expect_rejected "a name containing a space is rejected" 'mongo port=1' 1
+expect_rejected "a name containing XML syntax is rejected" 'a><b=1' 1
 expect_rejected "a good line after a bad one still rejects the block" 'bad line
-mongo.port=27017' 'bad line'
+mongo.port=27017' 1
+
+# A name that is not a valid XML element name renders a tag no parser accepts, so the renderer
+# would report success and Maven would fail later on an unparsable settings.xml. PR #79 review,
+# thread 4082708779.
+expect_rejected "a name starting with a digit is rejected" '123foo=bar' 1
+expect_rejected "a name starting with a dot is rejected" '.foo=bar' 1
+expect_rejected "a name starting with a hyphen is rejected" '-foo=bar' 1
+
+# XML permits a leading underscore, so rejecting it would be over-tightening.
+make_settings "$TMP/underscore.xml"
+render '_foo=bar' "$TMP/underscore.xml"
+check "a name starting with an underscore is accepted" 0 $?
+check "the underscore name renders" \
+  "                <_foo>bar</_foo>" \
+  "$(grep '_foo' "$TMP/underscore.xml")"
+
+# The whole point of the message change: a rejected line's value never reaches the log.
+make_settings "$TMP/secret.xml"
+render 'mongo password=supersecret' "$TMP/secret.xml"
+check "a rejected line exits non-zero" 1 $?
+if grep -q 'supersecret' "$TMP/stdout" "$TMP/stderr"; then
+  fail "a rejected line's value never reaches the log"
+  sed 's/^/       /' "$TMP/stdout" "$TMP/stderr"
+else
+  pass "a rejected line's value never reaches the log"
+fi
 
 # --- Cases 12-14: the file itself -------------------------------------------------------------
 make_settings "$TMP/no-marker.xml"
@@ -215,6 +246,34 @@ if diff -q "$TMP/no-marker.xml" "$TMP/no-marker.before" >/dev/null 2>&1; then
 else
   fail "a missing marker leaves the file untouched"
 fi
+
+# The marker contract is "exactly one line whose trimmed content is the marker". Substring
+# matching accepted a line with trailing text, rendered at column 0 because the indentation
+# lookup found nothing, and destroyed the trailing text. PR #79 review, thread 4082708735.
+make_settings "$TMP/trailing.xml"
+sed 's|<!-- MAVEN_PROPERTIES -->|<!-- MAVEN_PROPERTIES --> trailing|' "$TMP/trailing.xml" > "$TMP/trailing.tmp"
+mv "$TMP/trailing.tmp" "$TMP/trailing.xml"
+cp "$TMP/trailing.xml" "$TMP/trailing.before"
+render 'mongo.port=27017' "$TMP/trailing.xml"
+check "a marker line with trailing content exits non-zero" 1 $?
+if diff -q "$TMP/trailing.xml" "$TMP/trailing.before" >/dev/null 2>&1; then
+  pass "a marker line with trailing content leaves the file untouched"
+else
+  fail "a marker line with trailing content leaves the file untouched"
+  diff "$TMP/trailing.before" "$TMP/trailing.xml" | sed 's/^/       /'
+fi
+
+# An unrelated line that merely mentions the marker is not a marker either - and with a real
+# marker present, it must not turn a valid file into a "duplicated marker" failure.
+make_settings "$TMP/mention.xml"
+awk '{ print } /<github.personal.token>/ { print "                <!-- see <!-- MAVEN_PROPERTIES --> in the release workflow -->" }' \
+  "$TMP/mention.xml" > "$TMP/mention.tmp"
+mv "$TMP/mention.tmp" "$TMP/mention.xml"
+render 'mongo.port=27017' "$TMP/mention.xml"
+check "a line merely mentioning the marker is not counted as one" 0 $?
+check "the real marker is still the one replaced" \
+  "                <mongo.port>27017</mongo.port>" \
+  "$(grep '<mongo.port>' "$TMP/mention.xml")"
 
 make_settings "$TMP/two-markers.xml"
 sed 's/.*MAVEN_PROPERTIES.*/&\n&/' "$TMP/two-markers.xml" > "$TMP/two-markers.tmp"

@@ -14,6 +14,11 @@
 set -eu
 
 MARKER='<!-- MAVEN_PROPERTIES -->'
+# The contract is a line whose *trimmed content* is exactly the marker, so both the count and the
+# rewrite anchor on it. Substring matching accepted `<!-- MAVEN_PROPERTIES --> trailing` as the
+# marker, rendered at column 0 because the indentation lookup below found nothing, and destroyed
+# the trailing text; it also counted an unrelated line that merely mentioned the marker.
+MARKER_RE='^[[:blank:]]*<!-- MAVEN_PROPERTIES -->[[:blank:]]*$'
 
 SETTINGS="${1:-}"
 if [ -z "$SETTINGS" ]; then
@@ -25,9 +30,9 @@ if [ ! -f "$SETTINGS" ]; then
   exit 1
 fi
 
-markers="$(grep -c -- "$MARKER" "$SETTINGS" || true)"
+markers="$(grep -cE "$MARKER_RE" "$SETTINGS" || true)"
 if [ "$markers" -ne 1 ]; then
-  echo "::error::render-properties.sh: expected exactly one '$MARKER' line in $SETTINGS, found $markers"
+  echo "::error::render-properties.sh: expected exactly one line whose content is '$MARKER' in $SETTINGS, found $markers"
   exit 1
 fi
 
@@ -52,9 +57,14 @@ while IFS= read -r line; do
   case "$line" in '#'*) continue ;; esac
 
   # A name becomes an XML tag in a file the release build trusts, so it is rejected rather than
-  # escaped. The alphabet is what Maven property names actually use.
-  if ! printf '%s' "$line" | grep -Eq '^[A-Za-z0-9._-]+='; then
-    echo "::error::render-properties.sh: line $lineno is not a valid name=value pair: $line"
+  # escaped. The start character must be one XML permits, or the tag is unparsable and Maven
+  # fails later on a settings.xml this script reported success for — `<123foo>` is not a name.
+  # A leading underscore is valid XML and stays allowed.
+  #
+  # The message gives the line number and nothing else: this block is where a consumer puts its
+  # passwords, so quoting the rejected line would publish one into the Actions log.
+  if ! printf '%s' "$line" | grep -Eq '^[A-Za-z_][A-Za-z0-9._-]*='; then
+    echo "::error::render-properties.sh: line $lineno of maven_properties is not a valid name=value pair, or its name is not a valid XML element name (it must start with a letter or underscore). The line is not quoted here because it may contain a secret."
     rm -f "$rendered" "$count_file" "$input"
     exit 1
   fi
@@ -70,8 +80,8 @@ done < "$input"
 
 # Write beside the target and move into place, so a failure above never leaves a half-rendered
 # settings.xml - valid XML with properties missing, which fails later and further away.
-awk -v marker="$MARKER" -v rendered="$rendered" '
-  index($0, marker) > 0 {
+awk -v marker_re="$MARKER_RE" -v rendered="$rendered" '
+  $0 ~ marker_re {
     while ((getline line < rendered) > 0) print line
     close(rendered)
     next
