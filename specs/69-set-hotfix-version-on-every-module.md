@@ -571,7 +571,7 @@ copying `release.yml` with a `dry_run` passthrough — are both gone now that
 - [x] **Task 3 — `action.yml`.** Create it as §4.1. Verify with
       `git ls-files -s .github/actions/verify-reactor-version/` that both scripts are `100755`.
       Commit.
-- [ ] **Task 4 — prove the command locally, before touching the workflow.** In a throwaway
+- [x] **Task 4 — prove the command locally, before touching the workflow.** In a throwaway
       worktree of `dsh`'s RC with every POM edited to the released `0.3.0`, run the two
       `help:evaluate` lookups and `release:update-versions` from §2.1, then
       `git status --porcelain '*pom.xml' | wc -l`. Expect `13`, a diff of 13 insertions and 13
@@ -580,6 +580,69 @@ copying `release.yml` with a `dry_run` passthrough — are both gone now that
       `all 13 module(s) are at 0.3.1-SNAPSHOT`. Record both outputs in this spec's Task 4 results
       block. **This is the end-to-end rehearsal of the fix that costs nothing to repeat** — do it
       before the workflow edit, not after.
+
+      **Task 4 results.** Maven 3.9.16, worktree `D:\w69-task4` detached at `94060ecf`, all 13
+      POMs edited to the released `0.3.0` and committed, so the baseline was clean
+      (`git status --porcelain --untracked-files=all` empty).
+
+      The lookups printed the coordinates alone, no surrounding whitespace:
+
+      ```text
+      ROOT_GROUP_ID=[com.mriss.products]
+      ROOT_ARTIFACT_ID=[dsh]
+      ```
+
+      `mvn -B -DautoVersionSubmodules=true -Dproject.dev.com.mriss.products:dsh=0.3.1-SNAPSHOT
+      release:update-versions` exited 0, and:
+
+      ```text
+      git status --porcelain '*pom.xml' | wc -l   ->  13
+      git diff --shortstat  ->  13 files changed, 13 insertions(+), 13 deletions(-)
+      untracked (--untracked-files=all)  ->  (none)
+      ```
+
+      The whole diff is 13 `<version>` lines — 9 tab-indented, 3 space-indented, 1 at the root —
+      each `0.3.0` to `0.3.1-SNAPSHOT`, per-file indentation preserved. Nothing else moved; the
+      `<scm><tag>` at `pom.xml:277` is untouched.
+
+      Then `mvn -B validate` exited 0 and the guard agreed:
+
+      ```text
+      $ sh assert-reactor-version.sh 0.3.1-SNAPSHOT .logs/validate.log
+      all 13 module(s) are at 0.3.1-SNAPSHOT
+      $ echo $?
+      0
+      ```
+
+      The reactor's real `[INFO] Building …` lines match the §4.3 fixtures line for line, which
+      is what makes the suite's fixtures evidence rather than invention.
+
+      **The defect, reproduced in the same worktree.** `mvn -B -DprocessAllModules=true
+      -DnewVersion=0.3.1-SNAPSHOT versions:set` exited 0 and rewrote **1 of 13** — a third
+      measurement of §1, now on Maven 3.9.16 locally. `mvn -B validate` on what it produced
+      exited 1 with the error §1.3 quotes:
+
+      ```text
+      [ERROR] The build could not read 7 projects
+      [FATAL] Non-resolvable parent POM for com.mriss.products.dsh:dsh-data:0.3.0:
+              com.mriss.products:dsh:pom:0.3.0 (absent)
+      ```
+
+      and the guard refused it rather than passing vacuously:
+
+      ```text
+      ::error::'.logs/validate-broken.log' holds no '[INFO] Building …' line. …
+      guard exit=1
+      ```
+
+      Both of §1.3's failure modes are therefore covered by measurement: the unresolvable-parent
+      one here, and the resolvable-but-skewed one by the suite's case 2 — which cannot be
+      measured locally, because `0.3.0` was never deployed. That is the same reason §1.3 reasons
+      about it rather than measuring it.
+
+      One local-only observation, recorded so nobody chases it: the release plugin rewrote the
+      POMs with CRLF on this Windows box, so `git diff` warned `CRLF will be replaced by LF`.
+      The runners are `ubuntu-latest`; this does not arise there, and it changed no content.
 - [ ] **Task 5 — `project-release.yml`.** Apply §4.4: the three steps, the new comments, and the
       `:204` touch-up. Delete the `RH_ACTIVE` evidence block. Commit.
 - [ ] **Task 6 — pin for validation.** Point the new action's `uses:` at
