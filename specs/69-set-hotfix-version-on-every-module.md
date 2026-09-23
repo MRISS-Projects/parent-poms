@@ -732,8 +732,11 @@ copying `release.yml` with a `dry_run` passthrough — are both gone now that
 - [x] **Task 8 — unpin.** Flip the action reference back to `@master`, confirm `build.yml` is
       green, and confirm the `dsh` scratch branch is deleted. Commit.
 
-      **Task 8 result.** Unpinned in commit below; `dsh`'s `scratch-69-rehearsal` deleted from
-      the remote. `git ls-remote --heads origin` on `dsh`, taken before the dispatch and again
+      **Task 8 result.** Unpinned in `5c90d32e`; build run
+      [35914528696](https://github.com/MRISS-Projects/parent-poms/actions/runs/35914528696)
+      green on every step, `Check this repository's actions are pinned to master` included.
+      `dsh`'s `scratch-69-rehearsal` is deleted from the remote.
+      `git ls-remote --heads origin` on `dsh`, taken before the dispatch and again
       after the deletion, `diff`s clean at 13 entries — the run left the consumer's remote
       exactly as it found it, which is `assert-no-writes`'s claim confirmed from outside the
       run as well as inside it.
