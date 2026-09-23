@@ -1,0 +1,42 @@
+name: Verify reactor version
+description: >
+  Fail unless every module of the Maven reactor in `working-directory` reports the expected
+  version. See specs/69-set-hotfix-version-on-every-module.md.
+
+inputs:
+  expected-version:
+    description: The version every module must carry, e.g. 0.3.1-SNAPSHOT.
+    required: true
+  working-directory:
+    description: The directory holding the reactor root POM. Defaults to the workspace.
+    required: false
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    - name: Verify every module carries the expected version
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      # The version reaches the script through the environment rather than being interpolated
+      # into the run body, for the same reason maven-properties does it: an input is not a
+      # literal until something makes it one.
+      env:
+        EXPECTED_VERSION: ${{ inputs.expected-version }}
+      run: |
+        set -euo pipefail
+
+        log="$RUNNER_TEMP/verify-reactor-version.log"
+
+        # validate is the cheapest phase that still builds the model of every module, which is
+        # what makes a missing parent version fail here rather than at the next command.
+        if ! mvn -B validate > "$log" 2>&1; then
+          echo "::error::mvn -B validate failed in $(pwd). The reactor does not build its" \
+               "model — a module very likely names a parent version that does not exist."
+          cat "$log"
+          exit 1
+        fi
+
+        summary="$("$GITHUB_ACTION_PATH/assert-reactor-version.sh" "$EXPECTED_VERSION" "$log")"
+        echo "$summary"
+        echo "- **#69 check** — $summary" >> "$GITHUB_STEP_SUMMARY"
