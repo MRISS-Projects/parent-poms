@@ -305,33 +305,33 @@ which fails later and further away.
 
 ## 6. Tasks
 
-- [ ] **Task 1 — the suite, red.** Write `render-properties.test.sh` with cases 1-3 from §5. Run
+- [x] **Task 1 — the suite, red.** Write `render-properties.test.sh` with cases 1-3 from §5. Run
       `sh .github/actions/maven-properties/render-properties.test.sh`. Expected: fails, script not
       found. Commit the test alone.
-- [ ] **Task 2 — the script, green for 1-3.** Implement §2.4 far enough for the three cases. Run
+- [x] **Task 2 — the script, green for 1-3.** Implement §2.4 far enough for the three cases. Run
       the suite. Expected: 3 passing. `git update-index --chmod=+x` both scripts, then commit.
-- [ ] **Task 3 — validation and escaping.** Add cases 4-15, run (red), implement, run (green).
+- [x] **Task 3 — validation and escaping.** Add cases 4-15, run (red), implement, run (green).
       Commit.
-- [ ] **Task 4 — `action.yml`.** Composite action with `properties` (required, no default) and
+- [x] **Task 4 — `action.yml`.** Composite action with `properties` (required, no default) and
       `settings_file` (default `~/.m2/settings.xml`), passing `properties` through the environment,
       never as an argument. Commit.
-- [ ] **Task 5 — `project-release.yml`.** Input, marker, step (§4.1). Commit.
-- [ ] **Task 6 — `project-hotfix.yml`.** The same (§4.2). Commit.
-- [ ] **Task 7 — `project-staging.yml`.** Input, marker, step, and the removals in §4.3. Commit.
-- [ ] **Task 8 — `build.yml`.** Generalise the test glob, remove the now-redundant step, rewrite the
+- [x] **Task 5 — `project-release.yml`.** Input, marker, step (§4.1). Commit.
+- [x] **Task 6 — `project-hotfix.yml`.** The same (§4.2). Commit.
+- [x] **Task 7 — `project-staging.yml`.** Input, marker, step, and the removals in §4.3. Commit.
+- [x] **Task 8 — `build.yml`.** Generalise the test glob, remove the now-redundant step, rewrite the
       comment (§4.4). Commit.
-- [ ] **Task 9 — prove byte-identity.** Extract the settings heredoc from each of the three
+- [x] **Task 9 — prove byte-identity.** Extract the settings heredoc from each of the three
       workflows as it stands on `master`, render the branch's version with `MAVEN_PROPERTIES`
       empty, and `diff` the two. Expected: no output, three times. Paste the commands and the
       empty diffs into the PR. **This is AC002, and reading the script is not a substitute.**
-- [ ] **Task 10 — docs.** `specs/github-actions-reusable-workflows.md` (§4.5). Commit.
+- [x] **Task 10 — docs.** `specs/github-actions-reusable-workflows.md` (§4.5). Commit.
 - [ ] **Task 11 — validate against a real consumer.** With `dsh`'s wrappers pointed at
       `@issue-76-consumer-supplied-maven-properties`, dispatch `staging.yml` and confirm the
       Mongo-dependent tests pass with the values arriving through `maven_properties`; then
       dispatch `release.yml` with `dry_run: true` and confirm `release:prepare` completes its
       fork. Link both runs in the PR. This is AC004 and AC005, and it cannot be done from this
       repository alone.
-- [ ] **Task 12 — reconcile `#76`.** Update AC003 per §4.3 before the PR is reviewed, so the issue
+- [x] **Task 12 — reconcile `#76`.** Update AC003 per §4.3 before the PR is reviewed, so the issue
       and the spec agree on what this change does and does not remove.
 
 ---
@@ -370,3 +370,40 @@ which fails later and further away.
 - **Releasing `3.9.0`.** The milestone still holds `#59`, `#65`, `#69`, `#70` and `#78`. `dsh`
   consumes these workflows at `@master` and its root POM already points at `3.9.0-SNAPSHOT`, so no
   release is needed for the consuming story to finish.
+
+---
+
+## 9. Build record
+
+Written as the work was done, so a reviewer reads what happened rather than what was planned.
+
+**Task 9's byte-identity proof, run on this branch.** The heredoc body is extracted from each
+workflow on `master` and on this branch, the branch's copy is rendered with an empty block, and
+the two are diffed:
+
+```text
+ok   - project-release: empty input renders byte-identical to master
+ok   - project-hotfix: empty input renders byte-identical to master
+ok   - project-staging: empty input renders byte-identical to master
+ok   - project-release with two properties adds exactly: <mongo.host>localhost</mongo.host> <mongo.port>27017</mongo.port>
+```
+
+The fourth line is the positive control. Three empty diffs prove the feature is inert; without it
+they would also pass for a script that does nothing at all.
+
+**The test suite is 34 assertions**, all green, and `build.yml`'s generalised loop picks up all
+seven suites under `.github/actions/` — verified by running the loop locally.
+
+**Two findings recorded rather than silently fixed:**
+
+1. **`project-staging.yml` can only lose two inputs, not four** (§4.3). `#76`'s body was corrected
+   by Task 12 before review.
+2. **The loop in `build.yml` would have skipped this action's suite entirely.** The glob was
+   `rehearsal-*`. It is `*` now, with a guard that fails the step when the glob matches nothing —
+   a silent zero-suite run is the failure mode that hid this in the first place.
+
+**One deviation from §2.4 as written.** The rendering loop reads from a temporary file rather than
+a pipe. In a pipeline the loop runs in a subshell, where `exit 1` on a rejected line ends the
+subshell and lets the script render the rest of the block anyway — the validation would have
+reported an error and then written the file. The test for a good line following a bad one is what
+catches it.
