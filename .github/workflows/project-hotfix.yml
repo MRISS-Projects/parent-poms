@@ -21,6 +21,14 @@ on:
         required: false
         default: false
         description: 'Rehearse the run: no remote write, every suppression announced'
+      maven_properties:
+        type: string
+        required: false
+        default: ''
+        description: >-
+          Build properties for this project, one `name=value` per line, rendered into
+          the <properties> of the github-packages profile in the generated
+          settings.xml. Empty leaves that file exactly as it is written.
     secrets:
       DEPLOY_TOKEN:
         required: true
@@ -108,6 +116,7 @@ jobs:
                       <id>github-packages</id>
                       <properties>
                           <github.personal.token>${env.DEPLOY_TOKEN}</github.personal.token>
+                          <!-- MAVEN_PROPERTIES -->
                       </properties>
                       <repositories>
                           <repository>
@@ -132,6 +141,14 @@ jobs:
               </activeProfiles>
           </settings>
           SETTINGS_EOF
+
+      # #76: the heredoc above is quoted, so it cannot interpolate. The action replaces
+      # the marker line inside <properties> with the consumer's own build properties,
+      # and deletes it when there are none.
+      - name: Render consumer Maven properties
+        uses: MRISS-Projects/parent-poms/.github/actions/maven-properties@master
+        with:
+          properties: ${{ inputs.maven_properties }}
 
       - name: Configure Git
         run: |

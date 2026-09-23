@@ -1,0 +1,37 @@
+name: Render consumer Maven properties
+description: >
+  Render a consumer-supplied `name=value` block into the <properties> of the github-packages
+  profile in the settings.xml the calling workflow has already written. Empty input deletes the
+  marker and leaves the file exactly as written — see
+  specs/76-consumer-supplied-maven-properties.md.
+
+inputs:
+  properties:
+    description: >
+      Build properties for the consuming project, one `name=value` per line. Blank lines and
+      lines starting with # are ignored. A line that is not `name=value`, or whose name is
+      outside [A-Za-z0-9._-], fails the step rather than being escaped: the name becomes an XML
+      tag in a file the build then trusts.
+    required: false
+    default: ''
+  settings-file:
+    description: >
+      The settings.xml to rewrite. Empty means $HOME/.m2/settings.xml, which is the file every
+      caller here has just written.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Render the properties into settings.xml
+      shell: bash
+      # Both inputs reach the script through the environment, never interpolated into the run
+      # body: the block is multi-line, may contain shell metacharacters, and a value may be a
+      # password. Interpolating it would make the step a script-injection site.
+      env:
+        MAVEN_PROPERTIES: ${{ inputs.properties }}
+        SETTINGS_FILE: ${{ inputs.settings-file }}
+      run: |
+        set -euo pipefail
+        "$GITHUB_ACTION_PATH/render-properties.sh" "${SETTINGS_FILE:-$HOME/.m2/settings.xml}"
