@@ -769,8 +769,41 @@ fi
 
    cd target/checkout
 
-   # Set initial hotfix SNAPSHOT version on all modules
-   mvn -B -DprocessAllModules=true -DnewVersion=${{ inputs.initial_hotfix_version }} versions:set
+   # Set initial hotfix SNAPSHOT version on all modules.
+   #
+   # #69: this was `versions:set -DprocessAllModules=true`, which rewrote the root POM and
+   # nothing else — 1 of 13 on the dsh reactor. It is an aggregator goal: it computes the
+   # change for every module and writes one file. release:update-versions keyed by the root's
+   # own coordinates reaches all of them. The key is project.dev.<groupId>:<artifactId>, a
+   # per-project property, and not one of the names pom.xml's release <configuration> binds —
+   # a -D naming one of those is inert.
+   ROOT_GROUP_ID=$(mvn -q -N -DforceStdout -Dexpression=project.groupId help:evaluate)
+   ROOT_ARTIFACT_ID=$(mvn -q -N -DforceStdout -Dexpression=project.artifactId help:evaluate)
+
+   mvn -B -DautoVersionSubmodules=true \
+     "-Dproject.dev.${ROOT_GROUP_ID}:${ROOT_ARTIFACT_ID}=${{ inputs.initial_hotfix_version }}" \
+     release:update-versions
+   ```
+
+   Then, in a step of its own, because a composite action cannot run inside a `run:` block and
+   the check has to sit between the version change and the commit:
+
+   ```yaml
+   - name: Verify every module carries the hotfix version
+     uses: MRISS-Projects/parent-poms/.github/actions/verify-reactor-version@master
+     with:
+       expected-version: ${{ inputs.initial_hotfix_version }}
+       working-directory: target/checkout
+   ```
+
+   It runs `mvn -B validate` in the checkout and requires every `[INFO] Building …` line to
+   carry the expected version. The check is positive on purpose: in a rehearsal a wrong version
+   fails the next command anyway, but in a real release the registry already holds the parent,
+   so `scm:checkin` would succeed and the hotfix line would silently start at the version it
+   was branched from. Finally:
+
+   ```bash
+   cd target/checkout
 
    # Commit the version change to the hotfix branch
    mvn -B -Dmessage="[maven-release-plugin] set hotfix version ${{ inputs.initial_hotfix_version }}" scm:checkin
@@ -827,7 +860,7 @@ fi
 | Ask User Confirmation | Replaced by workflow `inputs` — caller provides values explicitly |
 | Build and Deploy Maven Release | Step 7 (release:clean + prepare + perform) |
 | Creates Hotfix Branch | Step 8 |
-| Generates Version at Hotfix Branch | Step 9 (versions:set + scm:checkin) |
+| Generates Version at Hotfix Branch | Step 9 (`release:update-versions` + verify + `scm:checkin`) |
 | Post Release | Steps 10–12 |
 | Remove RC Branch | Step 13 |
 

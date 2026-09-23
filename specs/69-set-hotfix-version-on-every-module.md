@@ -654,7 +654,7 @@ copying `release.yml` with a `dry_run` passthrough — are both gone now that
       `git ls-remote --heads origin` comparison. Link the run in the PR.
 - [ ] **Task 8 — unpin.** Flip the action reference back to `@master`, confirm `build.yml` is
       green, and confirm the `dsh` scratch branch is deleted. Commit.
-- [ ] **Task 9 — docs.** Apply §4.5 to `specs/github-actions-reusable-workflows.md`. Commit.
+- [x] **Task 9 — docs.** Apply §4.5 to `specs/github-actions-reusable-workflows.md`. Commit.
 - [ ] **Task 10 — report.** Comment on `#69` with the measurement from Task 4 and the rehearsal
       from Task 7, and on [`#72`](https://github.com/MRISS-Projects/parent-poms/issues/72) that
       its AC006 now has its eighth marker. Neither issue is closed by Claude.
