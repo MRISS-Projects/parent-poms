@@ -645,10 +645,25 @@ copying `release.yml` with a `dry_run` passthrough — are both gone now that
       The runners are `ubuntu-latest`; this does not arise there, and it changed no content.
 - [x] **Task 5 — `project-release.yml`.** Apply §4.4: the three steps, the new comments, and the
       `:204` touch-up. Delete the `RH_ACTIVE` evidence block. Commit.
-- [ ] **Task 6 — pin for validation.** Point the new action's `uses:` at
+- [x] **Task 6 — pin for validation.** Point the new action's `uses:` at
       `@issue-69-set-hotfix-version-on-every-module`, and push. Expect `build.yml` red on
       "Check this repository's actions are pinned to master" and green elsewhere; note the run
       URL in the spec. Commit.
+
+      **Task 6 result.** Pin commit `1687c6a1`, build run
+      [35911573060](https://github.com/MRISS-Projects/parent-poms/actions/runs/35911573060) —
+      failed on `Check this repository's actions are pinned to master` and nothing else. Every
+      step before it is green, including the two that matter here:
+
+      ```text
+      --- .github/actions/verify-reactor-version/assert-reactor-version.test.sh
+      Ran 8 action test suite(s).
+      All action scripts are mode 100755.
+      ```
+
+      So the new suite is picked up by `build.yml`'s glob with no edit there — #76's
+      generalisation working as the global constraint above assumes — and both scripts carry
+      the executable bit as CI sees it, not merely as this Windows box reports it.
 - [ ] **Task 7 — the rehearsal.** Run §5 steps 1, 3 and 4. Record in this spec: the run URL, the
       verification step's output, all eight markers, the `assert-no-writes` block, and the
       `git ls-remote --heads origin` comparison. Link the run in the PR.
