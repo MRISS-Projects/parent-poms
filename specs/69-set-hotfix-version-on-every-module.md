@@ -643,7 +643,7 @@ copying `release.yml` with a `dry_run` passthrough — are both gone now that
       One local-only observation, recorded so nobody chases it: the release plugin rewrote the
       POMs with CRLF on this Windows box, so `git diff` warned `CRLF will be replaced by LF`.
       The runners are `ubuntu-latest`; this does not arise there, and it changed no content.
-- [ ] **Task 5 — `project-release.yml`.** Apply §4.4: the three steps, the new comments, and the
+- [x] **Task 5 — `project-release.yml`.** Apply §4.4: the three steps, the new comments, and the
       `:204` touch-up. Delete the `RH_ACTIVE` evidence block. Commit.
 - [ ] **Task 6 — pin for validation.** Point the new action's `uses:` at
       `@issue-69-set-hotfix-version-on-every-module`, and push. Expect `build.yml` red on

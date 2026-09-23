@@ -201,8 +201,8 @@ jobs:
 
       # #72 §2.2 — the one rehearsal-only step. `release:prepare -DdryRun=true` creates no
       # tag and `release:perform -DdryRun=true` creates no target/checkout, so without this
-      # every step below is unreachable rather than merely skipped, and #69's versions:set
-      # and #65's merge-back would never execute. It builds both locally, out of the
+      # every step below is unreachable rather than merely skipped, and #69's hotfix version
+      # step and #65's merge-back would never execute. It builds both locally, out of the
       # pom.xml.tag tree the dry run already wrote to disk, and pushes nothing.
       #
       # IT RUNS BETWEEN prepare AND perform, which is the whole reason the Maven release is
@@ -254,23 +254,41 @@ jobs:
 
           cd target/checkout
 
-          mvn -B -DprocessAllModules=true -DnewVersion=${{ inputs.initial_hotfix_version }} versions:set
+          # #69: `versions:set -DprocessAllModules=true` rewrote the root POM and nothing else —
+          # measured at 1 of 13 on the dsh reactor (run 35662168807), and neither a flag nor a
+          # plugin-version problem: -DgroupId='*' -DartifactId='*' -DoldVersion='*' and
+          # versions-maven-plugin 2.20.0 both reproduce it. It is an aggregator goal; it computes
+          # the change for every module and writes one file.
+          #
+          # release:update-versions keyed by the root's own coordinates reaches all 13.
+          # project.dev.<groupId>:<artifactId> rather than -DdevelopmentVersion or
+          # -Dbuild.NEXT_DEVELOPMENT_VERSION: it is a per-project property, so it is not one of
+          # the names pom.xml's release <configuration> binds, and a -D naming one of those is
+          # inert. See specs/69-set-hotfix-version-on-every-module.md §2.2.
+          ROOT_GROUP_ID=$(mvn -q -N -DforceStdout -Dexpression=project.groupId help:evaluate)
+          ROOT_ARTIFACT_ID=$(mvn -q -N -DforceStdout -Dexpression=project.artifactId help:evaluate)
 
-          # #69's question, answered by the run rather than by reading the plugin: does
-          # versions:set -DprocessAllModules=true rewrite one POM or all of them? #69's
-          # analysis predicts 1 of 13. Rehearsal-only, because in a real release this
-          # directory is a fresh checkout whose diff is the same measurement but whose log
-          # nobody reads.
-          if [ -n "${RH_ACTIVE:-}" ]; then
-            modified=$(git status --porcelain '*pom.xml' | wc -l)
-            total=$(git ls-files '*pom.xml' | wc -l)
-            echo "REHEARSAL evidence for #69: versions:set modified ${modified} of ${total} pom.xml file(s)."
-            git status --porcelain '*pom.xml'
-            {
-              echo "- **#69 evidence** — \`versions:set -DprocessAllModules=true\` modified" \
-                   "\`${modified}\` of \`${total}\` POM files."
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+          mvn -B -DautoVersionSubmodules=true \
+            "-Dproject.dev.${ROOT_GROUP_ID}:${ROOT_ARTIFACT_ID}=${{ inputs.initial_hotfix_version }}" \
+            release:update-versions
+
+      # #69: in a rehearsal a wrong version here fails the next command outright, because
+      # nothing was deployed for the stale parent to resolve against. In a real release the
+      # registry holds it, scm:checkin succeeds, and the hotfix line silently starts at the
+      # version it was branched from. So the check is positive and runs in both modes; it
+      # replaces the rehearsal-only evidence line #72 added to measure this issue.
+      - name: Verify every module carries the hotfix version
+        uses: MRISS-Projects/parent-poms/.github/actions/verify-reactor-version@master
+        with:
+          expected-version: ${{ inputs.initial_hotfix_version }}
+          working-directory: target/checkout
+
+      # A composite action cannot run inside a `run:` block and the assertion must sit between
+      # the version change and the commit, so the step is split. A `cd` does not survive a step
+      # boundary; this one re-enters the checkout.
+      - name: Commit the Hotfix Version
+        run: |
+          cd target/checkout
 
           bash "$RUNNER_TEMP/rehearsal-marker.sh" scm-checkin-hotfix-version \
             "push the ${{ inputs.initial_hotfix_version }} version change to ${{ inputs.hotfix_branch }}"
