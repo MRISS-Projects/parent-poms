@@ -562,7 +562,7 @@ copying `release.yml` with a `dry_run` passthrough — are both gone now that
 
 ## 6. Tasks
 
-- [ ] **Task 1 — the test suite, red.** Create
+- [x] **Task 1 — the test suite, red.** Create
       `.github/actions/verify-reactor-version/assert-reactor-version.test.sh` with the eight cases
       of §4.3 and real `dsh` fixture lines. Run `sh assert-reactor-version.test.sh`: it must fail,
       because the script does not exist yet. Commit the failing suite on its own.
