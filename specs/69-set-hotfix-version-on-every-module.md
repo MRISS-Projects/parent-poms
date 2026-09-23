@@ -566,7 +566,7 @@ copying `release.yml` with a `dry_run` passthrough — are both gone now that
       `.github/actions/verify-reactor-version/assert-reactor-version.test.sh` with the eight cases
       of §4.3 and real `dsh` fixture lines. Run `sh assert-reactor-version.test.sh`: it must fail,
       because the script does not exist yet. Commit the failing suite on its own.
-- [ ] **Task 2 — the script, green.** Create `assert-reactor-version.sh` exactly as §4.2.
+- [x] **Task 2 — the script, green.** Create `assert-reactor-version.sh` exactly as §4.2.
       `git update-index --chmod=+x` both files. Run the suite: eight `ok`, exit 0. Commit.
 - [ ] **Task 3 — `action.yml`.** Create it as §4.1. Verify with
       `git ls-files -s .github/actions/verify-reactor-version/` that both scripts are `100755`.
