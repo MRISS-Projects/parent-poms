@@ -741,9 +741,14 @@ copying `release.yml` with a `dry_run` passthrough — are both gone now that
       exactly as it found it, which is `assert-no-writes`'s claim confirmed from outside the
       run as well as inside it.
 - [x] **Task 9 — docs.** Apply §4.5 to `specs/github-actions-reusable-workflows.md`. Commit.
-- [ ] **Task 10 — report.** Comment on `#69` with the measurement from Task 4 and the rehearsal
+- [x] **Task 10 — report.** Comment on `#69` with the measurement from Task 4 and the rehearsal
       from Task 7, and on [`#72`](https://github.com/MRISS-Projects/parent-poms/issues/72) that
       its AC006 now has its eighth marker. Neither issue is closed by Claude.
+
+      **Task 10 result.** Posted, neither issue closed:
+      [`#69` comment](https://github.com/MRISS-Projects/parent-poms/issues/69#issuecomment-5804843996)
+      and
+      [`#72` comment](https://github.com/MRISS-Projects/parent-poms/issues/72#issuecomment-5804844172).
 
 ---
 
