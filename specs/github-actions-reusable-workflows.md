@@ -501,6 +501,10 @@ jobs:
 | `appengine_project_version` | string | no | `""` | GCP App Engine version suffix (empty = skip flag) |
 | `cloudrun_project_version` | string | no | `""` | GCP Cloud Run version suffix (empty = skip flag) |
 | `build_number` | string | no | `GITHUB_RUN_NUMBER` | Build number; resolved to `RC<n>` in the step |
+| `maven_properties` | string | no | `""` | Build properties for the consuming project, one `name=value` per line, rendered into the `github-packages` profile of the generated `settings.xml` (`#76`) |
+| `mongo_user` | string | no | `""` | MongoDB application user to create for tests (empty = skip user creation). Feeds the setup step only; `#78` removes it |
+| `mongo_password` | string | no | `""` | Password for that user. `#78` removes it |
+| `mongo_database` | string | no | `""` | Database to create the user against. `#78` removes it |
 
 #### Secrets
 
@@ -667,6 +671,8 @@ jobs:
 | `hotfix_branch` | string | yes | Name of the hotfix branch to create, e.g. `0.3.x` |
 | `initial_hotfix_version` | string | yes | Initial SNAPSHOT for hotfix branch, e.g. `0.3.1-SNAPSHOT` |
 | `site_deployment_url` | string | no | Site staging path. Default: `file:///tmp/sites` |
+| `dry_run` | boolean | no | Rehearse the run: no remote write, every suppression announced (`#72`) |
+| `maven_properties` | string | no | Build properties for the consuming project, one `name=value` per line, rendered into the `github-packages` profile of the generated `settings.xml` (`#76`) |
 
 #### Secrets
 
@@ -884,6 +890,8 @@ jobs:
 | `git_project` | string | yes | Target repository name |
 | `branch_name` | string | yes | Hotfix branch name, e.g. `0.3.x` |
 | `site_deployment_url` | string | no | Site staging path. Default: `file:///tmp/sites` |
+| `dry_run` | boolean | no | Rehearse the run: no remote write, every suppression announced (`#72`) |
+| `maven_properties` | string | no | Build properties for the consuming project, one `name=value` per line, rendered into the `github-packages` profile of the generated `settings.xml` (`#76`) |
 
 #### Secrets
 

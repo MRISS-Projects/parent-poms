@@ -26,16 +26,10 @@ on:
         required: false
         default: ''
         description: 'Build number; resolved to RC<n> in step'
-      mongo_host:
-        type: string
-        required: false
-        default: ''
-        description: 'MongoDB host for tests requiring a live connection (empty = skip Mongo setup entirely)'
-      mongo_port:
-        type: string
-        required: false
-        default: '27017'
-        description: 'MongoDB port for tests requiring a live connection'
+      # #78: these three are the last consumer-specific inputs here. They no longer
+      # configure the build -- #76 moved that to maven_properties -- and survive only as
+      # arguments to the Mongo user-creation step below, which #78 removes along with
+      # them and with the service containers.
       mongo_user:
         type: string
         required: false
@@ -51,6 +45,14 @@ on:
         required: false
         default: ''
         description: 'MongoDB database to create the application user against'
+      maven_properties:
+        type: string
+        required: false
+        default: ''
+        description: >-
+          Build properties for this project, one `name=value` per line, rendered into
+          the <properties> of the github-packages profile in the generated
+          settings.xml. Empty leaves that file exactly as it is written.
     secrets:
       DEPLOY_TOKEN:
         required: true
@@ -139,6 +141,7 @@ jobs:
                       <id>github-packages</id>
                       <properties>
                           <github.personal.token>${env.DEPLOY_TOKEN}</github.personal.token>
+                          <!-- MAVEN_PROPERTIES -->
                       </properties>
                       <repositories>
                           <repository>
@@ -163,6 +166,14 @@ jobs:
               </activeProfiles>
           </settings>
           SETTINGS_EOF
+
+      # #76: the heredoc above is quoted, so it cannot interpolate. The action replaces
+      # the marker line inside <properties> with the consumer's own build properties,
+      # and deletes it when there are none.
+      - name: Render consumer Maven properties
+        uses: MRISS-Projects/parent-poms/.github/actions/maven-properties@master
+        with:
+          properties: ${{ inputs.maven_properties }}
 
       - name: Configure Git
         run: |
@@ -193,11 +204,6 @@ jobs:
             GCP_FLAGS="$GCP_FLAGS -Dcloudrun.project.version=${{ inputs.cloudrun_project_version }}"
           fi
 
-          MONGO_FLAGS=""
-          if [ -n "${{ inputs.mongo_host }}" ]; then
-            MONGO_FLAGS="-Dmongo.host=${{ inputs.mongo_host }} -Dmongo.port=${{ inputs.mongo_port }} -Dmongo.user=${{ inputs.mongo_user }} -Dmongo.password=${{ inputs.mongo_password }}"
-          fi
-
           set +e
           output=$(mvn -B -U \
             -Ddeployment \
@@ -205,7 +211,6 @@ jobs:
             -Drelease.type=rcs \
             -Dbuild.number=RC${BUILD_NUM} \
             $GCP_FLAGS \
-            $MONGO_FLAGS \
             clean deploy 2>&1)
           rc=$?
           echo "$output"
