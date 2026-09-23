@@ -175,9 +175,13 @@ containing newlines, spaces or shell metacharacters.
    indents differently.
 3. **For each line of `MAVEN_PROPERTIES`:** strip a trailing `\r`, strip leading and trailing
    whitespace, skip the line if it is empty or begins with `#`.
-4. **Validate.** The line must match `^[A-Za-z0-9._-]+=`. A line that does not is a fatal error
-   naming the line number and its content. This input becomes XML that a release build then trusts;
-   a name is never escaped, it is rejected.
+4. **Validate.** The line must match `^[A-Za-z_][A-Za-z0-9._-]*=`. A line that does not is a
+   fatal error naming **the line number and nothing else**. Two rules in one: this input
+   becomes XML that a release build then trusts, so a name is rejected rather than escaped;
+   and the start character must be one XML permits, or the tag is unparsable and Maven fails
+   later on a file this script reported success for. A leading underscore is valid XML and
+   stays allowed. The line itself is never quoted back — the block is where a consumer puts
+   its passwords, and an Actions log is not the place to publish one.
 5. **Split at the first `=` only**, so `flyway.url=jdbc:x?a=b` keeps its value intact.
 6. **XML-escape the value** — `&` first, then `<` and `>`. Names need no escaping because step 4
    already restricted them to a safe alphabet.
@@ -191,9 +195,9 @@ containing newlines, spaces or shell metacharacters.
 
 | Situation | Behaviour | Why |
 |---|---|---|
-| Marker missing or duplicated | exit non-zero, `::error::` | The properties would be dropped, and the build would fail later as an unresolved placeholder — the exact confusion `#76` exists to end |
-| Line without `=` | exit non-zero, names the line | Almost always a caller pasting a `-D` flag or a stray word |
-| Name outside `[A-Za-z0-9._-]` | exit non-zero, names the line | XML injection into a file the release build trusts |
+| Marker missing, duplicated, or carrying trailing content | exit non-zero, `::error::` | The properties would be dropped, and the build would fail later as an unresolved placeholder — the exact confusion `#76` exists to end. Matching is anchored to a whole line, so trailing text fails rather than being swallowed |
+| Line without `=` | exit non-zero, names the line **number** | Almost always a caller pasting a `-D` flag or a stray word |
+| Name outside `[A-Za-z_][A-Za-z0-9._-]*` | exit non-zero, names the line **number** | XML injection, or a tag no parser accepts, in a file the release build trusts |
 | Settings file absent | exit non-zero | The step ran out of order |
 | `MAVEN_PROPERTIES` empty or all blank lines | exit 0, marker deleted | The default path for every consumer that needs nothing |
 
@@ -291,9 +295,14 @@ the script and asserts on the result.
 | 8 | Value containing `=` (`flyway.url=jdbc:x?a=b`) | Split at the first `=` only |
 | 9 | Empty value (`mongo.user=`) | Renders `<mongo.user></mongo.user>` |
 | 10 | Line with no `=` | Exit non-zero; message names the line number |
-| 11 | Name with a space or a `<` | Exit non-zero; message names the line |
+| 11 | Name with a space or a `<` | Exit non-zero; message names the line number |
+| 11a | Name starting with a digit, a dot or a hyphen | Exit non-zero — `<123foo>` is not an XML name |
+| 11b | Name starting with an underscore | Accepted; XML permits it |
+| 11c | A rejected line carrying a secret | The value appears nowhere in stdout or stderr |
 | 12 | Marker missing | Exit non-zero; file unchanged |
 | 13 | Marker duplicated | Exit non-zero; file unchanged |
+| 13a | Marker line with trailing content | Exit non-zero; file unchanged |
+| 13b | An unrelated line mentioning the marker, with a real marker present | Exit 0; the real marker is the one replaced |
 | 14 | Settings file absent | Exit non-zero |
 | 15 | A failing run leaves the file untouched | Render to a temp file and move on success only — asserted by comparing bytes after cases 10-13 |
 
@@ -407,3 +416,36 @@ a pipe. In a pipeline the loop runs in a subshell, where `exit 1` on a rejected 
 subshell and lets the script render the rest of the block anyway — the validation would have
 reported an error and then written the file. The test for a good line following a bad one is what
 catches it.
+
+---
+
+## 10. Review round 1 — PR #79
+
+Copilot raised three findings on `render-properties.sh`. **All three were valid**, each reproduced
+at HEAD before being fixed, and each now has a test that would have caught it.
+
+| Thread | Finding | Reproduction |
+|---|---|---|
+| [4082708674](https://github.com/MRISS-Projects/parent-poms/pull/79#discussion_r4082708674) | The rejection message quoted the whole line, which may hold a password | `MAVEN_PROPERTIES='mongo password=supersecret'` printed the secret into the log |
+| [4082708735](https://github.com/MRISS-Projects/parent-poms/pull/79#discussion_r4082708735) | Marker matched as a substring, in the count and the rewrite | `<!-- MAVEN_PROPERTIES --> trailing` was accepted, rendered at column 0, trailing text destroyed |
+| [4082708779](https://github.com/MRISS-Projects/parent-poms/pull/79#discussion_r4082708779) | Names that XML does not permit were accepted | `123foo=bar` rendered `<123foo>`; `javax.xml` rejects the result as unparsable |
+
+**The first one is the one worth remembering.** §2.4 step 8 already said "names only: a value may
+be a password" — for the *success* path. The error path was written without that thought, and
+then a test was written asserting the message "names the offending line", with `mongo port=1` as
+the needle. The suite did not merely miss the leak; it required it. The assertion is now inverted:
+the message must name the line number, and a case feeds `supersecret` and greps both streams for
+it.
+
+That is the general lesson for this repository's shell suites. A test that asserts on a
+diagnostic's *content* pins whatever the diagnostic happened to say when it was written. Assert
+what must be there (a line number) and what must not (the value), not the sentence.
+
+The suite went from 34 assertions to 51. Byte-identity was re-proven on all three workflows after
+the change, because a fix to the marker matching is exactly the kind of change that could have
+broken AC002 silently.
+
+**One deviation from §6's "commit per fix".** The three fixes landed in one commit: two of them
+are the same two lines of code, and splitting them would have produced an intermediate state where
+the validation rejects a name while the message still quotes it. The commit message names all
+three threads.
