@@ -45,6 +45,11 @@ on:
           Build properties for this project, one `name=value` per line, rendered into
           the <properties> of the github-packages profile in the generated
           settings.xml. Empty leaves that file exactly as it is written.
+      development_branch:
+        type: string
+        required: false
+        default: 'DEVELOPMENT'
+        description: 'Branch every release is merged back into, e.g. DEVELOP or DEVELOPMENT'
     secrets:
       DEPLOY_TOKEN:
         required: true
@@ -173,6 +178,19 @@ jobs:
         run: |
           git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      # #65: the merge-back is the last step of the run, so a missing development branch would
+      # otherwise be discovered after the tag, the deploy, the master merge and the site. Here
+      # it costs the first minute and nothing else. A read, so it runs the same in both modes.
+      - name: Check the development branch exists
+        env:
+          DEVELOPMENT_BRANCH: ${{ inputs.development_branch }}
+        run: |
+          if ! git ls-remote --exit-code --heads origin "$DEVELOPMENT_BRANCH" > /dev/null; then
+            echo "::error::development branch '$DEVELOPMENT_BRANCH' does not exist on the remote." \
+                 "Pass development_branch from the calling workflow (dsh: DEVELOP)."
+            exit 1
+          fi
 
       - name: Validate version
         run: |
@@ -389,6 +407,20 @@ jobs:
           # instead of trusting git's own output.
           git push $RH_GIT_PUSH_DRYRUN "$REPO_URL" --delete ${{ inputs.branch_name }}
 
+      # #65: carry the release into the development branch, which keeps its own version.
+      # Last on purpose: if a real conflict stops it, the release is already complete and only
+      # a merge a human can finish from the tag is missing. Deleting the RC branch first loses
+      # nothing: the tag holds its content, and the next-development commit left on it changes
+      # only versions, which the alignment recomputes from the development branch.
+      # See specs/65-merge-release-back-into-develop.md §3.4.
+      - name: Merge Release Tag to Development Branch
+        uses: MRISS-Projects/parent-poms/.github/actions/merge-to-develop@master
+        with:
+          tag: v${{ inputs.current_version }}
+          development_branch: ${{ inputs.development_branch }}
+          git_project: ${{ inputs.git_project }}
+          token: ${{ secrets.DEPLOY_TOKEN }}
+
       # if: always() — a rehearsal that dies halfway is exactly when you need to know
       # whether it wrote something first.
       - name: Rehearsal verify
@@ -401,9 +433,8 @@ jobs:
           dispatch_branch: ${{ inputs.branch_name }}
           hotfix_branch: ${{ inputs.hotfix_branch }}
           token: ${{ secrets.DEPLOY_TOKEN }}
-          # Set equality is enforced against this list. When #65 adds the merge into
-          # DEVELOP, its marker id must be added here or the rehearsal fails — which is the
-          # point: a write point added without a marker becomes a build failure.
+          # Set equality is enforced against this list, so a write point added without a
+          # marker becomes a build failure. #65's merge-to-develop is the ninth.
           declared_markers: >-
             release-prepare
             release-perform-deploy
@@ -413,3 +444,4 @@ jobs:
             site-deploy
             commit-readme
             remove-rc-branch
+            merge-to-develop
