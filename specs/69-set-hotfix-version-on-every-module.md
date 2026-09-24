@@ -1012,6 +1012,42 @@ independently before being acted on, and both were valid.
       release, so a stale parent normally resolves. `validate` can also fail for reasons with
       nothing to do with `#69`. Round 1 corrected §1.3 and left this line stating the old
       belief; it now reports what happened and points at the log.
+- [x] **Task 15 — verify the round, and unpin.** Workflow YAML has no harness here and a
+      misplaced `env:` would leave the variable empty and surface only at release time, so the
+      round was rehearsed rather than asserted.
+      [`dsh` run 35941898391](https://github.com/MRISS-Projects/dsh/actions/runs/35941898391),
+      `dry_run` at `0.9.9-SNAPSHOT`, **success on every step**:
+
+      ```text
+      INITIAL_HOTFIX_VERSION: 0.9.9-SNAPSHOT
+      HOTFIX_BRANCH: 0.3.x
+      all 13 module(s) are at 0.9.9-SNAPSHOT
+      REHEARSAL scm-checkin-hotfix-version: would push the 0.9.9-SNAPSHOT version change to 0.3.x
+      rehearsal: all 8 declared write point(s) announced exactly once.
+      rehearsal: the remote is byte-for-byte as it was before the run.
+      ```
+
+      The marker line is the direct evidence that both variables expand inside the `run:` body.
+      The `-Dmessage` argument was compared byte for byte against the pre-round form and is
+      identical, satisfying the commit-message constraint.
+
+      **What the run does not show:** that the injection is closed. That is the local stub-Maven
+      reproduction in Task 13. Firing a real payload at the release pipeline to prove a point is
+      not a reasonable test, and this is recorded so nobody later mistakes the green run for
+      that proof.
+
+      `build.yml` was red on the pin guard between the re-pin and this unpin, which is the same
+      expected red as Task 6. The unpin went in as soon as the rehearsal's verify step had
+      resolved the pinned action — not after the whole run — because pushing it earlier would
+      have made that step resolve `@master`, where the action does not yet exist. Green again:
+      [run 35942474648](https://github.com/MRISS-Projects/parent-poms/actions/runs/35942474648).
+      `scratch-69-round2` deleted; `ls-remote` back to 13 heads.
+
+      **Review effort.** `Balanced` was asked for at hand-over and not used: the round ran at
+      the repository default, `Lite`, and the human has ruled `Balanced` out for now on cost.
+      It found a real bug at `Lite` regardless. Recorded because §3 of `dsh-pr-cycle` asks which
+      layer supplied the effort level, and the answer here is "the repository default, because
+      the review was automatic".
 
 ---
 
