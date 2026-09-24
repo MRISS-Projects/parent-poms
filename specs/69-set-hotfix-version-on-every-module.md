@@ -902,10 +902,50 @@ that every measurement taken to prove it had used the one input value that hides
 - [x] **Task 5R — apply the correction.** `project-release.yml`: the new command, the corrected
       comment, the corrected verify-step comment. `specs/github-actions-reusable-workflows.md`
       and this spec's §1, §1.3, §2.1, §2.2, §2.3, §4.2, §4.3 and §4.4 to match. Commit.
-- [ ] **Task 7R — re-rehearse, at a version that proves the mechanism.** §5 again, but with
+- [x] **Task 7R — re-rehearse, at a version that proves the mechanism.** §5 again, but with
       `initial_hotfix_version: 0.9.9-SNAPSHOT` so a pass means the command works rather than
       that the policy agreed. `hotfix_branch` stays `0.3.x`. Record the run URL, the
       verification output, the eight markers and `assert-no-writes`.
+
+      **Task 7R result.** [`dsh` run 35938090065](https://github.com/MRISS-Projects/dsh/actions/runs/35938090065),
+      from `scratch-69-rehearsal-2` cut at `94060ecf`, **`initial_hotfix_version: 0.9.9-SNAPSHOT`**
+      against a `0.3.0` release. **Conclusion: success — every step green.**
+
+      That input is the point. `0.9.9-SNAPSHOT` is not the default version policy's increment of
+      `0.3.0`, so the two mechanisms cannot agree by accident here: the superseded command would
+      have left twelve modules at `0.3.1-SNAPSHOT` and failed this very step. The hotfix step
+      logged thirteen transforms and then:
+
+      ```text
+      [INFO] --- release:3.1.1:update-versions (default-cli) @ dsh ---
+      [INFO] Transforming pom.xml dsh 'DSH - Document Smart Highlights'...
+      …thirteen in all, one per module…
+
+      all 13 module(s) are at 0.9.9-SNAPSHOT
+      ```
+
+      All eight markers again, with `scm-checkin-hotfix-version` now carrying the new version:
+
+      ```text
+      REHEARSAL scm-checkin-hotfix-version: would push the 0.9.9-SNAPSHOT version change to 0.3.x
+      rehearsal: all 8 declared write point(s) announced exactly once.
+      ```
+
+      `assert-no-writes`:
+
+      ```text
+        heads: unchanged (14 entries)
+        tags: unchanged (12 entries)
+        packages: unchanged (267 entries)
+        tag v0.3.0: absent, as it must be
+        branch 0.3.x: absent, as it must be
+        branch staging-0.3.0-SNAPSHOT-RC: still present, as it must be
+      rehearsal: the remote is byte-for-byte as it was before the run.
+      ```
+
+      **Task 8R result.** Action unpinned to `@master`; `scratch-69-rehearsal-2` deleted.
+      `git ls-remote --heads origin` on `dsh` before the dispatch and after the deletion `diff`s
+      clean at 13 entries.
 - [ ] **Task 12 — correct the record on the issues.** The `#69` comment posted at Task 10 asserts
       the `project.dev` mechanism as proven. Post a follow-up correcting it and linking Task 4R
       and Task 7R. `#72`'s comment is unaffected — its subject is the markers, which stand.
