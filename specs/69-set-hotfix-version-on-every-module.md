@@ -190,7 +190,9 @@ defect in the first attempt at §2.1.
 In `target/checkout`, replacing the `versions:set` call:
 
 ```bash
-mvn -B -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.initial_hotfix_version }} \
+# INITIAL_HOTFIX_VERSION reaches the step through `env`, never interpolated into the script
+# text — see §6.2.
+mvn -B "-Dbuild.NEXT_DEVELOPMENT_VERSION=$INITIAL_HOTFIX_VERSION" \
   release:update-versions
 ```
 
@@ -362,11 +364,18 @@ runs:
 
         log="$RUNNER_TEMP/verify-reactor-version.log"
 
-        # validate is the cheapest phase that still builds the model of every module, which is
-        # what makes a missing parent version fail here rather than at the next command.
+        # validate is the cheapest phase that still builds the model of every module, so the
+        # versions it reports are the resolved ones for the whole reactor.
+        #
+        # PR #80 review: this annotation used to assert that a module "very likely names a
+        # parent version that does not exist". That is the one cause the corrected §1.3 says is
+        # unlikely — the release-version artifacts are in the local repository in a rehearsal and
+        # in the registry in a real release, so a stale parent usually resolves. validate can
+        # fail for reasons that have nothing to do with #69 at all. It states what happened and
+        # points at the log rather than guessing.
         if ! mvn -B validate > "$log" 2>&1; then
-          echo "::error::mvn -B validate failed in $(pwd). The reactor does not build its" \
-               "model — a module very likely names a parent version that does not exist."
+          echo "::error::mvn -B validate failed in $(pwd), so the reactor's versions could not" \
+               "be checked. The full log follows."
           cat "$log"
           exit 1
         fi
@@ -572,7 +581,7 @@ steps. The `scm:checkout` block at `:244-256` is unchanged and is elided here as
           # 0.9.9-SNAPSHOT off 0.3.0 instead produced a mixed reactor AND rewrote nine
           # ${project.version} references in the root to a hardcoded 0.3.1-SNAPSHOT.
           # See specs/69-set-hotfix-version-on-every-module.md §2.2.
-          mvn -B -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.initial_hotfix_version }} \
+          mvn -B "-Dbuild.NEXT_DEVELOPMENT_VERSION=$INITIAL_HOTFIX_VERSION" \
             release:update-versions
 
       # #69: nothing upstream of this catches a wrong version here. A rehearsal will not: the
@@ -590,14 +599,19 @@ steps. The `scm:checkout` block at `:244-256` is unchanged and is elided here as
           working-directory: target/checkout
 
       - name: Commit the Hotfix Version
+        env:
+          INITIAL_HOTFIX_VERSION: ${{ inputs.initial_hotfix_version }}
+          HOTFIX_BRANCH: ${{ inputs.hotfix_branch }}
         run: |
           cd target/checkout
 
           bash "$RUNNER_TEMP/rehearsal-marker.sh" scm-checkin-hotfix-version \
-            "push the ${{ inputs.initial_hotfix_version }} version change to ${{ inputs.hotfix_branch }}"
+            "push the $INITIAL_HOTFIX_VERSION version change to $HOTFIX_BRANCH"
 
-          mvn -B $RH_SCM_LOCAL_URL -Dmessage="[maven-release-plugin] set hotfix version ${{ inputs.initial_hotfix_version }}" scm:checkin
+          mvn -B $RH_SCM_LOCAL_URL "-Dmessage=[maven-release-plugin] set hotfix version $INITIAL_HOTFIX_VERSION" scm:checkin
 ```
+
+Both steps take their dispatch inputs through `env`, never into the script text — §6.2.
 
 Splitting the step is forced: a composite action cannot run inside a `run:` block, and the
 assertion must sit between the version change and the commit. Each step re-enters
@@ -954,6 +968,50 @@ that every measurement taken to prove it had used the one input value that hides
       [Correction posted](https://github.com/MRISS-Projects/parent-poms/issues/69#issuecomment-5805447361)
       on `#69`, superseding the Task 10 comment. `#72`'s comment stands unamended: its subject
       is the eight markers, and Task 7R fired all eight again.
+
+### 6.2 Review round 2 — PR #80, Copilot at `Lite`
+
+[PR #80](https://github.com/MRISS-Projects/parent-poms/pull/80). The review arrived
+**automatically**, so it ran at the repository default effort, `Lite`, not the `Balanced` the
+story asked for at hand-over. It still found a real bug.
+
+Its overview names two problems but raises **one** inline thread and reports `Findings: 1`; the
+second exists only as prose in the review body, with no line anchor. Both were verified
+independently before being acted on, and both were valid.
+
+- [x] **Task 13 — quote dispatch inputs (thread
+      [`4088784016`](https://github.com/MRISS-Projects/parent-poms/pull/80#discussion_r4088784016)).**
+      `${{ }}` is substituted into the script *text* before bash parses it, so a dispatch input
+      interpolated into a `run:` body is a command-injection vector. Reproduced with a stub
+      Maven:
+
+      ```text
+      generated:   mvn_stub -B -Dbuild.NEXT_DEVELOPMENT_VERSION=0.3.1-SNAPSHOT; touch ./PWNED # release:update-versions
+      executed:    maven got: -B -Dbuild.NEXT_DEVELOPMENT_VERSION=0.3.1-SNAPSHOT
+      side effect: PWNED
+      ```
+
+      Note the second half: the trailing `#` swallowed `release:update-versions`, so the step
+      would have gone **green having set no versions at all** — the same class of silent failure
+      this whole story is about. Through `env` the identical payload is inert data, one argument
+      Maven then rejects, and the goal survives.
+
+      Severity is hardening rather than an open door — dispatching needs write access — but the
+      job carries `contents: write`, `packages: write` and `DEPLOY_TOKEN`.
+
+      **Scope.** Fixing only the flagged line would have been theatre: the same two steps
+      interpolate `initial_hotfix_version` twice more and `hotfix_branch` once. Both steps are
+      ones this story created or rewrote, so all four uses are fixed here. Twelve further steps
+      in this workflow share the pattern and this story touches none of them —
+      [`#81`](https://github.com/MRISS-Projects/parent-poms/issues/81) covers those rather than
+      letting a `#69` PR grow into a workflow-wide audit.
+- [x] **Task 14 — stop the failure annotation guessing a cause.** Raised in the review body
+      only. The annotation asserted that a module "very likely names a parent version that does
+      not exist" — which §1.3, *as corrected in round 1*, says is the unlikely case: the
+      artifacts are in the local repository in a rehearsal and in the registry in a real
+      release, so a stale parent normally resolves. `validate` can also fail for reasons with
+      nothing to do with `#69`. Round 1 corrected §1.3 and left this line stating the old
+      belief; it now reports what happened and points at the log.
 
 ---
 
