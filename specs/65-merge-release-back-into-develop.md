@@ -401,7 +401,7 @@ aligned `merge-back/<tag>` branch. This mirrors §1.2 at the scale of two POMs a
 
 ### Task 6: rehearsals
 
-- [ ] Open the DSH twin issue and branch, and pass `development_branch: DEVELOP` in both wrappers.
+- [x] Open the DSH twin issue ([`dsh#117`](https://github.com/MRISS-Projects/dsh/issues/117)). The wrapper change is its work, after this merges.
 - [x] Run §5 items 3, 4 and 5. Record the run URLs and the evidence lines here.
 - [ ] Comment on `#65` with the evidence, and state that `dsh` `0.3.0` is the confirming run.
 
@@ -425,8 +425,27 @@ and the tag. §1.2's 96 is a different count, every path of the merged result th
 `DEVELOP`, which is 93 non-POM paths and 3 POMs. The gap of one is a path the release changed that
 `DEVELOP` already held in the same state.
 
-**Not dispatched:** AC004's negative path, meaning the preflight failing on a branch that does not
-exist. All three runs passed through the preflight on a branch that did exist.
+**AC004's negative path**, dispatched afterwards from a scratch DSH branch,
+`rehearsal-65-preflight`, passing `development_branch: does-not-exist-65`.
+[`dsh` 36004008611](https://github.com/MRISS-Projects/dsh/actions/runs/36004008611) failed at
+`Check the development branch exists`, the step straight after `Configure Git`, with
+`development branch 'does-not-exist-65' does not exist on the remote. Pass development_branch
+from the calling workflow (dsh: DEVELOP).` Nothing after it ran: no `Validate version` and no
+`release:prepare`. Heads, tags and packages were unchanged. `assert-markers` reported no markers
+at all, which is correct, since no write point was reached.
+
+One lesson, recorded so it is not repeated. The first attempt,
+[`dsh` 36003903318](https://github.com/MRISS-Projects/dsh/actions/runs/36003903318), pointed the
+DSH wrapper at the PR branch directly, reasoning that the preflight runs before `merge-to-develop`
+is ever reached. It died in `Set up job`, with `Can't find 'action.yml' … merge-to-develop@master`.
+**The runner downloads every action a job references before its first step**, so an action that
+exists only on an unmerged branch breaks the whole job, whether or not the job would ever reach it.
+The flipped `rehearsal-65` branch is not optional for any rehearsal of this workflow before merge.
+That run wrote nothing either. DSH's refs were identical before and after both runs, and every
+scratch branch is deleted.
+
+The twin is [`dsh#117`](https://github.com/MRISS-Projects/dsh/issues/117). It can only merge
+after this PR does.
 
 ---
 
@@ -441,7 +460,7 @@ The issue's five criteria, corrected where §2 showed them wrong:
 - [x] **AC003:** non-version changes from the RC or hotfix branch are on the development branch
       afterwards, which the carried-over assertion checks. A conflicting change **fails the run**
       rather than being resolved by picking a side.
-- [ ] **AC004:** the branch is named by a `development_branch` input on both workflows, with the
+- [x] **AC004:** the branch is named by a `development_branch` input on both workflows, with the
       same name and default as `project-stage.yml`. A missing branch fails before the release
       starts.
 - [ ] **AC005:** validated against `dsh`, whose RC branch carries 152 RC-only commits, by §5's
