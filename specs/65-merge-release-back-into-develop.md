@@ -256,6 +256,25 @@ Push: marker `merge-to-develop` ("push the merge of `<tag>` into `<branch>`"), t
 `declared_markers` in both workflows. `rehearsal-verify` already snapshots every head, so
 `assert-no-writes.sh` covers the development branch staying untouched with no change.
 
+**The push retries, added in PR #82's review round.** Copilot found that the push was
+unprotected against a concurrent run. `project-release.yml` and `project-hotfix.yml` use
+different concurrency groups, so a release and a hotfix can both clone the development branch,
+and the second push is then rejected as non-fast-forward. The conclusion was right, but that
+mechanism is the rarest way to reach it. The common one is **any PR merged into the development
+branch during the minutes a release takes**, and no concurrency group can prevent that. So the
+fix is a retry, not serialization. `push-merge-back.sh` follows `commit-readme`'s loop: three
+attempts, and a retry only when the fetched tip is not an ancestor of HEAD, meaning the branch
+really advanced. It differs in one place. A merge is redone rather than rebased: reset to the
+new tip and run `merge-into-develop.sh` again, so both assertions are proven again against what
+is actually pushed. A retry goes ahead only if no `pom.xml` changed between the tip the alignment
+was built against and the new one. Otherwise it stops with the manual-merge recovery, because the
+alignment may no longer match. Every failure path ends with that same recovery message.
+
+The same race exists on the `master` push, and it is deliberately **not** addressed here. Only
+the release automation writes `master` in this estate, so the only way to hit it there is the
+rare concurrent release and hotfix. The development branch is different because it takes
+everyday merges.
+
 ### 3.5 Hotfix specifics
 
 `project-hotfix.yml` runs the same action. After `0.3.0` merges back, the merge base of `v0.3.1`
@@ -273,6 +292,8 @@ the development branch is a situation for a human, and the merge should say so.
 | `.github/actions/merge-to-develop/action.yml` | **new**: §3.2 to §3.4 as composite steps |
 | `.github/actions/merge-to-develop/merge-into-develop.sh` | **new**: §3.3, POSIX `sh`, git only |
 | `.github/actions/merge-to-develop/merge-into-develop.test.sh` | **new**: scratch-repo tests, picked up by `build.yml`'s `*.test.sh` glob with no edit |
+| `.github/actions/merge-to-develop/push-merge-back.sh` | **new, review round 1**: the push, with §3.4's retry |
+| `.github/actions/merge-to-develop/push-merge-back.test.sh` | **new, review round 1**: a local bare remote, advanced by a second clone between attempts |
 | `.github/actions/merge-to-develop/assert-carried-over.sh` | **new**: §3.3's two checks, called by `merge-into-develop.sh` and testable alone |
 | `.github/actions/merge-to-develop/assert-carried-over.test.sh` | **new**: includes `lost_change_detected` |
 | `.github/workflows/project-release.yml` | `development_branch` input, preflight step, new last step, marker declared |
@@ -446,6 +467,33 @@ scratch branch is deleted.
 
 The twin is [`dsh#117`](https://github.com/MRISS-Projects/dsh/issues/117). It can only merge
 after this PR does.
+
+### 6.1 Review round 1: PR #82, Copilot
+
+One finding, on `action.yml`'s push: it was unprotected against a concurrent run. **Valid**, but
+for a broader reason than it gave. §3.4 records the triage and the fix. The triage chose the
+retry over the serialization the finding offered first, because serialization cannot stop an
+ordinary PR merge into the development branch mid-release.
+
+`push-merge-back.test.sh` (25 assertions) was written red first: 19 failures with no script. Its
+cases are:
+
+- no race
+- a concurrent non-POM commit, which retries and keeps both changes
+- a concurrent POM change, which stops
+- a concurrent change that now conflicts, which stops
+- a refusal that is not an advance, via an `update` hook, which stops at once
+- `--dry-run`
+- misuse, including `RH_GIT_PUSH_DRYRUN` unset
+
+Writing the script turned up one defect of its own. `recovery()` printed only `$1`, and the
+POM-change path passes its reason as two arguments, so the second half was dropped. The first
+green run missed it, because it matched the path list printed afterwards. An assertion on the
+whole reason was added, shown red with `$1` restored, and made green with `$*`.
+
+**Not covered by a test:** exhausting all three attempts. It needs a remote that advances on
+every push, and that is not reachable with a bare repository and a hook. The bound itself is
+`commit-readme`'s, unchanged.
 
 ---
 
