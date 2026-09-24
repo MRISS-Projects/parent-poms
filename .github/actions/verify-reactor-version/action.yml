@@ -28,11 +28,18 @@ runs:
 
         log="$RUNNER_TEMP/verify-reactor-version.log"
 
-        # validate is the cheapest phase that still builds the model of every module, which is
-        # what makes a missing parent version fail here rather than at the next command.
+        # validate is the cheapest phase that still builds the model of every module, so the
+        # versions it reports are the resolved ones for the whole reactor.
+        #
+        # PR #80 review: this annotation used to assert that a module "very likely names a
+        # parent version that does not exist". That is the one cause the corrected §1.3 says is
+        # unlikely — the release-version artifacts are in the local repository in a rehearsal and
+        # in the registry in a real release, so a stale parent usually resolves. validate can
+        # fail for reasons that have nothing to do with #69 at all. It states what happened and
+        # points at the log rather than guessing.
         if ! mvn -B validate > "$log" 2>&1; then
-          echo "::error::mvn -B validate failed in $(pwd). The reactor does not build its" \
-               "model — a module very likely names a parent version that does not exist."
+          echo "::error::mvn -B validate failed in $(pwd), so the reactor's versions could not" \
+               "be checked. The full log follows."
           cat "$log"
           exit 1
         fi
