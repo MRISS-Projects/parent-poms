@@ -946,9 +946,14 @@ that every measurement taken to prove it had used the one input value that hides
       **Task 8R result.** Action unpinned to `@master`; `scratch-69-rehearsal-2` deleted.
       `git ls-remote --heads origin` on `dsh` before the dispatch and after the deletion `diff`s
       clean at 13 entries.
-- [ ] **Task 12 — correct the record on the issues.** The `#69` comment posted at Task 10 asserts
+- [x] **Task 12 — correct the record on the issues.** The `#69` comment posted at Task 10 asserts
       the `project.dev` mechanism as proven. Post a follow-up correcting it and linking Task 4R
       and Task 7R. `#72`'s comment is unaffected — its subject is the markers, which stand.
+
+      **Task 12 result.**
+      [Correction posted](https://github.com/MRISS-Projects/parent-poms/issues/69#issuecomment-5805447361)
+      on `#69`, superseding the Task 10 comment. `#72`'s comment stands unamended: its subject
+      is the eight markers, and Task 7R fired all eight again.
 
 ---
 
