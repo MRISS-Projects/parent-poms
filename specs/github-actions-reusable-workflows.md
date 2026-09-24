@@ -785,7 +785,11 @@ fi
    # remaining modules are then moved by the default version policy, which increments each
    # module's own version. The two answers coincide exactly when the hotfix version is
    # MAJOR.MINOR.(FIX+1)-SNAPSHOT of the release, and diverge badly otherwise.
-   mvn -B -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.initial_hotfix_version }} \
+   # The dispatch input reaches the step through `env` as INITIAL_HOTFIX_VERSION and is quoted
+   # here. A ${{ }} expression is substituted into the script text before bash parses it, so
+   # interpolating a caller-supplied value straight into a `run:` body is a command-injection
+   # vector. PR #80's review caught this on exactly this line.
+   mvn -B "-Dbuild.NEXT_DEVELOPMENT_VERSION=$INITIAL_HOTFIX_VERSION" \
      release:update-versions
    ```
 
@@ -811,8 +815,9 @@ fi
    ```bash
    cd target/checkout
 
-   # Commit the version change to the hotfix branch
-   mvn -B -Dmessage="[maven-release-plugin] set hotfix version ${{ inputs.initial_hotfix_version }}" scm:checkin
+   # Commit the version change to the hotfix branch. Same `env` treatment as above; the message
+   # expands byte for byte to what it was.
+   mvn -B "-Dmessage=[maven-release-plugin] set hotfix version $INITIAL_HOTFIX_VERSION" scm:checkin
    ```
 10. **Post-release: merge release tag to master**:
     ```bash

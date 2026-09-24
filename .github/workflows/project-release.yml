@@ -240,6 +240,16 @@ jobs:
           mvn -B $RH_SCM_LOCAL_URL -Dbranch=${{ inputs.hotfix_branch }} scm:branch
 
       - name: Checkout Hotfix Branch and Set Initial Version
+        # PR #80 review: a ${{ }} expression is substituted into the script TEXT before bash
+        # parses it, so a dispatch input reaching a `run:` body directly is a command-injection
+        # vector — `0.3.1-SNAPSHOT; touch ./PWNED #` ran the touch, and its trailing `#` ate the
+        # Maven goal, so the step would also have gone green having set no versions at all.
+        # Through `env` the same payload is inert data: one argument Maven then rejects.
+        # Dispatching needs write access, so this is hardening rather than an open door, but the
+        # job carries contents:write, packages:write and DEPLOY_TOKEN.
+        env:
+          INITIAL_HOTFIX_VERSION: ${{ inputs.initial_hotfix_version }}
+          HOTFIX_BRANCH: ${{ inputs.hotfix_branch }}
         run: |
           rm -rf target/checkout
 
@@ -247,7 +257,7 @@ jobs:
           # rehearsal the hotfix branch exists only in the workspace repository, which is
           # where the redirected scm:branch above just pushed it.
           mvn -B $RH_SCM_LOCAL_URL \
-            -DscmVersion=${{ inputs.hotfix_branch }} \
+            "-DscmVersion=$HOTFIX_BRANCH" \
             -DscmVersionType=branch \
             -DcheckoutDirectory=target/checkout \
             scm:checkout
@@ -277,7 +287,7 @@ jobs:
           # 0.9.9-SNAPSHOT off 0.3.0 instead produced a mixed reactor AND rewrote nine
           # ${project.version} references in the root to a hardcoded 0.3.1-SNAPSHOT.
           # See specs/69-set-hotfix-version-on-every-module.md §2.2.
-          mvn -B -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.initial_hotfix_version }} \
+          mvn -B "-Dbuild.NEXT_DEVELOPMENT_VERSION=$INITIAL_HOTFIX_VERSION" \
             release:update-versions
 
       # #69: nothing upstream of this catches a wrong version here. A rehearsal will not: the
@@ -298,13 +308,18 @@ jobs:
       # the version change and the commit, so the step is split. A `cd` does not survive a step
       # boundary; this one re-enters the checkout.
       - name: Commit the Hotfix Version
+        # Same reasoning as the step above. The -Dmessage value expands byte for byte to what it
+        # was, which the global constraint on the commit message requires.
+        env:
+          INITIAL_HOTFIX_VERSION: ${{ inputs.initial_hotfix_version }}
+          HOTFIX_BRANCH: ${{ inputs.hotfix_branch }}
         run: |
           cd target/checkout
 
           bash "$RUNNER_TEMP/rehearsal-marker.sh" scm-checkin-hotfix-version \
-            "push the ${{ inputs.initial_hotfix_version }} version change to ${{ inputs.hotfix_branch }}"
+            "push the $INITIAL_HOTFIX_VERSION version change to $HOTFIX_BRANCH"
 
-          mvn -B $RH_SCM_LOCAL_URL -Dmessage="[maven-release-plugin] set hotfix version ${{ inputs.initial_hotfix_version }}" scm:checkin
+          mvn -B $RH_SCM_LOCAL_URL "-Dmessage=[maven-release-plugin] set hotfix version $INITIAL_HOTFIX_VERSION" scm:checkin
 
       - name: Merge Release Tag to Master
         run: |
