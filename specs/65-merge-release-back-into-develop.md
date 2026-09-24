@@ -186,10 +186,14 @@ Inside the new action, working in a fresh clone of the development branch:
    branch `merge-back/v<version>` at it, and set it to `DEV_VERSION` using `#69`'s proven
    mechanism:
    `mvn -B "-Dbuild.NEXT_DEVELOPMENT_VERSION=$DEV_VERSION" release:update-versions`.
-   Then set the SCM tag to `DEV_SCM_TAG`. **The mechanism for this is Task 1's to measure.**
-   The candidate is `versions:set-scm-tag -DnewTag="$DEV_SCM_TAG"`. The fallback, if it is
-   aggregator-only like `versions:set`, is a guarded edit of the root POM's single `<scm><tag>`
-   element that fails if it matches anything other than exactly one line.
+   Then set the SCM tag to `DEV_SCM_TAG` with
+   `mvn -B -N versions:set-scm-tag "-DnewTag=$DEV_SCM_TAG"`. Task 1 measured both goals (see
+   its results): `release:update-versions` does not touch `<scm><tag>`, and
+   `versions:set-scm-tag` writes the root POM only, like `versions:set`. That is enough here,
+   because `<scm>` is declared once, in the root, and inherited from there. A consumer module
+   that declares its own `<scm><tag>` would keep the tag's value, conflict, and **fail the
+   merge loudly** (§3.3). That is the safe direction, so the spec accepts it rather than
+   editing POMs by hand. `-N` states the root-only scope instead of leaving it to the goal.
 3. **Assert the alignment** with `verify-reactor-version`, `expected-version: $DEV_VERSION`, and
    commit it as `[maven-release-plugin] align v<version> to <DEV_VERSION> for merge-back`.
    This commit exists only as a merge input. The tag does not move.
@@ -206,11 +210,30 @@ normally agree, which is exactly why Task 6 rehearses with them set apart.
 - **On conflict:** `git merge --abort`. List the conflicted paths as `::error::` lines. Say that
   the release itself is complete and only the merge-back remains, and name the tag to merge by
   hand. Exit 1.
-- **Carried-over assertion** (on success). For every path the release changed relative to the
-  merge base, excluding `pom.xml` files, the merged content must equal the tag's content unless
-  the development branch changed that path too. Any violation is an error naming the path.
-  A plain merge should never trip this. It is here so that a future `-X` fails a release
-  instead of costing one, which is the positive-assertion rule `#69` set.
+- **Carried-over assertion** (on success), `assert-carried-over.sh`. It makes two checks:
+  1. **The merged tree is the clean plain merge.**
+     `git merge-tree --write-tree <branch-before> <aligned-ref>` must exit 0, with no
+     conflicts, and the tree it prints must equal `HEAD^{tree}`. A `-X ours` or `-X theirs`
+     resolution only ever differs from a plain merge where there was a conflict, and
+     `merge-tree` reports exactly those. So any side-picking, in any file, fails this.
+     *Correction made while building:* the first version of this check, as the spec was
+     approved, compared paths one by one and **skipped paths the development branch had also
+     changed**. Those are the only paths `-X ours` can lose hunks in, so it could never have
+     caught the defect it was written for. This came to light while writing the
+     `lost_change_detected` test, before any code existed: its fixture has to be a conflict,
+     and a conflict means both sides changed the path.
+  2. **Alignment touched nothing but POMs.** Outside files named `pom.xml`, the aligned commit
+     must be identical to the tag: `git diff --name-only <tag> <aligned-ref>`, with every
+     `pom.xml` excluded, must print nothing. Check 1 takes the aligned commit as its input, so
+     it cannot see an alignment step that rewrote a non-POM file. This check can. Together, the
+     two checks say that HEAD is exactly the plain merge of the development branch and the
+     release, with only POMs changed in between.
+
+  A violation is an error naming the paths, and the merge commit is reset away, so the
+  development-branch clone ends where it started. A plain merge of a correct alignment never
+  trips either check. They are here so that a future `-X`, or a Maven goal that writes more
+  than versions, fails a release instead of costing one. That is the positive-assertion rule
+  `#69` set.
 - Print the evidence line:
   `merge-to-develop: carried <n> path(s) from <tag> into <branch>; 0 lost`.
 
@@ -250,6 +273,8 @@ the development branch is a situation for a human, and the merge should say so.
 | `.github/actions/merge-to-develop/action.yml` | **new**: §3.2 to §3.4 as composite steps |
 | `.github/actions/merge-to-develop/merge-into-develop.sh` | **new**: §3.3, POSIX `sh`, git only |
 | `.github/actions/merge-to-develop/merge-into-develop.test.sh` | **new**: scratch-repo tests, picked up by `build.yml`'s `*.test.sh` glob with no edit |
+| `.github/actions/merge-to-develop/assert-carried-over.sh` | **new**: §3.3's two checks, called by `merge-into-develop.sh` and testable alone |
+| `.github/actions/merge-to-develop/assert-carried-over.test.sh` | **new**: includes `lost_change_detected` |
 | `.github/workflows/project-release.yml` | `development_branch` input, preflight step, new last step, marker declared |
 | `.github/workflows/project-hotfix.yml` | the same |
 | `specs/github-actions-reusable-workflows.md` | document the input, the step and the failure mode |
@@ -296,30 +321,58 @@ with `#57`/`dsh#85`.
 
 ### Task 1: measure the alignment mechanism (no code)
 
-- [ ] In a clone of `dsh` at `staging-0.3.0-SNAPSHOT-RC`, apply `pom.xml.tag`-equivalent release
+- [x] In a clone of `dsh` at `staging-0.3.0-SNAPSHOT-RC`, apply `pom.xml.tag`-equivalent release
       versions (`0.3.0`, SCM tag `v0.3.0`) as a local commit.
-- [ ] Run `mvn -B "-Dbuild.NEXT_DEVELOPMENT_VERSION=0.4.0-SNAPSHOT" release:update-versions`.
+- [x] Run `mvn -B "-Dbuild.NEXT_DEVELOPMENT_VERSION=0.4.0-SNAPSHOT" release:update-versions`.
       Record how many POMs changed, and whether `<scm><tag>` changed.
-- [ ] Run `mvn -B versions:set-scm-tag -DnewTag=HEAD`. Record which POMs it wrote. Repeat with
+- [x] Run `mvn -B versions:set-scm-tag -DnewTag=HEAD`. Record which POMs it wrote. Repeat with
       `-DnewTag=zz-not-a-default`, a value no default would produce.
-- [ ] Merge the result into `DEVELOP` plainly. Record the conflict count, which must be 0.
-- [ ] Write the measured mechanism into §3.2, replacing "Task 1's to measure", and record the
+- [x] Merge the result into `DEVELOP` plainly. Record the conflict count, which must be 0.
+- [x] Write the measured mechanism into §3.2, replacing "Task 1's to measure", and record the
       results here.
 
-### Task 2: `merge-into-develop.sh`, tests first
+**Results, 2026-09-24.** Maven 3.9.9, JDK 17, `maven-release-plugin` 3.1.1 and
+`versions-maven-plugin` 2.18.0, both managed by this repository's `pom.xml`. `dsh` was at
+`origin/staging-0.3.0-SNAPSHOT-RC` and `origin/DEVELOP` as of that morning.
 
-- [ ] Write `merge-into-develop.test.sh` with these scratch-repo cases:
-  - `rc_fix_survives`: RC-only change to a non-POM file, present after the merge
-  - `dev_change_survives`: development-only change to a non-POM file, still present
-  - `real_conflict_fails`: same line edited on both sides. Exit 1, path in the output,
-    development branch ref unchanged, no merge in progress
-  - `lost_change_detected`: a merged state produced with `-X ours` over a conflicting RC fix is
-    fed to the assertion alone. It must fail and name the path. This is the regression the
-    assertion exists for.
-  - `poms_excluded`: a POM that differs from the tag after the merge is not reported
-  - `evidence_line`: the count printed equals the number of non-POM paths the release changed
-- [ ] Run it. It must be red.
-- [ ] Implement `merge-into-develop.sh` until green. Run `sh -n` and `shellcheck` if available.
+| Measurement | Result |
+|---|---|
+| `release:update-versions` at `0.4.0-SNAPSHOT` on the fake tag | 13 of 13 POMs, one `<version>` line each. `<scm><tag>` untouched (`v0.3.0`) |
+| `versions:set-scm-tag -DnewTag=zz-not-a-default` | Reactor stopped at `[1/13]`. Root `pom.xml` only, one line (`:277`). The unrelated `<tag>` at `:905` untouched |
+| `versions:set-scm-tag -DnewTag=HEAD`, then `git merge --no-ff` into `DEVELOP` | Exit 0, **0 conflicts** |
+| Merged result against `DEVELOP` | 96 files changed |
+| Merged result against the tag | 13 files, 14 lines: 13 `<version>`s and the one `<scm><tag>`. Non-POM paths differing: **0** |
+| Every POM of the merged result | `0.4.0-SNAPSHOT`, 13 of 13 |
+
+`generateBackupPoms` is already `false` in the managed `versions-maven-plugin` configuration, so
+the goal leaves no `pom.xml.versionsBackup` to be swept into a commit.
+
+### Task 2: the scripts, tests first
+
+Both suites build their scratch repositories with a shared, sourced `test-fixture.sh`: a base
+commit, a `DEVELOP` branch with only the next-version bump, an `rc` branch, a release tag, and an
+aligned `merge-back/<tag>` branch. This mirrors §1.2 at the scale of two POMs and two text files.
+
+- [ ] Write `assert-carried-over.test.sh`:
+  - a clean plain merge passes and prints the evidence line
+  - `lost_change_detected`: a conflicting RC fix merged with `-X ours` fails and names the
+    path. This is the regression the assertion exists for.
+  - the same with `-X theirs`
+  - a merge commit edited after the fact (tree differs from the plain merge) fails
+  - an aligned commit that also rewrote a non-POM file fails and names it
+  - a deletion on the release is counted and passes
+  - misuse prints usage and exits 1
+- [ ] Write `merge-into-develop.test.sh`:
+  - `rc_fix_survives`, `dev_change_survives`, and edits to different lines of one file both
+    survive
+  - `real_conflict_fails`: exit 1, the path and the tag are named, the branch ref is unchanged,
+    no merge is in progress, and the working tree is clean
+  - the merge is a two-parent commit with the §3.3 message, and the POMs carry the development
+    version and SCM tag
+  - `evidence_line`: the count equals the number of non-POM paths the release changed
+  - run on the wrong branch, or with the wrong arguments, it exits 1
+- [ ] Run both. They must be red.
+- [ ] Implement both scripts until green. Run `sh -n` and `shellcheck`.
 
 ### Task 3: the composite action
 
