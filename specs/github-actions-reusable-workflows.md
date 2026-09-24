@@ -773,15 +773,19 @@ fi
    #
    # #69: this was `versions:set -DprocessAllModules=true`, which rewrote the root POM and
    # nothing else — 1 of 13 on the dsh reactor. It is an aggregator goal: it computes the
-   # change for every module and writes one file. release:update-versions keyed by the root's
-   # own coordinates reaches all of them. The key is project.dev.<groupId>:<artifactId>, a
-   # per-project property, and not one of the names pom.xml's release <configuration> binds —
-   # a -D naming one of those is inert.
-   ROOT_GROUP_ID=$(mvn -q -N -DforceStdout -Dexpression=project.groupId help:evaluate)
-   ROOT_ARTIFACT_ID=$(mvn -q -N -DforceStdout -Dexpression=project.artifactId help:evaluate)
-
-   mvn -B -DautoVersionSubmodules=true \
-     "-Dproject.dev.${ROOT_GROUP_ID}:${ROOT_ARTIFACT_ID}=${{ inputs.initial_hotfix_version }}" \
+   # change for every module and writes one file.
+   #
+   # build.NEXT_DEVELOPMENT_VERSION is the key that works. pom.xml binds <developmentVersion>
+   # to it, so a -D resolves it and it becomes the default development version for every
+   # project in the reactor. It is a POM interpolation variable, not a plugin parameter's user
+   # property — so unlike -DdevelopmentVersion, the release <configuration> does not render it
+   # inert.
+   #
+   # Do NOT reach for -Dproject.dev.<groupId>:<artifactId> here. It moves only the root; the
+   # remaining modules are then moved by the default version policy, which increments each
+   # module's own version. The two answers coincide exactly when the hotfix version is
+   # MAJOR.MINOR.(FIX+1)-SNAPSHOT of the release, and diverge badly otherwise.
+   mvn -B -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.initial_hotfix_version }} \
      release:update-versions
    ```
 
@@ -797,10 +801,12 @@ fi
    ```
 
    It runs `mvn -B validate` in the checkout and requires every `[INFO] Building …` line to
-   carry the expected version. The check is positive on purpose: in a rehearsal a wrong version
-   fails the next command anyway, but in a real release the registry already holds the parent,
-   so `scm:checkin` would succeed and the hotfix line would silently start at the version it
-   was branched from. Finally:
+   carry the expected version. The check is positive on purpose, because nothing else here
+   fails on a wrong version: a rehearsal resolves the stale parent from the artifacts the
+   rehearsal bridge installed locally, and a real release resolves it from the registry
+   `release:perform` just deployed to. Either way `scm:checkin` succeeds and the hotfix line
+   quietly starts at the version it was branched from, so the absence of an error proves
+   nothing. Finally:
 
    ```bash
    cd target/checkout

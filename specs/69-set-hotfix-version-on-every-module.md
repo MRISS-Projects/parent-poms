@@ -39,9 +39,13 @@ against the real `MRISS-Projects/dsh` 13-module reactor.
 - **`<configuration>` beats the user property.** `pom.xml:365-377` binds `arguments`,
   `tagNameFormat`, `allowTimestampedSnapshots`, `preparationGoals`, `goals`, `scmCommentPrefix`,
   `branchName`, `developmentVersion` and `releaseVersion` in the release plugin's
-  `<configuration>`. Any `-D` naming one of those is inert. Check that list before reaching for a
-  command-line flag — it is what makes `-DdevelopmentVersion` useless here, and it is the reason
-  §2.2 chooses `project.dev.<groupId>:<artifactId>`, which is not on it.
+  `<configuration>`. Any `-D` naming one of those **parameters** is inert. Check that list before
+  reaching for a command-line flag — it is what makes `-DdevelopmentVersion` useless here.
+  **The constraint is about parameter names, not about every name that appears in the block.**
+  `<developmentVersion>` is bound to `${build.NEXT_DEVELOPMENT_VERSION}`, and that is a POM
+  interpolation variable, so `-Dbuild.NEXT_DEVELOPMENT_VERSION` resolves normally and reaches the
+  plugin — it is the mechanism §2.1 uses. Reading the constraint as covering it too is what sent
+  the first attempt at §2.2 down the wrong path.
 - The hotfix commit message stays exactly
   `[maven-release-plugin] set hotfix version <initial_hotfix_version>`, byte for byte.
 - The declared rehearsal marker set is unchanged. This change adds no write point: both new
@@ -90,6 +94,12 @@ Reproduced locally for this spec in a worktree of the `0.3.0` RC, `git status --
 | `mvn -B -DautoVersionSubmodules=true -Dproject.dev.com.mriss.products:dsh=0.3.1-SNAPSHOT release:update-versions` | **13 of 13** |
 | `mvn -B -DautoVersionSubmodules=true -Dbuild.NEXT_DEVELOPMENT_VERSION=0.3.1-SNAPSHOT release:update-versions` | **13 of 13** |
 
+> **Both of those last two rows are a trap, and the first of them nearly shipped.** `0.3.1-SNAPSHOT`
+> is exactly what the release plugin's default version policy produces from `0.3.0` unaided, so
+> **every** command that moves the root at all scores 13 of 13 here, whatever it does to the other
+> twelve. The measurement cannot tell the two mechanisms apart. §2.2 re-runs it at a version that
+> is *not* the natural increment, which is the only form of this measurement worth trusting.
+
 ### 1.1 What `versions:set` actually does here
 
 `-X` shows the goal computing the full change set and then applying one file. For every module it
@@ -131,27 +141,38 @@ one-token fix:
 The goal has to change. That is what the issue body proposes and what `set-version.sh` already
 does in both repositories.
 
-### 1.3 The rehearsal's failure is the lucky one
+### 1.3 Nothing downstream catches it — in either mode
 
-In a rehearsal the step fails loudly. `dry_run` deploys nothing, so the parent version the twelve
-modules still name exists in no repository and the next command cannot build the project model:
+**This section originally claimed the opposite, and was wrong. Corrected in review; the original
+reasoning is kept below because the correction is the whole argument for §3.**
+
+The claim was that a rehearsal fails loudly, because `dry_run` deploys nothing and so the parent
+version the twelve modules still name exists in no repository:
 
 ```text
 [ERROR] Non-resolvable parent POM for com.mriss.products.dsh:dsh-data:0.3.0:
         com.mriss.products:dsh:pom:0.3.0 (absent)
 ```
 
-**A real release is expected to behave differently, and worse.** That step runs *after*
-`release:perform` has deployed `0.3.0` to the registry, so `com.mriss.products:dsh:pom:0.3.0`
-resolves, `scm:checkin` succeeds, and the hotfix branch is committed with a root at
-`0.3.1-SNAPSHOT` and twelve modules inheriting `0.3.0` from a parent declaration that was never
-updated. The `0.3.x` line then starts life re-releasing the version it was branched from.
+That is not what a rehearsal does. `rehearsal-tag/action.yml` runs `mvn … install` of the
+release-version artifacts precisely so later steps resolve — its own comment says so — so
+`com.mriss.products:dsh:pom:0.3.0` sits in the runner's local repository by the time this step
+runs, and a stale parent resolves. The error above was quoted from
+[`dsh` run 35662168807](https://github.com/MRISS-Projects/dsh/actions/runs/35662168807), whose
+`Checkout Hotfix Branch and Set Initial Version` step did fail; **that run's logs have since
+expired (HTTP 410) and the quote can no longer be checked**, so what actually failed there is
+now unknown. It is not evidence for anything and is not relied on here.
 
-This is reasoning from the order of the steps and from what `release:perform` deploys, not a
-measurement — a rehearsal cannot produce it, because a rehearsal deploys nothing. It is recorded
-here because it decides the shape of the fix: **the remedy needs a positive assertion that the
-versions are right, not merely the absence of the error `scm:checkin` happened to raise.** §3 is
-that assertion.
+A real release does not catch it either, for the reason originally given: that step runs *after*
+`release:perform` has deployed `0.3.0` to the registry, so the parent resolves, `scm:checkin`
+succeeds, and the hotfix branch is committed with a root at the hotfix version and twelve modules
+inheriting the released one. The `0.3.x` line then starts life re-releasing the version it was
+branched from.
+
+So **both** modes commit a mixed-version reactor quietly. That is what decides the shape of the
+fix: the remedy needs a positive assertion that the versions are right, because there is no error
+whose absence means anything. §3 is that assertion — and §2.2 is the record of it catching a real
+defect in the first attempt at §2.1.
 
 ---
 
@@ -162,46 +183,85 @@ that assertion.
 In `target/checkout`, replacing the `versions:set` call:
 
 ```bash
-ROOT_GROUP_ID=$(mvn -q -N -DforceStdout -Dexpression=project.groupId help:evaluate)
-ROOT_ARTIFACT_ID=$(mvn -q -N -DforceStdout -Dexpression=project.artifactId help:evaluate)
-
-mvn -B -DautoVersionSubmodules=true \
-  "-Dproject.dev.${ROOT_GROUP_ID}:${ROOT_ARTIFACT_ID}=${{ inputs.initial_hotfix_version }}" \
+mvn -B -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.initial_hotfix_version }} \
   release:update-versions
 ```
 
+`pom.xml:375` binds `<developmentVersion>${build.NEXT_DEVELOPMENT_VERSION}</developmentVersion>`,
+so a `-D` on that name resolves the interpolation and the value becomes the default development
+version for **every** project in the reactor. It is a POM interpolation variable, not a plugin
+parameter's user property, which is exactly why the "`<configuration>` beats the user property"
+constraint does not bite here — while `-DdevelopmentVersion`, which names the parameter, is
+rendered inert by that same binding.
+
 Measured from a tree in exactly the state the real step sees it — all 13 POMs at the **released**
-`0.3.0`, not at a SNAPSHOT:
+`0.3.0`, not at a SNAPSHOT — and asking for `0.9.9-SNAPSHOT`, deliberately *not* the natural
+increment:
 
 ```text
-13 files changed, 13 insertions(+), 13 deletions(-)
+13 files changed, 13 insertions(+), 13 deletions(-)      all at 0.9.9-SNAPSHOT
+${project.version} references: untouched
+untracked (--untracked-files=all): (none)
 ```
 
 One line per POM, the root's own `<version>` and each module's `<parent><version>`, nothing else
 touched. No `pom.xml.releaseBackup`, no `release.properties`, no untracked file of any kind is
-left behind for `scm:checkin` to sweep in — checked with `git status --untracked-files=all`.
+left behind for `scm:checkin` to sweep in.
 
-The `mvn -q -N … help:evaluate` lookup is the house pattern already used twice in
-`project-hotfix.yml:160` and `:166`. It prints the value alone, with no surrounding whitespace.
+### 2.2 Why not `project.dev.<groupId>:<artifactId>` — a defect caught in review
 
-`-DautoVersionSubmodules=true` is deliberate even though `dsh`'s modules carry no `<version>` of
-their own and inherit it. A consumer whose modules *do* declare one would otherwise have each of
-them auto-incremented independently instead of following the root.
+**This section previously recommended `-Dproject.dev.<groupId>:<artifactId>` and rejected
+`-Dbuild.NEXT_DEVELOPMENT_VERSION`. That was wrong, it was implemented, it passed a full
+rehearsal, and code review caught it. The record is kept because the way it hid is the lesson.**
 
-### 2.2 Why `project.dev.<groupId>:<artifactId>` and not `-Dbuild.NEXT_DEVELOPMENT_VERSION`
+`project.dev.<groupId>:<artifactId>` sets the development version of **one project** — the one
+whose coordinates it names. Here that is the root, and nothing else. The other twelve modules
+fall through to the release plugin's default version policy, which increments **each module's
+own** version independently.
 
-Both reach 13 of 13. The difference is what they depend on.
+`-DautoVersionSubmodules=true` does not rescue it. `AbstractMapVersionsPhase` takes that path
+only when `isAutoVersionSubmodules() && ArtifactUtils.isSnapshot(rootProject.getVersion())`, and
+at this point `target/checkout` is a checkout of the release tag, so the root is at `0.3.0` — a
+release version. The guard fails and the per-project branch runs.
 
-`project.dev.<groupId>:<artifactId>` is a per-project property the release plugin reads directly.
-It is not one of the names bound in `pom.xml`'s release `<configuration>`, so the trap of the
-global constraint above does not apply to it — measured: it produced `0.3.1-SNAPSHOT` across all
-13 modules *while* `<developmentVersion>${build.NEXT_DEVELOPMENT_VERSION}</developmentVersion>`
-was bound and unresolved.
+The two mechanisms **agree exactly** when `initial_hotfix_version` is
+`MAJOR.MINOR.(FIX+1)-SNAPSHOT` of the released version, because that is what the policy computes
+unaided. `0.3.0` → `0.3.1-SNAPSHOT` is that case. Every measurement in the first pass of this
+story used it, including a green end-to-end rehearsal, so nothing disagreed with anything.
 
-`-Dbuild.NEXT_DEVELOPMENT_VERSION` works only by feeding that binding. It routes the *hotfix*
-version through a property whose name says "next development version", and a consumer that
-overrides the release plugin's `<configuration>` gets a silently different version. Rejected for
-both reasons.
+Re-measured at `0.9.9-SNAPSHOT` off `0.3.0`, the disagreement is stark:
+
+```text
+  8 lines ->  0.9.9-SNAPSHOT      root <version> and each <parent><version>
+ 12 lines ->  0.3.1-SNAPSHOT      the policy default, NOT what was asked for
+  9 lines:   <version>${project.version}</version>  ->  <version>0.3.1-SNAPSHOT</version>
+```
+
+— a mixed-version reactor, plus nine `dependencyManagement` entries in the root POM that were
+deliberately `${project.version}` hardcoded to a version the build no longer carries. (Those nine
+survive in the coincidence case only because `${project.version}` still resolves correctly when
+root and modules land together.)
+
+`initial_hotfix_version` is a free-text `workflow_dispatch` input and no step validates its shape,
+so this is reachable by typing: release `1.0.0`, open the hotfix line at `1.1.0-SNAPSHOT`.
+
+The original objection to `-Dbuild.NEXT_DEVELOPMENT_VERSION` — that it routes a *hotfix* version
+through a property whose name says "next development version", so a consumer who overrides the
+release plugin's `<configuration>` would silently get something else — is a real one, and is not
+dismissed. It is answered by §3: that consumer now fails at the verification step, loudly and by
+name, instead of silently. The guard is what converts this class of mistake from silent to loud,
+which is an argument for keeping the guard rather than against the flag.
+
+**The check caught this defect.** Run against the `project.dev` tree at `0.9.9-SNAPSHOT`:
+
+```text
+::error::12 of 13 module(s) are not at 0.9.9-SNAPSHOT:
+  DSH Test Data Set is at 0.3.1-SNAPSHOT
+  dsh-data is at 0.3.1-SNAPSHOT
+  …
+```
+
+That is AC002 firing on a real defect rather than on a fixture.
 
 ### 2.3 A side effect worth keeping
 
@@ -215,6 +275,11 @@ both reasons.
 So an operator who dispatches `initial_hotfix_version: 0.3.1` instead of `0.3.1-SNAPSHOT` now
 fails at that step instead of opening a hotfix line pinned to a release version. `versions:set`
 accepted it.
+
+Re-checked against §2.1's corrected command, since the rejection could plausibly have lived in
+the `project.dev` path alone: `-Dbuild.NEXT_DEVELOPMENT_VERSION=0.3.1` exits **1** with
+`0.3.1 is invalid, expected a snapshot` and leaves every POM untouched. The side effect survives
+the correction.
 
 ---
 
@@ -336,11 +401,17 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 # The [n/m] progress suffix is absent in a single-module reactor, so it is stripped only when
-# present. "Building jar:", "Building war:" and their siblings are packaging messages from a
+# present. "Building jar:", "Building tar.gz:" and their siblings are packaging messages from a
 # different plugin: a validate-only run never reaches them, and skipping them costs nothing if
 # some caller ever runs a later phase.
+#
+# The filter matches the SHAPE of those messages — a lowercase packaging token, then a colon
+# and a space — rather than enumerating types. An enumeration was tried first and missed tar,
+# tar.gz, tar.bz2 and sar; any list would go stale the next time a packaging is added, and a
+# missed one is read as a module named "Building" at a version of "/x/y.tar.gz". A module line
+# cannot collide with this: it carries a version after the name, never a colon.
 sed -n 's/^\[INFO\] Building \(.*\)$/\1/p' "$log" \
-  | grep -vE '^(jar|war|ear|zip|rar|maven-plugin):' \
+  | grep -vE '^[a-z][a-z0-9.-]*: ' \
   | sed -e 's/[[:space:]]*\[[0-9][0-9]*\/[0-9][0-9]*\][[:space:]]*$//' \
   > "$TMP/modules"
 
@@ -450,11 +521,14 @@ Cases, all required:
 | 4 | one module, no `[n/m]` suffix, right version | exit 0, says `all 1 module(s)` |
 | 5 | a log with no `Building` line at all | exit 1, says `holds no` |
 | 6 | a good log that also contains `[INFO] Building jar: /x/y.jar` | exit 0, says `all 13` |
+| 6b | the same for `war ear zip rar tar tar.gz tar.bz2 sar maven-plugin`, one log each | exit 0, says `all 13` |
 | 7 | one argument instead of two | exit 1, says `usage:` |
 | 8 | a log path that does not exist | exit 1, says `no Maven log` |
 
 Case 2 is the regression test for this issue and case 6 is the one that would break under a naive
-`grep`; neither is optional.
+`grep`; neither is optional. Case 6b was added in review: the filter originally enumerated six
+packaging types and missed `tar`, `tar.gz`, `tar.bz2` and `sar`, so it now matches the shape of a
+packaging message instead of a list that would go stale again.
 
 ### 4.4 `.github/workflows/project-release.yml` — modify
 
@@ -474,23 +548,34 @@ steps. The `scm:checkout` block at `:244-256` is unchanged and is elided here as
           # versions-maven-plugin 2.20.0 both reproduce it. It is an aggregator goal; it computes
           # the change for every module and writes one file.
           #
-          # release:update-versions keyed by the root's own coordinates reaches all 13.
-          # project.dev.<groupId>:<artifactId> rather than -DdevelopmentVersion or
-          # -Dbuild.NEXT_DEVELOPMENT_VERSION: it is a per-project property, so it is not one of
-          # the names pom.xml's release <configuration> binds, and a -D naming one of those is
-          # inert. See specs/69-set-hotfix-version-on-every-module.md §2.2.
-          ROOT_GROUP_ID=$(mvn -q -N -DforceStdout -Dexpression=project.groupId help:evaluate)
-          ROOT_ARTIFACT_ID=$(mvn -q -N -DforceStdout -Dexpression=project.artifactId help:evaluate)
-
-          mvn -B -DautoVersionSubmodules=true \
-            "-Dproject.dev.${ROOT_GROUP_ID}:${ROOT_ARTIFACT_ID}=${{ inputs.initial_hotfix_version }}" \
+          # release:update-versions reaches all 13, driven through build.NEXT_DEVELOPMENT_VERSION.
+          # pom.xml:375 binds <developmentVersion> to that property, so a -D resolves it and it
+          # becomes the default development version for EVERY project in the reactor. It is a POM
+          # interpolation variable, not a plugin parameter's user property, which is why the
+          # "<configuration> beats the user property" trap does not apply to it — unlike
+          # -DdevelopmentVersion, which that same binding does render inert.
+          #
+          # -Dproject.dev.<groupId>:<artifactId> was tried first and is WRONG here, subtly: it
+          # moves the root and nothing else, and the other twelve modules are then moved by the
+          # release plugin's default version policy, which increments each module's own version.
+          # -DautoVersionSubmodules=true does not save it, because the plugin takes that path only
+          # when the root is a SNAPSHOT and this checkout is the release tag. The two agree only
+          # when initial_hotfix_version happens to equal MAJOR.MINOR.(FIX+1)-SNAPSHOT of the
+          # release, which is what made the first measurement of this look correct. Asking for
+          # 0.9.9-SNAPSHOT off 0.3.0 instead produced a mixed reactor AND rewrote nine
+          # ${project.version} references in the root to a hardcoded 0.3.1-SNAPSHOT.
+          # See specs/69-set-hotfix-version-on-every-module.md §2.2.
+          mvn -B -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.initial_hotfix_version }} \
             release:update-versions
 
-      # #69: in a rehearsal a wrong version here fails the next command outright, because
-      # nothing was deployed for the stale parent to resolve against. In a real release the
-      # registry holds it, scm:checkin succeeds, and the hotfix line silently starts at the
-      # version it was branched from. So the check is positive and runs in both modes; it
-      # replaces the rehearsal-only evidence line #72 added to measure this issue.
+      # #69: nothing upstream of this catches a wrong version here. A rehearsal will not: the
+      # bridge installs the release-version artifacts locally (rehearsal-tag/action.yml), so a
+      # stale parent resolves and scm:checkin succeeds. A real release will not either: by this
+      # point release:perform has deployed them, so the hotfix line just quietly starts at the
+      # version it was branched from. Hence a POSITIVE assertion, in both modes — the absence of
+      # an error proves nothing here. It replaces the rehearsal-only evidence line #72 added to
+      # measure this issue, and it has already earned its keep: it is what caught the
+      # project.dev.<g>:<a> defect described in the previous step's comment.
       - name: Verify every module carries the hotfix version
         uses: MRISS-Projects/parent-poms/.github/actions/verify-reactor-version@master
         with:
@@ -581,6 +666,12 @@ copying `release.yml` with a `dry_run` passthrough — are both gone now that
       block. **This is the end-to-end rehearsal of the fix that costs nothing to repeat** — do it
       before the workflow edit, not after.
 
+      > **Superseded — read §2.2 first.** Everything below measured the command at
+      > `0.3.1-SNAPSHOT` off `0.3.0`, which is the one value at which the wrong command and the
+      > right one agree. It is recorded unchanged because the shape of the mistake matters: the
+      > numbers are all real and all correct, and they still do not establish what they were
+      > taken to establish. Task 4R below is the measurement that does.
+
       **Task 4 results.** Maven 3.9.16, worktree `D:\w69-task4` detached at `94060ecf`, all 13
       POMs edited to the released `0.3.0` and committed, so the baseline was clean
       (`git status --porcelain --untracked-files=all` empty).
@@ -668,6 +759,13 @@ copying `release.yml` with a `dry_run` passthrough — are both gone now that
       verification step's output, all eight markers, the `assert-no-writes` block, and the
       `git ls-remote --heads origin` comparison. Link the run in the PR.
 
+      > **Superseded — read §2.2 first.** This rehearsal ran the *wrong* command and passed,
+      > because it too used `0.3.1-SNAPSHOT` off `0.3.0`. A green end-to-end run is not evidence
+      > that a command is right when the inputs cannot distinguish it from the default. Task 7R
+      > re-runs it at a version that can. Everything recorded here about the *workflow* — the
+      > step split, the eight markers, `assert-no-writes` — stands; only the conclusion about
+      > the command does not.
+
       **Task 7 result.** [`dsh` run 35911734453](https://github.com/MRISS-Projects/dsh/actions/runs/35911734453),
       dispatched from the scratch branch `scratch-69-rehearsal` at `c595a920`, cut from the RC
       at `94060ecf`. Inputs as §5 step 3, plus `branch_name: staging-0.3.0-SNAPSHOT-RC`, which
@@ -749,6 +847,61 @@ copying `release.yml` with a `dry_run` passthrough — are both gone now that
       [`#69` comment](https://github.com/MRISS-Projects/parent-poms/issues/69#issuecomment-5804843996)
       and
       [`#72` comment](https://github.com/MRISS-Projects/parent-poms/issues/72#issuecomment-5804844172).
+      Both predate the review round below and assert the `project.dev` mechanism; Task 12
+      corrects them in place rather than leaving the issue's record wrong.
+
+### 6.1 Review round 1 — the mechanism was wrong
+
+Local review of the finished branch found that §2.1's command did not do what §2.1 said, and
+that every measurement taken to prove it had used the one input value that hides the difference.
+§1.3's premise was independently wrong as well. The tasks that follow are that round.
+
+- [x] **Task 11 — widen the packaging filter, TDD.** Case 6b first: `war ear zip rar tar tar.gz
+      tar.bz2 sar maven-plugin`, one log each. Red on `tar`, `tar.gz`, `tar.bz2` and `sar` —
+      exactly the four the enumeration missed, the other five already passing. Replace the
+      enumeration with a shape match, `^[a-z][a-z0-9.-]*: `. Suite green at 36 assertions.
+- [x] **Task 4R — re-measure at a version that can tell the two apart.** Same worktree recipe,
+      all 13 POMs at the released `0.3.0`, asking for `0.9.9-SNAPSHOT`.
+
+      **`-DautoVersionSubmodules=true -Dproject.dev.com.mriss.products:dsh=0.9.9-SNAPSHOT`** —
+      13 files touched, and wrong:
+
+      ```text
+        8 lines ->  0.9.9-SNAPSHOT     root <version>, each <parent><version>
+       12 lines ->  0.3.1-SNAPSHOT     the default version policy, not what was asked
+        9 lines:    <version>${project.version}</version> -> <version>0.3.1-SNAPSHOT</version>
+      ```
+
+      **`-Dbuild.NEXT_DEVELOPMENT_VERSION=0.9.9-SNAPSHOT`** — correct:
+
+      ```text
+      13 files changed, 13 insertions(+), 13 deletions(-)    all at 0.9.9-SNAPSHOT
+      ${project.version}: untouched      untracked: (none)
+      mvn -B validate -> exit 0
+      assert-reactor-version.sh 0.9.9-SNAPSHOT -> all 13 module(s) are at 0.9.9-SNAPSHOT
+      ```
+
+      And the guard on the bad tree, which is AC002 firing on a real defect:
+
+      ```text
+      ::error::12 of 13 module(s) are not at 0.9.9-SNAPSHOT:
+        DSH Test Data Set is at 0.3.1-SNAPSHOT
+        dsh-data is at 0.3.1-SNAPSHOT
+        …
+      ```
+
+      §2.3 re-checked against the new command: `-Dbuild.NEXT_DEVELOPMENT_VERSION=0.3.1` exits 1,
+      `0.3.1 is invalid, expected a snapshot`, no POM touched. The side effect survives.
+- [x] **Task 5R — apply the correction.** `project-release.yml`: the new command, the corrected
+      comment, the corrected verify-step comment. `specs/github-actions-reusable-workflows.md`
+      and this spec's §1, §1.3, §2.1, §2.2, §2.3, §4.2, §4.3 and §4.4 to match. Commit.
+- [ ] **Task 7R — re-rehearse, at a version that proves the mechanism.** §5 again, but with
+      `initial_hotfix_version: 0.9.9-SNAPSHOT` so a pass means the command works rather than
+      that the policy agreed. `hotfix_branch` stays `0.3.x`. Record the run URL, the
+      verification output, the eight markers and `assert-no-writes`.
+- [ ] **Task 12 — correct the record on the issues.** The `#69` comment posted at Task 10 asserts
+      the `project.dev` mechanism as proven. Post a follow-up correcting it and linking Task 4R
+      and Task 7R. `#72`'s comment is unaffected — its subject is the markers, which stand.
 
 ---
 

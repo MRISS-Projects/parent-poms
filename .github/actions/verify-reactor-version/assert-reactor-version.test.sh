@@ -118,6 +118,20 @@ echo '[INFO] Building jar: /home/runner/work/dsh/dsh-data/target/dsh-data-0.3.1-
 check_exit "'Building jar:' is not counted as a module" 0 0.3.1-SNAPSHOT "$with_jar"
 check_says "the module count ignores the packaging line" "all 13" 0.3.1-SNAPSHOT "$with_jar"
 
+# The action runs `validate` and never reaches a packaging plugin, but the filter exists so a
+# caller running a later phase is safe. That promise has to hold for the assembly types too,
+# not just the six that were enumerated first: `tar.gz` in particular would otherwise be read
+# as a module named "Building" at version "/x/y.tar.gz".
+for packaging in war ear zip rar tar tar.gz tar.bz2 sar maven-plugin; do
+  with_pkg="$TMP/with-$packaging.log"
+  cp "$good" "$with_pkg"
+  echo "[INFO] Building $packaging: /home/runner/work/dsh/dsh-data/target/dsh-data.$packaging" \
+    >> "$with_pkg"
+  check_exit "'Building $packaging:' is not counted as a module" 0 0.3.1-SNAPSHOT "$with_pkg"
+  check_says "'Building $packaging:' does not change the module count" \
+    "all 13" 0.3.1-SNAPSHOT "$with_pkg"
+done
+
 # --- 7 and 8. misuse -----------------------------------------------------------------
 
 sh "$SCRIPT" 0.3.1-SNAPSHOT >/dev/null 2>&1

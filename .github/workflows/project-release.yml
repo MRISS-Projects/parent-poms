@@ -260,23 +260,34 @@ jobs:
           # versions-maven-plugin 2.20.0 both reproduce it. It is an aggregator goal; it computes
           # the change for every module and writes one file.
           #
-          # release:update-versions keyed by the root's own coordinates reaches all 13.
-          # project.dev.<groupId>:<artifactId> rather than -DdevelopmentVersion or
-          # -Dbuild.NEXT_DEVELOPMENT_VERSION: it is a per-project property, so it is not one of
-          # the names pom.xml's release <configuration> binds, and a -D naming one of those is
-          # inert. See specs/69-set-hotfix-version-on-every-module.md §2.2.
-          ROOT_GROUP_ID=$(mvn -q -N -DforceStdout -Dexpression=project.groupId help:evaluate)
-          ROOT_ARTIFACT_ID=$(mvn -q -N -DforceStdout -Dexpression=project.artifactId help:evaluate)
-
-          mvn -B -DautoVersionSubmodules=true \
-            "-Dproject.dev.${ROOT_GROUP_ID}:${ROOT_ARTIFACT_ID}=${{ inputs.initial_hotfix_version }}" \
+          # release:update-versions reaches all 13, driven through build.NEXT_DEVELOPMENT_VERSION.
+          # pom.xml:375 binds <developmentVersion> to that property, so a -D resolves it and it
+          # becomes the default development version for EVERY project in the reactor. It is a POM
+          # interpolation variable, not a plugin parameter's user property, which is why the
+          # "<configuration> beats the user property" trap does not apply to it — unlike
+          # -DdevelopmentVersion, which that same binding does render inert.
+          #
+          # -Dproject.dev.<groupId>:<artifactId> was tried first and is WRONG here, subtly: it
+          # moves the root and nothing else, and the other twelve modules are then moved by the
+          # release plugin's default version policy, which increments each module's own version.
+          # -DautoVersionSubmodules=true does not save it, because the plugin takes that path only
+          # when the root is a SNAPSHOT and this checkout is the release tag. The two agree only
+          # when initial_hotfix_version happens to equal MAJOR.MINOR.(FIX+1)-SNAPSHOT of the
+          # release, which is what made the first measurement of this look correct. Asking for
+          # 0.9.9-SNAPSHOT off 0.3.0 instead produced a mixed reactor AND rewrote nine
+          # ${project.version} references in the root to a hardcoded 0.3.1-SNAPSHOT.
+          # See specs/69-set-hotfix-version-on-every-module.md §2.2.
+          mvn -B -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.initial_hotfix_version }} \
             release:update-versions
 
-      # #69: in a rehearsal a wrong version here fails the next command outright, because
-      # nothing was deployed for the stale parent to resolve against. In a real release the
-      # registry holds it, scm:checkin succeeds, and the hotfix line silently starts at the
-      # version it was branched from. So the check is positive and runs in both modes; it
-      # replaces the rehearsal-only evidence line #72 added to measure this issue.
+      # #69: nothing upstream of this catches a wrong version here. A rehearsal will not: the
+      # bridge installs the release-version artifacts locally (rehearsal-tag/action.yml), so a
+      # stale parent resolves and scm:checkin succeeds. A real release will not either: by this
+      # point release:perform has deployed them, so the hotfix line just quietly starts at the
+      # version it was branched from. Hence a POSITIVE assertion, in both modes — the absence of
+      # an error proves nothing here. It replaces the rehearsal-only evidence line #72 added to
+      # measure this issue, and it has already earned its keep: it is what caught the
+      # project.dev.<g>:<a> defect described in the previous step's comment.
       - name: Verify every module carries the hotfix version
         uses: MRISS-Projects/parent-poms/.github/actions/verify-reactor-version@master
         with:
