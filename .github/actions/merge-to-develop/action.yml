@@ -135,8 +135,10 @@ runs:
         cd "$DIR"
         bash "$RUNNER_TEMP/rehearsal-marker.sh" merge-to-develop \
           "push the merge of ${TAG} into ${DEVELOPMENT_BRANCH}"
-        # RH_GIT_PUSH_DRYRUN is unquoted on purpose: empty in a real release, so it must
-        # expand to no argument at all, as in the workflow's master push.
-        git push $RH_GIT_PUSH_DRYRUN \
+        # PR #82 review: the development branch takes everyday PR merges, so it can advance
+        # while the release runs. The script retries the way commit-readme does, merging again
+        # onto the new tip, and stops for a human if the new tip changed any POM. It reads
+        # RH_GIT_PUSH_DRYRUN itself.
+        sh "$GITHUB_ACTION_PATH/push-merge-back.sh" \
           "https://x-access-token:${TOKEN}@github.com/MRISS-Projects/${GIT_PROJECT}.git" \
-          "$DEVELOPMENT_BRANCH"
+          "$TAG" "merge-back/${TAG}" "$DEVELOPMENT_BRANCH"
