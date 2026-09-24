@@ -289,7 +289,7 @@ jobs:
       # measure this issue, and it has already earned its keep: it is what caught the
       # project.dev.<g>:<a> defect described in the previous step's comment.
       - name: Verify every module carries the hotfix version
-        uses: MRISS-Projects/parent-poms/.github/actions/verify-reactor-version@master
+        uses: MRISS-Projects/parent-poms/.github/actions/verify-reactor-version@issue-69-set-hotfix-version-on-every-module
         with:
           expected-version: ${{ inputs.initial_hotfix_version }}
           working-directory: target/checkout

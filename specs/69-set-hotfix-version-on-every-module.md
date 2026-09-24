@@ -20,16 +20,23 @@ carries `initial_hotfix_version`. A run that fails to achieve that fails at that
 modules that are wrong, before anything is committed or pushed.
 
 **Architecture.** Two changes to one step. The version is set with the release plugin's
-`release:update-versions` keyed by the root project's own coordinates, instead of
+`release:update-versions`, driven through `build.NEXT_DEVELOPMENT_VERSION`, instead of
 `versions:set`, which rewrites the root POM and nothing else. The result is then asserted by a
 new composite action that runs `mvn -B validate` in the checkout and requires every
 `[INFO] Building …` line to carry the expected version. The assertion runs in real releases and
 rehearsals alike, and it replaces `#72`'s rehearsal-only evidence line with a permanent check.
 
 **Tech stack.** GitHub Actions composite actions; POSIX `sh`; `maven-release-plugin` 3.1.1 (via
-`${release.plugin.version}`); `maven-help-plugin`; Maven **3.9.9 in CI**, which every workflow here
+`${release.plugin.version}`); Maven **3.9.9 in CI**, which every workflow here
 pins via `stCarolas/setup-maven`. The local measurements in §1 and §2 were taken on Maven 3.9.16
 against the real `MRISS-Projects/dsh` 13-module reactor.
+
+> **This spec was corrected after review; see §6.1.** Its first version specified
+> `-Dproject.dev.<groupId>:<artifactId>`, which moves only the root module, and every
+> measurement it offered as proof used the one hotfix version at which that is indistinguishable
+> from the right answer. §1's table, §1.3, §2.1, §2.2 and the Task 4 and Task 7 result blocks
+> all carry the correction inline rather than being rewritten, because how the mistake survived
+> a green end-to-end rehearsal is the more useful record.
 
 ---
 
