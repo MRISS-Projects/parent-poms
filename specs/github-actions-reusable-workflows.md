@@ -673,6 +673,7 @@ jobs:
 | `site_deployment_url` | string | no | Site staging path. Default: `file:///tmp/sites` |
 | `dry_run` | boolean | no | Rehearse the run: no remote write, every suppression announced (`#72`) |
 | `maven_properties` | string | no | Build properties for the consuming project, one `name=value` per line, rendered into the `github-packages` profile of the generated `settings.xml` (`#76`) |
+| `development_branch` | string | no | Branch every release is merged back into. Default `DEVELOPMENT`, as on `project-stage.yml`; dsh passes `DEVELOP`. Checked to exist before anything is written (`#65`) |
 
 #### Secrets
 
@@ -861,6 +862,31 @@ fi
     REPO_URL="https://x-access-token:${DEPLOY_TOKEN}@github.com/MRISS-Projects/${{ inputs.git_project }}.git"
     git push "$REPO_URL" --delete ${{ inputs.branch_name }}
     ```
+14. **Merge the release into the development branch** (`#65`): the
+    `.github/actions/merge-to-develop` composite action, last of all the write points:
+    ```yaml
+    - uses: MRISS-Projects/parent-poms/.github/actions/merge-to-develop@master
+      with:
+        tag: v${{ inputs.current_version }}
+        development_branch: ${{ inputs.development_branch }}
+        git_project: ${{ inputs.git_project }}
+        token: ${{ secrets.DEPLOY_TOKEN }}
+    ```
+    It clones the development branch and reads that branch's own version and `<scm><tag>`,
+    never `next_development_version`. It builds a local commit on the tag that sets the
+    reactor to both values, using `release:update-versions` and `versions:set-scm-tag`, and
+    merges that commit with a **plain** `git merge --no-ff`, with no `-s` and no `-X`. It then
+    asserts that every module carries the development version, that HEAD is exactly
+    `git merge-tree`'s plain merge, and that the alignment changed nothing but POMs, before
+    it pushes. A step `Check the development branch exists`, straight after `Configure Git`,
+    fails the run in its first minute if the branch is missing.
+
+    > **When the merge-back fails.** A real conflict, meaning a path both the RC branch and
+    > the development branch changed, stops the step, lists the paths, and pushes nothing. The
+    > release itself is complete by then. Finish by hand: merge the tag into the development
+    > branch, keep that branch's version in every `pom.xml`, and resolve each listed path on
+    > its merits. Taking one side wholesale is the silent loss this step exists to prevent.
+    > See `specs/65-merge-release-back-into-develop.md`.
 
 #### Jenkinsfile mapping
 
@@ -874,6 +900,7 @@ fi
 | Generates Version at Hotfix Branch | Step 9 (`release:update-versions` + verify + `scm:checkin`) |
 | Post Release | Steps 10–12 |
 | Remove RC Branch | Step 13 |
+| *(none: the Jenkinsfile never merged back)* | Step 14, merge-back into the development branch (`#65`) |
 
 #### GCP note
 
@@ -936,6 +963,7 @@ jobs:
 | `site_deployment_url` | string | no | Site staging path. Default: `file:///tmp/sites` |
 | `dry_run` | boolean | no | Rehearse the run: no remote write, every suppression announced (`#72`) |
 | `maven_properties` | string | no | Build properties for the consuming project, one `name=value` per line, rendered into the `github-packages` profile of the generated `settings.xml` (`#76`) |
+| `development_branch` | string | no | Branch every release is merged back into. Default `DEVELOPMENT`, as on `project-stage.yml`; dsh passes `DEVELOP`. Checked to exist before anything is written (`#65`) |
 
 #### Secrets
 
@@ -1039,6 +1067,13 @@ fi
     ```
     > `-Dcommit.readme.phase=none` is obsolete and inert — see #71. The commit to master is a workflow step.
 
+12. **Merge the release into the development branch** (`#65`): the same
+    `merge-to-develop` action as `project-release.yml` step 14, with
+    `tag: v${{ env.HOTFIX_RELEASE_NUMBER }}`. The same preflight runs after `Configure Git`.
+    Unlike this workflow's `master` merge, it does not pass `--allow-unrelated-histories`.
+    A hotfix tag with no history in common with the development branch is for a human to
+    merge.
+
 > **Note:** Unlike `project-release.yml`, there is **no RC branch removal** step — hotfix branches
 > are long-lived and remain active for future patch releases.
 
@@ -1050,6 +1085,7 @@ fi
 | Read pom.xml Info | Step 6 |
 | Build and Deploy Maven Release (no params) | Step 8 |
 | Post Release (merge → site-deploy → process-resources) | Steps 9–11 |
+| *(none: the Jenkinsfile never merged back)* | Step 12, merge-back into the development branch (`#65`) |
 
 ---
 
@@ -1137,6 +1173,7 @@ jobs:
       next_development_version: ${{ inputs.next_development_version }}
       hotfix_branch: ${{ inputs.hotfix_branch }}
       initial_hotfix_version: ${{ inputs.initial_hotfix_version }}
+      development_branch: DEVELOP
     secrets:
       DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
 ```
@@ -1159,6 +1196,7 @@ jobs:
     with:
       git_project: dsh
       branch_name: ${{ inputs.branch_name }}
+      development_branch: DEVELOP
     secrets:
       DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
 ```

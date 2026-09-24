@@ -279,8 +279,12 @@ the development branch is a situation for a human, and the merge should say so.
 | `.github/workflows/project-hotfix.yml` | the same |
 | `specs/github-actions-reusable-workflows.md` | document the input, the step and the failure mode |
 
-The action's inputs are `tag`, `development_branch`, `git_project` and `token`. It also reads
-`dry_run` so it can pass it through to the marker. Inputs reach its scripts through `env:`.
+The action's inputs are `tag`, `development_branch`, `git_project` and `token`. They reach its
+scripts through `env:`. *Changed while building:* the action has **no `dry_run` input**. It reads
+the `RH_TAG_SOURCE` and `RH_GIT_PUSH_DRYRUN` that `rehearsal-setup` already exported to the job,
+as the workflow's own `Merge Release Tag to Master` step does, so the run has one rehearsal
+switch rather than one per action. It fails if `RH_TAG_SOURCE` is unset, which can only mean
+`rehearsal-setup` did not run.
 
 **Consumer follow-up, not in this PR.** `dsh`'s `release.yml` and `hotfix.yml` must pass
 `development_branch: DEVELOP`. Order matters. Passing an input the called workflow does not
@@ -353,7 +357,7 @@ Both suites build their scratch repositories with a shared, sourced `test-fixtur
 commit, a `DEVELOP` branch with only the next-version bump, an `rc` branch, a release tag, and an
 aligned `merge-back/<tag>` branch. This mirrors §1.2 at the scale of two POMs and two text files.
 
-- [ ] Write `assert-carried-over.test.sh`:
+- [x] Write `assert-carried-over.test.sh`:
   - a clean plain merge passes and prints the evidence line
   - `lost_change_detected`: a conflicting RC fix merged with `-X ours` fails and names the
     path. This is the regression the assertion exists for.
@@ -362,7 +366,7 @@ aligned `merge-back/<tag>` branch. This mirrors §1.2 at the scale of two POMs a
   - an aligned commit that also rewrote a non-POM file fails and names it
   - a deletion on the release is counted and passes
   - misuse prints usage and exits 1
-- [ ] Write `merge-into-develop.test.sh`:
+- [x] Write `merge-into-develop.test.sh`:
   - `rc_fix_survives`, `dev_change_survives`, and edits to different lines of one file both
     survive
   - `real_conflict_fails`: exit 1, the path and the tag are named, the branch ref is unchanged,
@@ -371,28 +375,28 @@ aligned `merge-back/<tag>` branch. This mirrors §1.2 at the scale of two POMs a
     version and SCM tag
   - `evidence_line`: the count equals the number of non-POM paths the release changed
   - run on the wrong branch, or with the wrong arguments, it exits 1
-- [ ] Run both. They must be red.
-- [ ] Implement both scripts until green. Run `sh -n` and `shellcheck`.
+- [x] Run both. They must be red.
+- [x] Implement both scripts until green. Run `sh -n` and `shellcheck`.
 
 ### Task 3: the composite action
 
-- [ ] `action.yml`: clone, read `DEV_VERSION` and `DEV_SCM_TAG`, fetch the tag, align (Task 1
+- [x] `action.yml`: clone, read `DEV_VERSION` and `DEV_SCM_TAG`, fetch the tag, align (Task 1
       mechanism), `verify-reactor-version`, commit, `merge-into-develop.sh`,
       `verify-reactor-version`, marker, push. All inputs go through `env:`.
-- [ ] The executable bit on the scripts (`build.yml` checks it).
+- [x] The executable bit on the scripts (`build.yml` checks it).
 
 ### Task 4: the workflows
 
-- [ ] Both workflows: `development_branch` input, preflight after `Configure Git`, and the
+- [x] Both workflows: `development_branch` input, preflight after `Configure Git`, and the
       new last step before `Rehearsal verify`.
-- [ ] Add `merge-to-develop` to both `declared_markers` lists, and replace the comment that
+- [x] Add `merge-to-develop` to both `declared_markers` lists, and replace the comment that
       anticipated it.
-- [ ] Hand-check that, in a real release, every pre-existing command expands byte for byte as
+- [x] Hand-check that, in a real release, every pre-existing command expands byte for byte as
       before (`#72` §8 method).
 
 ### Task 5: docs
 
-- [ ] `specs/github-actions-reusable-workflows.md`: the input, the preflight, the step, and the
+- [x] `specs/github-actions-reusable-workflows.md`: the input, the preflight, the step, and the
       manual recovery when the merge-back conflicts.
 
 ### Task 6: rehearsals
