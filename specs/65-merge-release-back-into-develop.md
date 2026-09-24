@@ -402,8 +402,31 @@ aligned `merge-back/<tag>` branch. This mirrors §1.2 at the scale of two POMs a
 ### Task 6: rehearsals
 
 - [ ] Open the DSH twin issue and branch, and pass `development_branch: DEVELOP` in both wrappers.
-- [ ] Run §5 items 3, 4 and 5. Record the run URLs and the evidence lines here.
+- [x] Run §5 items 3, 4 and 5. Record the run URLs and the evidence lines here.
 - [ ] Comment on `#65` with the evidence, and state that `dsh` `0.3.0` is the confirming run.
+
+**Results, 2026-09-24.** These runs used #72's final-round method. A throwaway parent-poms branch,
+`rehearsal-65`, was cut from the PR head at `cc675702` and differed from it only in the two
+`merge-to-develop@` refs. The DSH scratch branches were: `rehearsal-65` (the wrappers pointed at
+it, passing `development_branch`), `rehearsal-65-hotfix` (cut from the RC with all 13 POMs at
+`0.3.1-SNAPSHOT`), `rehearsal-65-conflict-rc` (the RC plus an edit to line 1 of
+`connect-mongo.bat`), and `rehearsal-65-conflict-dev` (`DEVELOP` plus a different edit to the
+same line). Every scratch branch was deleted afterwards. DSH's `ls-remote --heads` and `--tags`
+are identical to the listings taken before the first push.
+
+| §5 | Run | Result |
+|---|---|---|
+| 3: release, `next_development_version: 0.9.9-SNAPSHOT` | [`dsh` 35997012261](https://github.com/MRISS-Projects/dsh/actions/runs/35997012261) | **green**. `DEVELOP is at 0.4.0-SNAPSHOT`: the value came from the branch, not the input. 13 of 13 at `0.4.0-SNAPSHOT` after alignment and again after the merge. `carried 94 path(s) from v0.3.0 into DEVELOP; 0 lost`. All 9 declared write points announced exactly once. Heads 17, tags 12 and packages 267 all unchanged |
+| 4: hotfix, `rehearsal-65-hotfix` | [`dsh` 35997055587](https://github.com/MRISS-Projects/dsh/actions/runs/35997055587) | **green**. `carried 94 path(s) from v0.3.1 into DEVELOP; 0 lost`. 13 of 13 at `0.4.0-SNAPSHOT` both times. All 6 declared write points. Remote unchanged |
+| 5: conflict | [`dsh` 35997059122](https://github.com/MRISS-Projects/dsh/actions/runs/35997059122) | **red, as required.** It failed in `Merge Release Tag to Development Branch` with `merging v0.3.0 into rehearsal-65-conflict-dev conflicts, so nothing was pushed. The release itself is complete…` and listed `connect-mongo.bat`. Heads, tags and packages unchanged, and the RC branch still present. `assert-markers` also reported `merge-to-develop` missing. That is correct and wanted: the step stopped before its push, so the write point never happened |
+
+The 94 matches the local simulation exactly: 94 non-POM paths changed between the branch point
+and the tag. §1.2's 96 is a different count, every path of the merged result that differs from
+`DEVELOP`, which is 93 non-POM paths and 3 POMs. The gap of one is a path the release changed that
+`DEVELOP` already held in the same state.
+
+**Not dispatched:** AC004's negative path, meaning the preflight failing on a branch that does not
+exist. All three runs passed through the preflight on a branch that did exist.
 
 ---
 
@@ -411,11 +434,11 @@ aligned `merge-back/<tag>` branch. This mirrors §1.2 at the scale of two POMs a
 
 The issue's five criteria, corrected where §2 showed them wrong:
 
-- [ ] **AC001:** `project-release.yml` merges the release tag into the development branch after
+- [x] **AC001:** `project-release.yml` merges the release tag into the development branch after
       its `master` merge. The development branch keeps its own version on every module, which
       `verify-reactor-version` asserts.
-- [ ] **AC002:** `project-hotfix.yml` does the same.
-- [ ] **AC003:** non-version changes from the RC or hotfix branch are on the development branch
+- [x] **AC002:** `project-hotfix.yml` does the same.
+- [x] **AC003:** non-version changes from the RC or hotfix branch are on the development branch
       afterwards, which the carried-over assertion checks. A conflicting change **fails the run**
       rather than being resolved by picking a side.
 - [ ] **AC004:** the branch is named by a `development_branch` input on both workflows, with the
@@ -423,7 +446,7 @@ The issue's five criteria, corrected where §2 showed them wrong:
       starts.
 - [ ] **AC005:** validated against `dsh`, whose RC branch carries 152 RC-only commits, by §5's
       rehearsals. The conflict path is proven by §5.5. `dsh` `0.3.0` confirms it.
-- [ ] **AC006:** `merge-to-develop` is a declared rehearsal marker in both workflows, and every
+- [x] **AC006:** `merge-to-develop` is a declared rehearsal marker in both workflows, and every
       rehearsal in §5 proves the remote unchanged.
 
 ---
