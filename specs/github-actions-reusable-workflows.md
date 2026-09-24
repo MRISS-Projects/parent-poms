@@ -769,11 +769,55 @@ fi
 
    cd target/checkout
 
-   # Set initial hotfix SNAPSHOT version on all modules
-   mvn -B -DprocessAllModules=true -DnewVersion=${{ inputs.initial_hotfix_version }} versions:set
+   # Set initial hotfix SNAPSHOT version on all modules.
+   #
+   # #69: this was `versions:set -DprocessAllModules=true`, which rewrote the root POM and
+   # nothing else — 1 of 13 on the dsh reactor. It is an aggregator goal: it computes the
+   # change for every module and writes one file.
+   #
+   # build.NEXT_DEVELOPMENT_VERSION is the key that works. pom.xml binds <developmentVersion>
+   # to it, so a -D resolves it and it becomes the default development version for every
+   # project in the reactor. It is a POM interpolation variable, not a plugin parameter's user
+   # property — so unlike -DdevelopmentVersion, the release <configuration> does not render it
+   # inert.
+   #
+   # Do NOT reach for -Dproject.dev.<groupId>:<artifactId> here. It moves only the root; the
+   # remaining modules are then moved by the default version policy, which increments each
+   # module's own version. The two answers coincide exactly when the hotfix version is
+   # MAJOR.MINOR.(FIX+1)-SNAPSHOT of the release, and diverge badly otherwise.
+   # The dispatch input reaches the step through `env` as INITIAL_HOTFIX_VERSION and is quoted
+   # here. A ${{ }} expression is substituted into the script text before bash parses it, so
+   # interpolating a caller-supplied value straight into a `run:` body is a command-injection
+   # vector. PR #80's review caught this on exactly this line.
+   mvn -B "-Dbuild.NEXT_DEVELOPMENT_VERSION=$INITIAL_HOTFIX_VERSION" \
+     release:update-versions
+   ```
 
-   # Commit the version change to the hotfix branch
-   mvn -B -Dmessage="[maven-release-plugin] set hotfix version ${{ inputs.initial_hotfix_version }}" scm:checkin
+   Then, in a step of its own, because a composite action cannot run inside a `run:` block and
+   the check has to sit between the version change and the commit:
+
+   ```yaml
+   - name: Verify every module carries the hotfix version
+     uses: MRISS-Projects/parent-poms/.github/actions/verify-reactor-version@master
+     with:
+       expected-version: ${{ inputs.initial_hotfix_version }}
+       working-directory: target/checkout
+   ```
+
+   It runs `mvn -B validate` in the checkout and requires every `[INFO] Building …` line to
+   carry the expected version. The check is positive on purpose, because nothing else here
+   fails on a wrong version: a rehearsal resolves the stale parent from the artifacts the
+   rehearsal bridge installed locally, and a real release resolves it from the registry
+   `release:perform` just deployed to. Either way `scm:checkin` succeeds and the hotfix line
+   quietly starts at the version it was branched from, so the absence of an error proves
+   nothing. Finally:
+
+   ```bash
+   cd target/checkout
+
+   # Commit the version change to the hotfix branch. Same `env` treatment as above; the message
+   # expands byte for byte to what it was.
+   mvn -B "-Dmessage=[maven-release-plugin] set hotfix version $INITIAL_HOTFIX_VERSION" scm:checkin
    ```
 10. **Post-release: merge release tag to master**:
     ```bash
@@ -827,7 +871,7 @@ fi
 | Ask User Confirmation | Replaced by workflow `inputs` — caller provides values explicitly |
 | Build and Deploy Maven Release | Step 7 (release:clean + prepare + perform) |
 | Creates Hotfix Branch | Step 8 |
-| Generates Version at Hotfix Branch | Step 9 (versions:set + scm:checkin) |
+| Generates Version at Hotfix Branch | Step 9 (`release:update-versions` + verify + `scm:checkin`) |
 | Post Release | Steps 10–12 |
 | Remove RC Branch | Step 13 |
 
