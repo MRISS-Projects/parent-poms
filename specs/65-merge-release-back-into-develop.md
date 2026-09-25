@@ -495,6 +495,25 @@ whole reason was added, shown red with `$1` restored, and made green with `$*`.
 every push, and that is not reachable with a bare repository and a hook. The bound itself is
 `commit-readme`'s, unchanged.
 
+**Re-rehearsed after the fix, 2026-09-25.** The run used §6's method, flipping only the two
+`merge-to-develop@` refs, against the PR head at `c378c2f4`. It had the same inputs as §5.3,
+including `next_development_version: 0.9.9-SNAPSHOT`. The DSH scratch branch was built with git
+plumbing (a temporary index, no working-tree checkout), which sidesteps the Windows path-length
+failures that the earlier worktrees ran into. It changed exactly the three wrapper lines.
+[`dsh` 36136595084](https://github.com/MRISS-Projects/dsh/actions/runs/36136595084) is
+**green**:
+
+- The merge-back reached `push-merge-back.sh`. Its dry-run push printed
+  `60c759cc7..6937da671  HEAD -> DEVELOP`, and `DEVELOP` had not advanced, so there was no retry.
+- `DEVELOP is at 0.4.0-SNAPSHOT`, 13 of 13 both before and after the merge.
+  `carried 94 path(s) from v0.3.0 into DEVELOP; 0 lost`, the same as before the fix.
+- All 9 declared write points were announced exactly once. Heads 14, tags 12 and packages 267
+  were all unchanged. Checked directly afterwards: `DEVELOP` still at `60c759cc7`, `master` at
+  `06bc59100`.
+
+Both scratch branches are deleted, and DSH's `ls-remote --heads` and `--tags` are identical to
+the listings taken before the run.
+
 ---
 
 ## 7. Acceptance criteria
