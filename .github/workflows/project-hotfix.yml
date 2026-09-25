@@ -29,6 +29,11 @@ on:
           Build properties for this project, one `name=value` per line, rendered into
           the <properties> of the github-packages profile in the generated
           settings.xml. Empty leaves that file exactly as it is written.
+      development_branch:
+        type: string
+        required: false
+        default: 'DEVELOPMENT'
+        description: 'Branch every release is merged back into, e.g. DEVELOP or DEVELOPMENT'
     secrets:
       DEPLOY_TOKEN:
         required: true
@@ -155,6 +160,17 @@ jobs:
           git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+      # #65: see the identical step in project-release.yml.
+      - name: Check the development branch exists
+        env:
+          DEVELOPMENT_BRANCH: ${{ inputs.development_branch }}
+        run: |
+          if ! git ls-remote --exit-code --heads origin "$DEVELOPMENT_BRANCH" > /dev/null; then
+            echo "::error::development branch '$DEVELOPMENT_BRANCH' does not exist on the remote." \
+                 "Pass development_branch from the calling workflow (dsh: DEVELOP)."
+            exit 1
+          fi
+
       - name: Read hotfix release number
         run: |
           HOTFIX_RELEASE_NUMBER=$(mvn -q help:evaluate -Dexpression=project.version -DforceStdout -N \
@@ -252,6 +268,19 @@ jobs:
           push-url: https://x-access-token:${{ secrets.DEPLOY_TOKEN }}@github.com/MRISS-Projects/${{ inputs.git_project }}.git
           dry-run: ${{ inputs.dry_run }}
 
+      # #65: see the identical step in project-release.yml. A hotfix's fixes reach the
+      # development branch the same way a release's do. The master merge's
+      # --allow-unrelated-histories is deliberately not carried over: a hotfix tag with no
+      # history in common with the development branch is for a human to merge, and the
+      # merge-back says so rather than forcing it. specs/65 §3.5.
+      - name: Merge Release Tag to Development Branch
+        uses: MRISS-Projects/parent-poms/.github/actions/merge-to-develop@master
+        with:
+          tag: v${{ env.HOTFIX_RELEASE_NUMBER }}
+          development_branch: ${{ inputs.development_branch }}
+          git_project: ${{ inputs.git_project }}
+          token: ${{ secrets.DEPLOY_TOKEN }}
+
       - name: Rehearsal verify
         if: always()
         uses: MRISS-Projects/parent-poms/.github/actions/rehearsal-verify@master
@@ -265,10 +294,11 @@ jobs:
           # Empty: project-hotfix.yml creates no branch, so there is none to assert absent.
           hotfix_branch: ''
           token: ${{ secrets.DEPLOY_TOKEN }}
-          # Five, not eight: no scm:branch, no versions:set checkin, no RC deletion.
+          # Six, not nine: no scm:branch, no versions:set checkin, no RC deletion.
           declared_markers: >-
             release-prepare
             release-perform-deploy
             merge-to-master
             site-deploy
             commit-readme
+            merge-to-develop

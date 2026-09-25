@@ -1,0 +1,144 @@
+name: Merge release to development branch
+description: >
+  Merge a release tag into the consumer's development branch, keeping that branch's own
+  version: align the tag to it, merge plainly, prove the result, push. The last write point
+  of project-release.yml and project-hotfix.yml. See
+  specs/65-merge-release-back-into-develop.md.
+
+inputs:
+  tag:
+    description: 'The release tag to merge, e.g. v0.3.0'
+    required: true
+  development_branch:
+    description: 'The branch to merge it into, e.g. DEVELOP'
+    required: true
+  git_project:
+    description: 'Target repository name, e.g. dsh'
+    required: true
+  token:
+    description: >
+      Token used to clone the development branch and push the merge. Composite actions
+      receive no secrets implicitly, so the caller passes DEPLOY_TOKEN here.
+    required: true
+
+# Rehearsal mode is not an input. The action reads the RH_* variables rehearsal-setup already
+# exported, exactly as the workflow's own `Merge Release Tag to Master` step does, so there is
+# one switch for the whole run rather than one per action. RH_TAG_SOURCE is 'origin' in a real
+# release and the workspace in a rehearsal, where the bridge built the tag. RH_GIT_PUSH_DRYRUN
+# is empty in a real release and --dry-run in a rehearsal.
+
+runs:
+  using: composite
+  steps:
+    - name: Clone the development branch and align the tag to it
+      id: align
+      shell: bash
+      env:
+        TAG: ${{ inputs.tag }}
+        DEVELOPMENT_BRANCH: ${{ inputs.development_branch }}
+        GIT_PROJECT: ${{ inputs.git_project }}
+        TOKEN: ${{ inputs.token }}
+        DIR: ${{ runner.temp }}/merge-to-develop
+      run: |
+        set -euo pipefail
+
+        # Composite actions do not enforce required: true.
+        for name in TAG DEVELOPMENT_BRANCH GIT_PROJECT TOKEN; do
+          if [ -z "${!name}" ]; then
+            echo "::error::merge-to-develop: input for $name is empty"
+            exit 1
+          fi
+        done
+        if [ -z "${RH_TAG_SOURCE:-}" ]; then
+          echo "::error::merge-to-develop: RH_TAG_SOURCE is unset. rehearsal-setup must run" \
+               "earlier in the job; in a real release it sets this to 'origin'."
+          exit 1
+        fi
+
+        rm -rf "$DIR"
+        git clone --quiet --branch "$DEVELOPMENT_BRANCH" \
+          "https://x-access-token:${TOKEN}@github.com/MRISS-Projects/${GIT_PROJECT}.git" "$DIR"
+        cd "$DIR"
+        git fetch --quiet "$RH_TAG_SOURCE" "refs/tags/${TAG}:refs/tags/${TAG}"
+
+        # The development branch's identity, read from the branch itself and never from
+        # next_development_version. The two normally agree, which is exactly why a mistake here
+        # would pass unnoticed; §5 rehearses with them set apart.
+        DEV_VERSION="$(mvn -q help:evaluate -Dexpression=project.version -DforceStdout -N)"
+        DEV_SCM_TAG="$(mvn -q help:evaluate -Dexpression=project.scm.tag -DforceStdout -N)"
+        for value in "$DEV_VERSION" "$DEV_SCM_TAG"; do
+          if [ -z "$value" ] || [ "$value" = "null" ]; then
+            echo "::error::could not read the version and <scm><tag> of $DEVELOPMENT_BRANCH" \
+                 "(got '$DEV_VERSION' and '$DEV_SCM_TAG')"
+            exit 1
+          fi
+        done
+        echo "merge-to-develop: $DEVELOPMENT_BRANCH is at $DEV_VERSION, <scm><tag> $DEV_SCM_TAG"
+
+        # The alignment commit: the tag, at the development branch's version and SCM tag, so
+        # the merge below has no version conflicts left to resolve. release:update-versions is
+        # #69's mechanism and reaches every module (13 of 13 on dsh); set-scm-tag writes the
+        # root only, which is where <scm> is declared. Measured in specs/65 Task 1.
+        git checkout --quiet -b "merge-back/${TAG}" "$TAG"
+        mvn -B -q "-Dbuild.NEXT_DEVELOPMENT_VERSION=${DEV_VERSION}" release:update-versions
+        mvn -B -q -N versions:set-scm-tag "-DnewTag=${DEV_SCM_TAG}"
+
+        echo "version=${DEV_VERSION}" >> "$GITHUB_OUTPUT"
+
+    - name: Verify the aligned tag carries the development version
+      uses: MRISS-Projects/parent-poms/.github/actions/verify-reactor-version@master
+      with:
+        expected-version: ${{ steps.align.outputs.version }}
+        working-directory: ${{ runner.temp }}/merge-to-develop
+
+    - name: Merge the aligned tag into the development branch
+      shell: bash
+      env:
+        TAG: ${{ inputs.tag }}
+        DEVELOPMENT_BRANCH: ${{ inputs.development_branch }}
+        DEV_VERSION: ${{ steps.align.outputs.version }}
+        DIR: ${{ runner.temp }}/merge-to-develop
+      run: |
+        set -euo pipefail
+        cd "$DIR"
+
+        # -a, not add -A: only tracked POMs changed, and the Maven runs above may have left
+        # untracked files that have no business in a commit.
+        git commit --quiet -a --allow-empty \
+          -m "[maven-release-plugin] align ${TAG} to ${DEV_VERSION} for merge-back"
+        git checkout --quiet "$DEVELOPMENT_BRANCH"
+
+        evidence="$(sh "$GITHUB_ACTION_PATH/merge-into-develop.sh" \
+          "$TAG" "merge-back/${TAG}" "$DEVELOPMENT_BRANCH")" || {
+          printf '%s\n' "$evidence"
+          exit 1
+        }
+        printf '%s\n' "$evidence"
+        echo "- **#65 merge-back** — $(printf '%s' "$evidence" | tail -1)" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Verify the development branch keeps its version
+      uses: MRISS-Projects/parent-poms/.github/actions/verify-reactor-version@master
+      with:
+        expected-version: ${{ steps.align.outputs.version }}
+        working-directory: ${{ runner.temp }}/merge-to-develop
+
+    - name: Push the development branch
+      shell: bash
+      env:
+        TAG: ${{ inputs.tag }}
+        DEVELOPMENT_BRANCH: ${{ inputs.development_branch }}
+        GIT_PROJECT: ${{ inputs.git_project }}
+        TOKEN: ${{ inputs.token }}
+        DIR: ${{ runner.temp }}/merge-to-develop
+      run: |
+        set -euo pipefail
+        cd "$DIR"
+        bash "$RUNNER_TEMP/rehearsal-marker.sh" merge-to-develop \
+          "push the merge of ${TAG} into ${DEVELOPMENT_BRANCH}"
+        # PR #82 review: the development branch takes everyday PR merges, so it can advance
+        # while the release runs. The script retries the way commit-readme does, merging again
+        # onto the new tip, and stops for a human if the new tip changed any POM. It reads
+        # RH_GIT_PUSH_DRYRUN itself.
+        sh "$GITHUB_ACTION_PATH/push-merge-back.sh" \
+          "https://x-access-token:${TOKEN}@github.com/MRISS-Projects/${GIT_PROJECT}.git" \
+          "$TAG" "merge-back/${TAG}" "$DEVELOPMENT_BRANCH"
