@@ -241,7 +241,7 @@ This is the reverse of `#65`/`dsh#117`, where the caller had to wait for the inp
       the run URL; that the job log has **no "Initialize containers" section**; the six
       `Tests run:` lines for the ITs; `All coverage checks have been met.` for every module; and the
       conclusion `success`. This is AC004 and AC005.
-- [ ] **Task 7 — confirm the end state, post-merge.** Order step 4 from §5. Record the same
+- [x] **Task 7 — confirm the end state, post-merge.** Order step 4 from §5. Record the same
       evidence as Task 6. Paste both runs into §8 and comment them on `#78`.
 
 ---
@@ -250,17 +250,20 @@ This is the reverse of `#65`/`dsh#117`, where the caller had to wait for the inp
 
 These restate the issue's ACs as Task 5 will reword them.
 
-- [ ] **AC001** — `project-staging.yml` declares no service containers, and `build.yml` fails any
+- [x] **AC001** — `project-staging.yml` declares no service containers, and `build.yml` fails any
       `project-*.yml` that declares `services:`. The guard's positive control is recorded.
-- [ ] **AC002** — `project-staging.yml` has no consumer-specific setup step. The Mongo user is no
-      longer created anywhere, because nothing needs it (§1.2).
-- [ ] **AC003** — `project-staging.yml` has no `mongo_user`, `mongo_password` or `mongo_database`
-      input, and no workflow here mentions Mongo or RabbitMQ.
-- [ ] **AC004** — *Restated.* A dispatched `dsh` staging run is green with no service containers:
+      *§8, Tasks 1-2; `build.yml` green with the step in run 36236972450.*
+- [x] **AC002** — `project-staging.yml` has no consumer-specific setup step. The Mongo user is no
+      longer created anywhere, because nothing needs it (§1.2). *§8, Task 3.*
+- [x] **AC003** — `project-staging.yml` has no `mongo_user`, `mongo_password` or `mongo_database`
+      input, and no workflow here mentions Mongo or RabbitMQ. *§8, Task 3: the grep exits 1 on
+      `master` at `8758af4a`.*
+- [x] **AC004** — *Restated.* A dispatched `dsh` staging run is green with no service containers:
       all six ITs pass and every module meets the coverage gate. (Was: "still runs a staging build
-      against a live MongoDB", a premise §1.2 disproved.)
-- [ ] **AC005** — A consumer needing no services pays no container startup. The Task 6 run's log
-      has no "Initialize containers" section.
+      against a live MongoDB", a premise §1.2 disproved.) *dsh runs 36258785216 (branch) and
+      36270645416 (`master`).*
+- [x] **AC005** — A consumer needing no services pays no container startup. The Task 6 run's log
+      has no "Initialize containers" section. *And neither does Task 7's.*
 
 ---
 
@@ -312,6 +315,26 @@ no `mongo_*` input and called this workflow at `@issue-78-remove-consumer-servic
 
 The full record is in `dsh`'s `specs/stories/123-drop-mongo-setup-inputs-from-staging.md` §9.
 `dsh#123` has since been pinned back to `@master`, ready to merge first.
+
+**Merged in order.** `dsh#123` merged into `staging-0.3.0-SNAPSHOT-RC` as `dsh#125` at
+2026-09-26T19:59Z. This change merged as PR `#83` (`8758af4a`) at 20:45Z. `dsh`'s staging wrapper
+had stopped passing the three inputs before they stopped being declared, so no window existed in
+which `dsh` staging could fail.
+
+**Task 7 — [dsh run 36270645416](https://github.com/MRISS-Projects/dsh/actions/runs/36270645416),
+`success`**, dispatched on 2026-09-26 on `dsh`'s `staging-0.3.0-SNAPSHOT-RC` at `1c914cdc4`. The
+log confirms the called ref: `project-staging.yml@refs/heads/master`, so this is the end state and
+not a task branch.
+
+- **No container startup.** The steps are the same eleven as Task 6's run, with no "Initialize
+  containers" and no Mongo user step. `docker pull`, `mongo:6` and `rabbitmq:3` do not occur in the
+  19,718-line log.
+- **Green with no services.** The same six ITs passed, 15 tests, no failures or errors.
+  `All coverage checks have been met.` appears 8 of 8 times, and `Rule violated` never appears.
+- **Same shape as §1.2 and Task 6.** Six `MongoSocketOpenException` monitor lines, and nothing
+  fails on them.
+
+The measurement held three times: locally, on the task branch, and on `master`.
 
 ---
 
