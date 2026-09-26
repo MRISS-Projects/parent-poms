@@ -64,10 +64,18 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Set up Maven 3.9.9
+      - name: Set up Maven 3.9.16
         uses: stCarolas/setup-maven@v5
         with:
-          maven-version: '3.9.9'
+          maven-version: '3.9.16'
+
+      - name: Verify Maven version
+        run: |
+          mvn -version
+          mvn -version | grep -qF 'Apache Maven 3.9.16 ' || {
+            echo "::error::Expected Maven 3.9.16. The 'Set up Maven 3.9.16' step did not take effect, so this build would have run the runner image's Maven."
+            exit 1
+          }
 
       - name: Configure Maven settings
         run: |

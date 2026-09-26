@@ -125,8 +125,8 @@ including exact reusable-workflow inputs/secrets and a Jenkinsfile-to-step mappi
 
 Required secret: `DEPLOY_TOKEN` (a cross-repo PAT — the default `GITHUB_TOKEN` cannot read/write
 `MRISS-Projects/maven-repo`, which is a separate repository from this one). JDK 17 (Temurin) +
-Maven 3.9.9 (pinned via `stCarolas/setup-maven@v5`, installed after `setup-java`) are standard across
-all workflows.
+Maven 3.9.16 (pinned via `stCarolas/setup-maven@v5`, installed after `setup-java`, and asserted by a
+`Verify Maven version` step) are standard across all workflows.
 
 ## Versioning
 
