@@ -109,7 +109,15 @@ does not touch it.
 | `+---+` verbatim block | fenced block with a language (`bash`, `text`, `ini`, `xml`), or `text` when unsure |
 | `[[1]]` ordered list | `1.` list, numbered as in the source |
 | `[[a]]` nested list | nested `1.` list, indented under its parent item |
-| `[images/x.png] Caption` figure | `![Caption](images/x.png)` — empty caption when the APT has none |
+| `[images/x.png]` figure, no caption | `![](images/x.png)` |
+| `[images/x.png] Caption` figure | raw HTML: `<figure><img src="images/x.png" /><figcaption>Caption</figcaption></figure>` |
+
+A captioned APT figure renders a visible `<figcaption>`. Markdown's `![Caption](…)` would move the text
+into `alt`, where it is not visible, so the caption would disappear from the page. That breaks
+AC006. So a captioned figure is written as the same HTML the baseline renders. The three `os`
+figures (§2.4) are the only captioned ones. Task 3 checks that Doxia's Markdown parser passes the
+raw `<figure>` through. If it does not, stop and bring it back to the human; do not fall back to
+`alt`.
 
 A verbatim block nested under a list item is indented so it stays inside the item, the way
 `maven.md` does it. Watch the rendered HTML for it — see §4.2.
@@ -156,7 +164,10 @@ editor for the very format this issue retires. So the follow-up asks whether the
 pages should be kept at all, and what generic guidance should replace them, both for projects
 inheriting from parent-poms and for contributors to parent-poms itself. Task 6 drafts that issue.
 
-`images/test-image.png` (`writing-projects-documentation.apt:82`) exists and must still render.
+`images/test-image.png` (`writing-projects-documentation.apt:82`) is not an image reference. It is
+text inside a verbatim block, showing the reader APT's figure syntax, and the baseline renders it as
+`<pre><code>[images/test-image.png]`. It is carried across as a fenced `text` block, unchanged. That
+example teaches the very syntax this issue retires, which is a content question for the follow-up.
 
 ### 2.5 Two commits per page group
 
@@ -236,12 +247,15 @@ Anything else is lost or rewritten content, and it fails the page.
 
 Also check two things the text diff cannot see. The number of `<pre` blocks must be the same in both
 renders (a verbatim block that fell out of its list item shows up as a count change or as merged
-text). The `<img` `src` values must be identical, including the five dead ones.
+text). The `<img` `src` values and `<figcaption>` texts inside `<main>` must be identical, including
+the five dead images. Both are scoped to `<main>` because the skin's footer carries its own `<img>`,
+the "Built by Maven" logo.
 
 ```bash
 for f in "$SCRATCH/baseline/<module>/<name>.html" "<module>/target/site/<name>.html"; do
   printf '%s pre=%s\n' "$f" "$(grep -o '<pre' "$f" | wc -l)"
-  grep -oE '<img [^>]*src="[^"]*"' "$f" | grep -oE 'src="[^"]*"'
+  sed -n '/<main/,/<\/main>/p' "$f" | grep -oE '<img [^>]*src="[^"]*"|<figcaption>[^<]*' |
+    grep -oE 'src="[^"]*"|<figcaption>.*'
 done
 ```
 
@@ -300,30 +314,33 @@ else the run left behind is a finding, and is not committed.
 
 **Files:** none changed.
 
-- [ ] **Step 1: render the site from `master`**
+- [x] **Step 1: render the site from `master`**
 
   On this branch, before any conversion — it differs from `master` only by this spec — run §4.5.
   Expected: both exit codes `0`.
 
-- [ ] **Step 2: keep the 15 rendered pages**
+- [x] **Step 2: keep the 15 rendered pages**
 
   Copy each page listed in §3 to `$SCRATCH/baseline/<module>/<name>.html`, and also
   `infrastructure/target/site/{java,maven}.html` for §4.3's negative test. Check the count is 15
   plus 2.
 
-- [ ] **Step 3: confirm the content container**
+- [x] **Step 3: confirm the content container**
 
   Open one rendered page and confirm that `<main` … `</main>` wraps the page content and excludes
   the `Last Published` line. If the skin uses a different container, fix `totext` in §4.2 and note
   it there.
 
-- [ ] **Step 4: prove the anchor check can fail**
+  Confirmed: `<main id="bodyColumn" class="span10">` wraps the content, and `Last Published` sits
+  in the header, outside it. `totext` stands as written.
+
+- [x] **Step 4: prove the anchor check can fail**
 
   On a scratch copy of `java.html`, change one `href="#…"` to a missing id, and run
   `check_anchors`. Expected: exactly one `BROKEN` line. On the unmodified `java.html` and
   `maven.html`: no output.
 
-- [ ] **Step 5: restore the working tree** — `git checkout -- README.md`, then `git status --short`
+- [x] **Step 5: restore the working tree** — `git checkout -- README.md`, then `git status --short`
   shows nothing.
 
 ### Task 1: The three archetype sub-modules (6 pages)
@@ -363,9 +380,10 @@ This is the only group with `%{toc}` (four pages) and dead images (two pages).
 - [ ] **Step 1: rename** — `git mv` for all five files, then commit, with the same message shape as
   Task 1 Step 1.
 - [ ] **Step 2: convert** — apply §2.1. On the four pages of §1.3, replace the TOC as in §2.2. Carry
-  the figures of §2.4 across as images, and do not touch their paths.
-- [ ] **Step 3: render and check** — run §4.5, §4.2, §4.3. Also confirm that
-  `writing-projects-documentation.html` still has an `<img` for `images/test-image.png`.
+  the figures of §2.4 across as §2.1 maps them, and do not touch their paths.
+- [ ] **Step 3: render and check** — run §4.5, §4.2, §4.3. Also confirm that the three `os.html`
+  figures still carry `<figcaption>System Settings</figcaption>`, and that `[images/test-image.png]`
+  is still text inside a `<pre>` on `writing-projects-documentation.html` (§2.4).
 - [ ] **Step 4: commit** — `docs(#70): convert the infrastructure site pages to Markdown`. The body
   must name the `Contents` headings and the five dead image references carried across, and point
   at §2.4.
