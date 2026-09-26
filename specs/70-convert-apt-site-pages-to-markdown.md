@@ -225,11 +225,18 @@ new render:
 ```bash
 totext() {
   sed -n '/<main/,/<\/main>/p' "$1" |
-    sed -e 's/<[^>]*>/ /g' -e 's/&nbsp;/ /g' -e 's/[[:space:]]\+/ /g' -e 's/^ //;s/ $//' |
-    grep -v '^$'
+    sed -e 's/<[^>]*>/ /g' -e 's/&nbsp;/ /g' |
+    tr -s '[:space:]' '\n' | grep -v '^$'
 }
 diff <(totext "$SCRATCH/baseline/<module>/<name>.html") <(totext "<module>/target/site/<name>.html")
 ```
+
+The reduction is **one word per line**. A first version collapsed whitespace only within a line.
+Task 2 showed why that is not enough. Doxia's Markdown renderer keeps the source's soft line breaks
+as newlines inside `<p>` and `<li>`, while APT joins them. So every reflowed paragraph showed up as a
+difference, and that noise would hide a real one. A word stream ignores wrapping and still reports
+every word added, lost or changed. The Task 1 negative test (a known-different page pair) was re-run
+under the word stream and still reported exactly the differing tokens.
 
 Task 0 Step 3 confirms that `<main` / `</main>` bound the content in this skin, **before** anything
 relies on it. If they do not, it substitutes the container the skin really uses, then records the
