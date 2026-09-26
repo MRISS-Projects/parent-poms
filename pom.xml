@@ -342,6 +342,13 @@
                             <include>**/*IT.java</include>
                             <include>**/*IntegrationTest.java</include>
                         </includes>
+                        <!-- Test against the compiled classes, not the packaged jar. Failsafe defaults to the
+                             jar when one exists, and after spring-boot-maven-plugin:repackage the classes sit
+                             under BOOT-INF/classes where the test classloader cannot see them: measured in DSH
+                             (#112) as NoClassDefFoundError for dsh-rest-api's own classes. Spring Boot's
+                             starter parent sets the same value for the same reason. Inert for a module that
+                             does not repackage. -->
+                        <classesDirectory>${project.build.outputDirectory}</classesDirectory>
                     </configuration>
                     <executions>
                         <execution>
