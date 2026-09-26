@@ -111,7 +111,14 @@ HTTP, is the likely first. §2 covers where that goes.
 
 One aside, so it is not mistaken for a finding here: a first attempt resumed a failed build with
 `-rf` and no `clean`, and `jacoco:check` then reported 0.50 line coverage on `dsh-rest-api`. A clean
-rerun of that module met the gate. It was a stale-exec artifact of the resume, not a defect.
+rerun of that module met the gate. **This was first written off as a stale-exec artifact of the
+resume. That was wrong.** It recurred on a plain `mvn -B install` while shipping `dsh#123`, and it
+traces to a `dsh` defect unrelated to this change. Four `dsh` modules run
+`maven-remote-resources-plugin:process` into `target/test-classes`, and that goal attaches its
+output directory as a *main* resource root. So every build copies the test fixtures into
+`target/classes`, and a build without `clean` also copies the previous build's compiled test
+classes, which `jacoco:check` then counts as uncovered. It is tracked in `dsh`, not here. It does
+not affect §1.2's result, which was measured on clean builds, as every CI and staging build is.
 
 ---
 
