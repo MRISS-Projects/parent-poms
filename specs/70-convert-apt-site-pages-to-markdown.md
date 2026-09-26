@@ -359,24 +359,24 @@ Markdown is `# Introduction` plus a trailing newline. The three `usage.apt` file
 identical; convert one, then apply the same structure to the others, keeping each file's own
 differences (archetype id, catalog option number).
 
-- [ ] **Step 1: rename** — `mkdir -p <module>/src/site/markdown` and `git mv` for all six files.
+- [x] **Step 1: rename** — `mkdir -p <module>/src/site/markdown` and `git mv` for all six files.
   Then commit, as `docs(#70): move the archetype sub-module site pages from apt/ to markdown/`,
   with the body stating that the content is still APT and is converted in the next commit.
-- [ ] **Step 2: convert** — apply §2.1 to all six files.
-- [ ] **Step 3: render and check** — run §4.5, then §4.2 and §4.3 for these six pages. The `usage`
+- [x] **Step 2: convert** — apply §2.1 to all six files.
+- [x] **Step 3: render and check** — run §4.5, then §4.2 and §4.3 for these six pages. The `usage`
   pages nest verbatim blocks under `[[a]]`/`[[b]]` items inside a `[[2]]` item. Check the `<pre`
   count in particular.
-- [ ] **Step 4: commit** — `docs(#70): convert the archetype sub-module site pages to Markdown`.
+- [x] **Step 4: commit** — `docs(#70): convert the archetype sub-module site pages to Markdown`.
 
 ### Task 2: `maven-archetypes` (4 pages)
 
 **Files:** `infrastructure/maven-archetypes/src/site/{apt → markdown}/{after-running,archetype-index,auto-subversion-add,before-running}`.
 
-- [ ] **Step 1: rename** — `git mv` for all four files, then commit, with the same message shape as
+- [x] **Step 1: rename** — `git mv` for all four files, then commit, with the same message shape as
   Task 1 Step 1.
-- [ ] **Step 2: convert** — apply §2.1.
-- [ ] **Step 3: render and check** — run §4.5, §4.2, §4.3.
-- [ ] **Step 4: commit** — `docs(#70): convert the maven-archetypes site pages to Markdown`.
+- [x] **Step 2: convert** — apply §2.1.
+- [x] **Step 3: render and check** — run §4.5, §4.2, §4.3.
+- [x] **Step 4: commit** — `docs(#70): convert the maven-archetypes site pages to Markdown`.
 
 ### Task 3: `infrastructure` (5 pages)
 
@@ -384,21 +384,21 @@ differences (archetype id, catalog option number).
 
 This is the only group with `%{toc}` (four pages) and dead images (two pages).
 
-- [ ] **Step 1: rename** — `git mv` for all five files, then commit, with the same message shape as
+- [x] **Step 1: rename** — `git mv` for all five files, then commit, with the same message shape as
   Task 1 Step 1.
-- [ ] **Step 2: convert** — apply §2.1. On the four pages of §1.3, replace the TOC as in §2.2. Carry
+- [x] **Step 2: convert** — apply §2.1. On the four pages of §1.3, replace the TOC as in §2.2. Carry
   the figures of §2.4 across as §2.1 maps them, and do not touch their paths.
-- [ ] **Step 3: render and check** — run §4.5, §4.2, §4.3. Also confirm that the three `os.html`
+- [x] **Step 3: render and check** — run §4.5, §4.2, §4.3. Also confirm that the three `os.html`
   figures still carry `<figcaption>System Settings</figcaption>`, and that `[images/test-image.png]`
   is still text inside a `<pre>` on `writing-projects-documentation.html` (§2.4).
-- [ ] **Step 4: commit** — `docs(#70): convert the infrastructure site pages to Markdown`. The body
+- [x] **Step 4: commit** — `docs(#70): convert the infrastructure site pages to Markdown`. The body
   must name the `Contents` headings and the five dead image references carried across, and point
   at §2.4.
 
 ### Task 4: Confirm `apt/` is gone everywhere in scope
 
-- [ ] **Step 1** — run §4.1. Expected: no output.
-- [ ] **Step 2** — `find . -type d -path '*/src/site/apt' -not -path '*/archetype-resources/*' -not -path '*/target/*'`.
+- [x] **Step 1** — run §4.1. Expected: no output.
+- [x] **Step 2** — `find . -type d -path '*/src/site/apt' -not -path '*/archetype-resources/*' -not -path '*/target/*'`.
   Expected: no output. An empty directory left on disk does not matter to git, but delete it
   locally so later renders cannot pick up a stale file.
 
@@ -406,21 +406,58 @@ This is the only group with `%{toc}` (four pages) and dead images (two pages).
 
 **Files:** `pom.xml:219-223`.
 
-- [ ] **Step 1: delete the `doxia-module-apt` dependency from `maven-site-plugin` only.** Leave
+- [x] **Step 1: delete the `doxia-module-apt` dependency from `maven-site-plugin` only.** Leave
   `pom.xml:417-421` (`maven-pdf-plugin`) alone.
-- [ ] **Step 2: full render** — `mvn -B clean`, then §4.5. Expected: both exit codes `0`.
-- [ ] **Step 3: all checks, all 15 pages** — §4.1 to §4.4, plus
+- [x] **Step 2: full render** — `mvn -B clean`, then §4.5. Expected: both exit codes `0`.
+- [x] **Step 3: all checks, all 15 pages** — §4.1 to §4.4, plus
   `git ls-files '*/src/site/markdown/*.md' | wc -l`, which must be 29: the 14 already on
   `master` at c8e75441, plus the 15. Record in this spec, under this
   step: the exit codes, the output of each check, and every accepted rendering difference from
   §4.2, one line each.
-- [ ] **Step 3b: confirm no consumer impact** — run `mvn -B dependency:resolve-plugins`
+
+  **Evidence**, from a `clean install` plus a full reactor `site` at 926c186e:
+
+  - Exit codes: `install` 0, `site` 0, `dependency:resolve-plugins` 0.
+  - §4.1: no output. `.md` count: 29.
+  - §4.2: all 15 pages compared. The only differences are the accepted ones listed below. The
+    `<pre>` count, each `<img src>` and each `<figcaption>` inside `<main>` are identical on every
+    page.
+  - §4.3: no `BROKEN` line on any of the 15 pages. The negative test (Task 0 Step 4) reported
+    exactly one.
+  - §4.4: no `site.xml` in `git diff --name-only master...`.
+  - `git status` after the runs: only `README.md` (regenerated by `-Ddeployment`), restored.
+
+  **Accepted rendering differences**, each inspected in both HTML files:
+
+  - `os`, `svn`, `tomcat`, `writing-projects-documentation`: "Table of Contents" (the heading plus
+    the macro's entry for itself) becomes the `Contents` heading of §2.2. The list has no
+    self-entry, as in `java.md` and `maven.md`.
+  - `os`: straight double quotes render as curly ones (`&#x201c;` `&#x201d;`), because Doxia's
+    Markdown renderer applies typographic quotes. The source text and the words are unchanged.
+  - `svn`: `C:\Users\[YOUR_USER]\AppData\Roaming\Subversion` now renders its backslash before
+    `[YOUR_USER]`. APT read `\[` as an escape and dropped it. The source always had it, and a code
+    span renders it literally. This is the one place where the rendered text gains a character.
+  - `os`, `svn`, `tomcat`: the three empty APT link targets rendered as `href="#null"`, which was a
+    dead in-page anchor on the originals. Written as `[text]()`, they render as `href=""`. The link
+    text is the same, and the target is still empty, since filling it is a content fix (§2.4).
+  - Archetype sub-module `usage` (×3): the inner `[[a]]`/`[[b]]` list renders with `decimal`
+    markers, where it had `lower-alpha`, because Markdown has no lettered list. The nesting, the
+    text and both `<pre>` blocks inside the items are unchanged.
+  - `archetype-index`: the table cells lose `text-align: center` (the renderer ignores the `:---:`
+    row), and the table class loses `table-bordered`. The cell text, links and rows are unchanged.
+  - All pages: `<b>` renders as `<strong>`, and soft line breaks stay as newlines inside `<p>` and
+    `<li>`. Neither is visible as content.
+- [x] **Step 3b: confirm no consumer impact** — run `mvn -B dependency:resolve-plugins`
   (redirected to `.logs/`) and confirm that `doxia-module-apt` 2.0.0 still resolves for
   `maven-site-plugin`, through the plugin's own dependency. This is §1.1's claim, checked by running
   it rather than by reading a POM. If that goal does not list plugin dependencies, re-run the
   `infrastructure/maven-archetypes/maven-plugin` site alone with `-X` into `.logs/mvn-site-debug.log`
   and find `doxia-module-apt` in the `maven-site-plugin` realm.
-- [ ] **Step 4: commit** — `build(#70): drop maven-site-plugin's redundant doxia-module-apt`. The
+
+  **Evidence:** the goal does list plugin dependencies, so the fallback was not needed.
+  `.logs/mvn-resolve-plugins.log` lines 257-338 are the `maven-site-plugin:3.21.0` block, and line
+  284 inside it is `org.apache.maven.doxia:doxia-module-apt:jar:2.0.0`, after the removal.
+- [x] **Step 4: commit** — `build(#70): drop maven-site-plugin's redundant doxia-module-apt`. The
   body must state that the plugin already declares the module at the same version, so the removal
   changes nothing on the classpath and does not prove the migration is complete. It must also state
   that the pdf plugin's copy stays, and why. The spec's evidence goes in a separate
