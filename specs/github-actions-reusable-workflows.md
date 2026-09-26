@@ -275,12 +275,20 @@ Additionally, `ProjectStagingJenkinsfile` passes GCP-specific Maven flags:
 | Tool | Version | Setup |
 |------|---------|-------|
 | JDK | 17 (Temurin) | `actions/setup-java@v4` with `distribution: temurin`, `java-version: '17'` |
-| Maven | **3.9.9** (pinned) | `stCarolas/setup-maven@v5` with `maven-version: 3.9.9` — must run **after** `setup-java` |
+| Maven | **3.9.16** (pinned, then asserted) | `stCarolas/setup-maven@v5` with `maven-version: '3.9.16'` — must run **after** `setup-java` — followed by a `Verify Maven version` step |
 
-**Why 3.9.9?** Maven 3.9.9 is the latest stable Maven 3 release, is fully backward-compatible with
-`maven-release-plugin:3.1.1` (which requires Maven 3.6.3+), and is the canonical version for all
-MRISS-Projects GitHub Actions pipelines. Explicit pinning ensures reproducible builds regardless of
-which Maven version ships on the `ubuntu-latest` runner image at any given time.
+**Why 3.9.16?** It was the newest Maven 3.9.x release when the pin last moved (#59, 2026-09-26),
+and it satisfies `maven-release-plugin:3.1.1`, which requires Maven 3.6.3+. The pin exists for
+reproducibility: builds must not depend on which Maven the `ubuntu-latest` runner image happens to
+ship. So the version moves only by a deliberate change, made in this repository and in every
+consuming repository's own workflows together — never by the runner image. The value is quoted
+because YAML reads an unquoted `3.10` as the number `3.1`.
+
+**Why the assertion?** Maven prints no version banner under `-B`, so a `setup-maven` step that
+silently failed to take effect would leave the run green on the runner's Maven. The
+`Verify Maven version` step fails the run instead. `grep -qF` with a trailing space needs no regex
+escaping and stops a future `3.9.160` from satisfying a check written for `3.9.16`. The error text
+names no documentation path, because these workflows run in every consuming repository.
 
 Setup snippet used in every workflow:
 ```yaml
@@ -291,10 +299,18 @@ Setup snippet used in every workflow:
     distribution: 'temurin'
     cache: 'maven'
 
-- name: Set up Maven 3.9.9
+- name: Set up Maven 3.9.16
   uses: stCarolas/setup-maven@v5
   with:
-    maven-version: 3.9.9
+    maven-version: '3.9.16'
+
+- name: Verify Maven version
+  run: |
+    mvn -version
+    mvn -version | grep -qF 'Apache Maven 3.9.16 ' || {
+      echo "::error::Expected Maven 3.9.16. The 'Set up Maven 3.9.16' step did not take effect, so this build would have run the runner image's Maven."
+      exit 1
+    }
 ```
 
 ### Git Configuration
@@ -389,12 +405,9 @@ jobs:
        distribution: 'temurin'
        cache: 'maven'
    ```
-3. **Setup Maven 3.9.9** — must run after `setup-java`:
-   ```yaml
-   - uses: stCarolas/setup-maven@v5
-     with:
-       maven-version: 3.9.9
-   ```
+3. **Set up Maven 3.9.16, then assert it** — must run after `setup-java`. The two steps of the
+   setup snippet in §5, verbatim: the pin, then `Verify Maven version`, which fails the run if the pin
+   did not take effect.
 4. **Configure Maven settings** — write `~/.m2/settings.xml` from the template in §8:
    ```yaml
    - name: Configure Maven settings
@@ -529,12 +542,9 @@ jobs:
        distribution: 'temurin'
        cache: 'maven'
    ```
-3. **Setup Maven 3.9.9** — must run after `setup-java`:
-   ```yaml
-   - uses: stCarolas/setup-maven@v5
-     with:
-       maven-version: 3.9.9
-   ```
+3. **Set up Maven 3.9.16, then assert it** — must run after `setup-java`. The two steps of the
+   setup snippet in §5, verbatim: the pin, then `Verify Maven version`, which fails the run if the pin
+   did not take effect.
 4. **Configure Maven settings** — write `~/.m2/settings.xml` from the template in §8.
 5. **Configure Git identity**.
 6. **Build and deploy artifacts** — 409 Conflict is treated as a warning (idempotent RC re-deploy):
@@ -711,12 +721,9 @@ fi
        distribution: 'temurin'
        cache: 'maven'
    ```
-3. **Setup Maven 3.9.9** — must run after `setup-java`:
-   ```yaml
-   - uses: stCarolas/setup-maven@v5
-     with:
-       maven-version: 3.9.9
-   ```
+3. **Set up Maven 3.9.16, then assert it** — must run after `setup-java`. The two steps of the
+   setup snippet in §5, verbatim: the pin, then `Verify Maven version`, which fails the run if the pin
+   did not take effect.
 4. **Configure Maven settings** — write `~/.m2/settings.xml` from the template in §8.
 5. **Configure Git identity**:
    ```bash
@@ -1000,12 +1007,9 @@ fi
        distribution: 'temurin'
        cache: 'maven'
    ```
-3. **Setup Maven 3.9.9** — must run after `setup-java`:
-   ```yaml
-   - uses: stCarolas/setup-maven@v5
-     with:
-       maven-version: 3.9.9
-   ```
+3. **Set up Maven 3.9.16, then assert it** — must run after `setup-java`. The two steps of the
+   setup snippet in §5, verbatim: the pin, then `Verify Maven version`, which fails the run if the pin
+   did not take effect.
 4. **Configure Maven settings** — write `~/.m2/settings.xml` from the template in §8.
 5. **Configure Git identity**:
    ```bash
@@ -1349,7 +1353,7 @@ VERSION_INFO="${MAJOR}-${MINOR}-${FIX}"
 | AC4 | Updates README.md on master | §6.4 step 11 | `process-resources` (no `-Dcommit.readme.phase=none`) |
 | AC5 | README.md update | Out of scope (separate issue) | |
 | AC6 | Java 17 Temurin | §5 | `actions/setup-java@v4` |
-| AC6 | Maven 3.9.9 pinned | §5 | `stCarolas/setup-maven@v5` with `maven-version: 3.9.9` |
+| AC6 | Maven 3.9.16 pinned and asserted | §5 | `stCarolas/setup-maven@v5` with `maven-version: '3.9.16'`, then `Verify Maven version` |
 | AC6 | Maven settings for GitHub Packages | §8 | |
 | AC6 | `DEPLOY_TOKEN` secret | §5 | |
 
@@ -1366,7 +1370,7 @@ The following decisions were resolved during spec authoring and are applied dire
 | 3 | `DEPLOY_TOKEN` declared as job-level `env:` in every workflow so shell scripts can reference `${DEPLOY_TOKEN}` in git push URLs | §6.1–6.4 job skeletons |
 | 4 | `permissions: contents: write, packages: write` declared on every job | §6.1–6.4 job skeletons |
 | 5 | `repository: MRISS-Projects/${{ inputs.git_project }}` on every `actions/checkout@v4` step | §6.1–6.4 step 1 |
-| 6 | `stCarolas/setup-maven@v5` with `maven-version: 3.9.9` added as an explicit step after `setup-java` in every workflow | §6.1–6.4 step 3 |
+| 6 | `stCarolas/setup-maven@v5` with `maven-version: '3.9.16'` added as an explicit step after `setup-java` in every workflow, followed by a `Verify Maven version` step (#59) | §6.1–6.4 step 3 |
 | 7 | Maven settings generation step is listed explicitly in each workflow (step 4) referencing the §8 template | §6.1–6.4 step 4 |
 | 8 | `on.workflow_call.secrets:` block with `DEPLOY_TOKEN: required: true` (and optional GCP secrets where relevant) added to every workflow | §6.1–6.4 trigger blocks |
 | 9 | `concurrency: cancel-in-progress: false` added to `project-release.yml` and `project-hotfix.yml` to prevent cancellation of in-progress releases | §6.3 & §6.4 job skeletons |
