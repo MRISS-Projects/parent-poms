@@ -218,11 +218,6 @@
                     <dependencies>
                         <dependency>
                             <groupId>org.apache.maven.doxia</groupId>
-                            <artifactId>doxia-module-apt</artifactId>
-                            <version>${doxia.tools.version}</version>
-                        </dependency>
-                        <dependency>
-                            <groupId>org.apache.maven.doxia</groupId>
                             <artifactId>doxia-module-markdown</artifactId>
                             <version>${doxia.tools.version}</version>
                         </dependency>
