@@ -217,7 +217,7 @@ This is the reverse of `#65`/`dsh#117`, where the caller had to wait for the inp
 
 ## 6. Tasks
 
-- [ ] **Task 1 — guard, red.** Add the `build.yml` step from §4. Run its `grep` locally against the
+- [x] **Task 1 — guard, red.** Add the `build.yml` step from §4. Run its `grep` locally against the
       unchanged `project-staging.yml`. Expected: one match at line 70, exit 1. Commit.
 - [ ] **Task 2 — delete the services.** Remove lines 68-79 of `project-staging.yml`, the comment
       included. Rerun the guard's `grep`. Expected: no match, exit 0. Commit.
@@ -259,6 +259,19 @@ These restate the issue's ACs as Task 5 will reword them.
 ## 8. Build record
 
 Filled in as the work is done.
+
+**Task 1 — the guard's positive control.** The step's `run:` body was extracted from `build.yml`
+and checked non-empty (8 lines) before running. An empty extraction exits 0 and would have passed
+as "green" for the wrong reason, and a first attempt did exactly that. Run against
+`project-staging.yml` unchanged from `master`:
+
+```text
+.github/workflows/project-staging.yml:70:    services:
+::error::A reusable project workflow declares services: (see #78).
+They would run for every consumer. Start test infrastructure from the
+product's own integration tests instead.
+guard exit=1
+```
 
 ---
 
