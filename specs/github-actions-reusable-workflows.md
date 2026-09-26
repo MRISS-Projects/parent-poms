@@ -502,9 +502,6 @@ jobs:
 | `cloudrun_project_version` | string | no | `""` | GCP Cloud Run version suffix (empty = skip flag) |
 | `build_number` | string | no | `GITHUB_RUN_NUMBER` | Build number; resolved to `RC<n>` in the step |
 | `maven_properties` | string | no | `""` | Build properties for the consuming project, one `name=value` per line, rendered into the `github-packages` profile of the generated `settings.xml` (`#76`) |
-| `mongo_user` | string | no | `""` | MongoDB application user to create for tests (empty = skip user creation). Feeds the setup step only; `#78` removes it |
-| `mongo_password` | string | no | `""` | Password for that user. `#78` removes it |
-| `mongo_database` | string | no | `""` | Database to create the user against. `#78` removes it |
 
 #### Secrets
 

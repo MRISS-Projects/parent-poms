@@ -224,7 +224,7 @@ This is the reverse of `#65`/`dsh#117`, where the caller had to wait for the inp
 - [x] **Task 3 — delete the step and the inputs.** Remove the "Create MongoDB user and database"
       step and the three `mongo_*` inputs with their `#78` comment. Then
       `grep -niE 'mongo|rabbit' .github/workflows/*.yml`. Expected: no output. Commit.
-- [ ] **Task 4 — docs.** Delete the three rows in `specs/github-actions-reusable-workflows.md`.
+- [x] **Task 4 — docs.** Delete the three rows in `specs/github-actions-reusable-workflows.md`.
       `grep -n mongo_ specs/github-actions-reusable-workflows.md`. Expected: no output. Commit.
 - [x] **Task 5 — reconcile `#78`.** Update the issue body to match §1.1: three inputs, current line
       numbers, and AC004 restated as below. Do this before the PR is reviewed, so the issue and the
