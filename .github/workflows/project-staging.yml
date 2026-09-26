@@ -65,18 +65,6 @@ jobs:
     permissions:
       contents: write
       packages: write
-    # Some products' test suites need a live MongoDB/RabbitMQ connection (e.g. dsh-rest-api).
-    # These services are idle/unused for products whose tests don't reference them.
-    services:
-      mongodb:
-        image: mongo:6
-        ports:
-          - 27017:27017
-      rabbitmq:
-        image: rabbitmq:3-management
-        ports:
-          - 5672:5672
-          - 15672:15672
     env:
       DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
     steps:

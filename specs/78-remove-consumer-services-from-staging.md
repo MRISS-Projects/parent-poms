@@ -219,7 +219,7 @@ This is the reverse of `#65`/`dsh#117`, where the caller had to wait for the inp
 
 - [x] **Task 1 — guard, red.** Add the `build.yml` step from §4. Run its `grep` locally against the
       unchanged `project-staging.yml`. Expected: one match at line 70, exit 1. Commit.
-- [ ] **Task 2 — delete the services.** Remove lines 68-79 of `project-staging.yml`, the comment
+- [x] **Task 2 — delete the services.** Remove lines 68-79 of `project-staging.yml`, the comment
       included. Rerun the guard's `grep`. Expected: no match, exit 0. Commit.
 - [ ] **Task 3 — delete the step and the inputs.** Remove the "Create MongoDB user and database"
       step and the three `mongo_*` inputs with their `#78` comment. Then
@@ -271,6 +271,14 @@ as "green" for the wrong reason, and a first attempt did exactly that. Run again
 They would run for every consumer. Start test infrastructure from the
 product's own integration tests instead.
 guard exit=1
+```
+
+**Task 2 — green.** With the `services:` block and its comment removed, the same extraction
+(8 lines, checked) against the branch:
+
+```text
+No reusable project workflow declares service containers.
+guard exit=0
 ```
 
 ---
