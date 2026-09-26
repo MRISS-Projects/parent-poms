@@ -7,7 +7,7 @@
 | Branch | `issue-78-remove-consumer-services-from-staging`, cut from `master` at `7e46ccb8` |
 | Requesting project | `MRISS-Projects/dsh` — Wave 0, `specs/product/PRD.md` §4 |
 | Split off from | [`#76`](https://github.com/MRISS-Projects/parent-poms/issues/76) — see `specs/76-consumer-supplied-maven-properties.md` §4.3 and §8 |
-| Consuming twin | A `dsh` issue that drops the three inputs from `dsh`'s `staging.yml` (§5). Opened after this spec is approved; its number is recorded here then |
+| Consuming twin | [`dsh#123`](https://github.com/MRISS-Projects/dsh/issues/123) — drops the three inputs from `dsh`'s `staging.yml` (§5). Merges first |
 
 > **For agentic workers:** implement this task-by-task. Steps use checkbox (`- [ ]`) syntax.
 > This change deletes workflow content and adds one guard; nothing here carries logic a unit test
@@ -226,7 +226,7 @@ This is the reverse of `#65`/`dsh#117`, where the caller had to wait for the inp
       `grep -niE 'mongo|rabbit' .github/workflows/*.yml`. Expected: no output. Commit.
 - [ ] **Task 4 — docs.** Delete the three rows in `specs/github-actions-reusable-workflows.md`.
       `grep -n mongo_ specs/github-actions-reusable-workflows.md`. Expected: no output. Commit.
-- [ ] **Task 5 — reconcile `#78`.** Update the issue body to match §1.1: three inputs, current line
+- [x] **Task 5 — reconcile `#78`.** Update the issue body to match §1.1: three inputs, current line
       numbers, and AC004 restated as below. Do this before the PR is reviewed, so the issue and the
       spec agree. **This edits a GitHub issue; show the new body to the owner first.**
 - [ ] **Task 6 — validate against `dsh`, pre-merge.** Order step 1 from §5. From the run, record:
