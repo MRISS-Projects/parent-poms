@@ -229,7 +229,7 @@ This is the reverse of `#65`/`dsh#117`, where the caller had to wait for the inp
 - [x] **Task 5 — reconcile `#78`.** Update the issue body to match §1.1: three inputs, current line
       numbers, and AC004 restated as below. Do this before the PR is reviewed, so the issue and the
       spec agree. **This edits a GitHub issue; show the new body to the owner first.**
-- [ ] **Task 6 — validate against `dsh`, pre-merge.** Order step 1 from §5. From the run, record:
+- [x] **Task 6 — validate against `dsh`, pre-merge.** Order step 1 from §5. From the run, record:
       the run URL; that the job log has **no "Initialize containers" section**; the six
       `Tests run:` lines for the ITs; `All coverage checks have been met.` for every module; and the
       conclusion `success`. This is AC004 and AC005.
@@ -287,6 +287,23 @@ comment, which named "MongoDB and RabbitMQ". AC003 says no workflow here mention
 comment was reworded to "one consumer's database and message broker" rather than the check
 relaxed. After that the grep exits 1 with no output, `grep -rn inputs.mongo .github/` finds
 nothing, and the guard still passes.
+
+**Task 6 — [dsh run 36258785216](https://github.com/MRISS-Projects/dsh/actions/runs/36258785216),
+`success`**, dispatched on 2026-09-26 from `dsh#123`'s branch at `9945c108b`. Its wrapper passed
+no `mongo_*` input and called this workflow at `@issue-78-remove-consumer-services-from-staging`.
+
+- **AC005: no container startup.** The job has no "Initialize containers" section and no Mongo user
+  step. `docker pull`, `mongo:6` and `rabbitmq:3` do not occur in the 25,677-line log.
+- **AC004: green with no services.** All six ITs passed under failsafe, 15 tests, no failures or
+  errors: `DshRestApplicationIT` 2, `DocumentResourceIT` 6, `DshDocIndexerApplicationIT` 1,
+  `DshKeywordExtractorApplicationIT` 2, `DshTopSentencesExtractorApplicationIT` 2 and
+  `DshDocProcessorWorkerApplicationIT` 2. `All coverage checks have been met.` appears 8 times, once
+  per code-bearing module, and `Rule violated` never appears.
+- **It matches §1.2.** Six `MongoSocketOpenException` lines, one per context, are the driver's
+  monitor, and nothing fails on them. The runner reproduced the local measurement exactly.
+
+The full record is in `dsh`'s `specs/stories/123-drop-mongo-setup-inputs-from-staging.md` §9.
+`dsh#123` has since been pinned back to `@master`, ready to merge first.
 
 ---
 
