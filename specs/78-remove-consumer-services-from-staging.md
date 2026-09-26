@@ -117,7 +117,8 @@ traces to a `dsh` defect unrelated to this change. Four `dsh` modules run
 `maven-remote-resources-plugin:process` into `target/test-classes`, and that goal attaches its
 output directory as a *main* resource root. So every build copies the test fixtures into
 `target/classes`, and a build without `clean` also copies the previous build's compiled test
-classes, which `jacoco:check` then counts as uncovered. It is tracked in `dsh`, not here. It does
+classes, which `jacoco:check` then counts as uncovered. It is tracked in
+[`dsh#124`](https://github.com/MRISS-Projects/dsh/issues/124), not here. It does
 not affect §1.2's result, which was measured on clean builds, as every CI and staging build is.
 
 ---
