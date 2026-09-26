@@ -151,8 +151,8 @@ jobs:
 
       # #78: a reusable workflow owns its job, so a service container declared there runs for
       # every consumer, whether its tests use it or not, and a consumer cannot add its own.
-      # project-staging.yml carried one consumer's MongoDB and RabbitMQ, and dsh turned out to
-      # need neither. A product whose integration tests need live infrastructure starts it from
+      # project-staging.yml carried one consumer's database and message broker, and that
+      # consumer turned out to need neither. A product whose integration tests need live infrastructure starts it from
       # those tests — see specs/78-remove-consumer-services-from-staging.md §2.
       - name: Check the reusable workflows declare no service containers
         run: |

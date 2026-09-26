@@ -221,7 +221,7 @@ This is the reverse of `#65`/`dsh#117`, where the caller had to wait for the inp
       unchanged `project-staging.yml`. Expected: one match at line 70, exit 1. Commit.
 - [x] **Task 2 — delete the services.** Remove lines 68-79 of `project-staging.yml`, the comment
       included. Rerun the guard's `grep`. Expected: no match, exit 0. Commit.
-- [ ] **Task 3 — delete the step and the inputs.** Remove the "Create MongoDB user and database"
+- [x] **Task 3 — delete the step and the inputs.** Remove the "Create MongoDB user and database"
       step and the three `mongo_*` inputs with their `#78` comment. Then
       `grep -niE 'mongo|rabbit' .github/workflows/*.yml`. Expected: no output. Commit.
 - [ ] **Task 4 — docs.** Delete the three rows in `specs/github-actions-reusable-workflows.md`.
@@ -280,6 +280,13 @@ guard exit=1
 No reusable project workflow declares service containers.
 guard exit=0
 ```
+
+**Task 3 — one match the spec did not foresee.** With the step and the three inputs removed,
+`grep -niE 'mongo|rabbit' .github/workflows/*.yml` still matched one line: the Task 1 guard's own
+comment, which named "MongoDB and RabbitMQ". AC003 says no workflow here mentions either, so the
+comment was reworded to "one consumer's database and message broker" rather than the check
+relaxed. After that the grep exits 1 with no output, `grep -rn inputs.mongo .github/` finds
+nothing, and the guard still passes.
 
 ---
 

@@ -26,25 +26,6 @@ on:
         required: false
         default: ''
         description: 'Build number; resolved to RC<n> in step'
-      # #78: these three are the last consumer-specific inputs here. They no longer
-      # configure the build -- #76 moved that to maven_properties -- and survive only as
-      # arguments to the Mongo user-creation step below, which #78 removes along with
-      # them and with the service containers.
-      mongo_user:
-        type: string
-        required: false
-        default: ''
-        description: 'MongoDB application user to create for tests (empty = skip user creation)'
-      mongo_password:
-        type: string
-        required: false
-        default: ''
-        description: 'MongoDB application user password for tests'
-      mongo_database:
-        type: string
-        required: false
-        default: ''
-        description: 'MongoDB database to create the application user against'
       maven_properties:
         type: string
         required: false
@@ -167,17 +148,6 @@ jobs:
         run: |
           git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Create MongoDB user and database
-        if: ${{ inputs.mongo_user != '' }}
-        run: |
-          docker run --rm --network host mongo:6 mongosh --host localhost --eval '
-            db.getSiblingDB("${{ inputs.mongo_database }}").createUser({
-              user: "${{ inputs.mongo_user }}",
-              pwd: "${{ inputs.mongo_password }}",
-              roles: [{ role: "readWrite", db: "${{ inputs.mongo_database }}" }]
-            });
-          '
 
       - name: Build and Deploy Staging Artifacts
         run: |
