@@ -4,7 +4,7 @@
 
 ## Version
 
-3.9.0-SNAPSHOT - 30 - 20260926-001543
+3.9.0-SNAPSHOT - 31 - 20260926-221515
 
 ## Build from Sources
 
@@ -34,6 +34,8 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | --- | ---- | ------- | -------- | -------- | ------- |
+| [59](https://github.com/MRISS-Projects/parent-poms/issues/59) | task | Update Maven pinned version from 3.9.9 to 3.9.16 in documentation and GitHub Actions | null | mriss | 9/26/26 |
+| [78](https://github.com/MRISS-Projects/parent-poms/issues/78) | task | project-staging.yml hardcodes one consumer's service containers and Mongo user creation | null | mriss | 9/26/26 |
 | [72](https://github.com/MRISS-Projects/parent-poms/issues/72) | task | No way to rehearse project-release.yml / project-hotfix.yml without performing a real release | null | mriss | 9/23/26 |
 | [76](https://github.com/MRISS-Projects/parent-poms/issues/76) | task | Consumer projects cannot supply build-time Maven properties to the reusable release, hotfix and staging workflows | null | mriss | 9/23/26 |
 | [67](https://github.com/MRISS-Projects/parent-poms/issues/67) | task | Activate failsafe behind a -DintegrationTests profile | null | mriss | 9/21/26 |
