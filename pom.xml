@@ -757,6 +757,29 @@
                             </rules>
                         </configuration>
                     </execution>
+                    <!-- PowerMock is forbidden in every MRISS project, in any scope, directly or
+                         transitively. Mockito is the sanctioned mocking tool, mockStatic included. -->
+                    <execution>
+                        <id>ban-powermock</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Explicit, so -Denforcer.skip=true cannot disarm it: explicit configuration beats the
+                                 parameter's user property. There is deliberately no property to skip this rule. -->
+                            <skip>false</skip>
+                            <rules>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>org.powermock</exclude>
+                                    </excludes>
+                                    <searchTransitive>true</searchTransitive>
+                                    <message>PowerMock is forbidden in every MRISS project. Use Mockito; mockStatic is allowed where no seam can be designed in.</message>
+                                </bannedDependencies>
+                            </rules>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>

@@ -54,6 +54,10 @@ exists but is inert, kept only for consumers that still pass it.
 There is no separate lint step; `maven-compiler-plugin` (Java 17 source/target) and `maven-surefire-plugin`
 are the only gates run on a plain `mvn install`.
 
+**PowerMock is forbidden** here and in every inheriting project, in any scope, directly or transitively:
+the root `pom.xml`'s `ban-powermock` enforcer execution fails `validate`, and it has no skip property —
+not even `-Denforcer.skip=true` disarms it. Mockito is the sanctioned mocking tool, `mockStatic` included.
+
 Integration tests never count toward the 95% `jacoco:check` gate. The `integration-tests`
 profile attaches a second JaCoCo agent writing `target/jacoco-it.exec`, and `jacoco:check` reads
 `target/jacoco.exec`. This is load-bearing: `maven-failsafe-plugin` defaults its `argLine` to
