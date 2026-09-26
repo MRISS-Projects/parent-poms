@@ -4,7 +4,7 @@
 
 ## Version
 
-3.9.0-SNAPSHOT - 29 - 20260921-011233
+3.9.0-SNAPSHOT - 30 - 20260926-001543
 
 ## Build from Sources
 
@@ -34,6 +34,8 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | --- | ---- | ------- | -------- | -------- | ------- |
+| [72](https://github.com/MRISS-Projects/parent-poms/issues/72) | task | No way to rehearse project-release.yml / project-hotfix.yml without performing a real release | null | mriss | 9/23/26 |
+| [76](https://github.com/MRISS-Projects/parent-poms/issues/76) | task | Consumer projects cannot supply build-time Maven properties to the reusable release, hotfix and staging workflows | null | mriss | 9/23/26 |
 | [67](https://github.com/MRISS-Projects/parent-poms/issues/67) | task | Activate failsafe behind a -DintegrationTests profile | null | mriss | 9/21/26 |
 
 ### Version 3.8.0
