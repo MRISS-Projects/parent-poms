@@ -4,7 +4,7 @@
 
 ## Version
 
-3.9.0-SNAPSHOT - 31 - 20260926-221515
+3.9.0-SNAPSHOT - 32 - 20260927-010501
 
 ## Build from Sources
 
@@ -34,6 +34,9 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | --- | ---- | ------- | -------- | -------- | ------- |
+| [71](https://github.com/MRISS-Projects/parent-poms/issues/71) | task | commit-readme-md runs three times per staging run, and one commit contains an unresolved 20260927-010501 | null | mriss | 9/27/26 |
+| [69](https://github.com/MRISS-Projects/parent-poms/issues/69) | task | project-release.yml sets the hotfix version on the root POM only | null | mriss | 9/27/26 |
+| [65](https://github.com/MRISS-Projects/parent-poms/issues/65) | task | Merge release tag back into DEVELOP after project-release.yml / project-hotfix.yml | null | mriss | 9/27/26 |
 | [59](https://github.com/MRISS-Projects/parent-poms/issues/59) | task | Update Maven pinned version from 3.9.9 to 3.9.16 in documentation and GitHub Actions | null | mriss | 9/26/26 |
 | [78](https://github.com/MRISS-Projects/parent-poms/issues/78) | task | project-staging.yml hardcodes one consumer's service containers and Mongo user creation | null | mriss | 9/26/26 |
 | [72](https://github.com/MRISS-Projects/parent-poms/issues/72) | task | No way to rehearse project-release.yml / project-hotfix.yml without performing a real release | null | mriss | 9/23/26 |
@@ -44,6 +47,7 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | --- | ---- | ------- | -------- | -------- | ------- |
+| [68](https://github.com/MRISS-Projects/parent-poms/issues/68) | task | README regeneration is unreachable from any consuming project | null | mriss | 9/27/26 |
 | [13](https://github.com/MRISS-Projects/parent-poms/issues/13) | bug | Image links don't work at .md files in maven generated site | mriss | mriss | 9/19/26 |
 | [57](https://github.com/MRISS-Projects/parent-poms/issues/57) | task | Update documentation: replace Maven 3.3.9 with 3.9.9 and standardise Java version to 17 | null | mriss | 9/18/26 |
 | [58](https://github.com/MRISS-Projects/parent-poms/issues/58) | task | Pin Maven 3.9.9 in all GitHub Actions workflows that invoke Maven | null | mriss | 9/18/26 |
@@ -63,6 +67,7 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | --- | ---- | ------- | -------- | -------- | ------- |
+| [29](https://github.com/MRISS-Projects/parent-poms/issues/29) | task | Update jenkins server name | mriss | mriss | 9/27/26 |
 | [43](https://github.com/MRISS-Projects/parent-poms/issues/43) | task | Upgrade maven-changes-plugin to 2.12.7 | null | mriss | 4/1/26 |
 | [28](https://github.com/MRISS-Projects/parent-poms/issues/28) | enhancement | Upgrade junit to 4.13.1 to fix vulnerability issues. | mriss | mriss | 3/25/26 |
 
