@@ -465,12 +465,15 @@ This is the only group with `%{toc}` (four pages) and dead images (two pages).
 
 ### Task 6: Post back to GitHub — only after the human approves each text
 
-- [ ] **Step 1: a comment on `#70`** — correcting the completion criterion (§1.1) and the TOC
+- [x] **Step 1: a comment on `#70`** — correcting the completion criterion (§1.1) and the TOC
   count (§1.3), and stating that the AC005 evidence is AC001's file check, not the build.
-- [ ] **Step 2: the follow-up issue** — whether the `infrastructure` documentation pages are still
+- [x] **Step 2: the follow-up issue** — whether the `infrastructure` documentation pages are still
   worth keeping, what generic guidance should replace them (for consuming projects and for
   parent-poms contributors), and the five dead images of §2.4 as the case that raised it. It is a
   plain issue with no milestone unless the human assigns one. Link it from `#70`.
+
+  **Done:** the follow-up is `#85`, with no milestone; the comment on `#70` carries both corrections
+  and links `#85`.
 
 ---
 
@@ -488,7 +491,7 @@ This is the only group with `%{toc}` (four pages) and dead images (two pages).
 ## 7. Out of scope
 
 - The 39 `.apt` files under `archetype-resources/` (`#70`, *Explicitly out of scope*).
-- Any content fix, including the five dead images (§2.4 — the follow-up issue).
+- Any content fix, including the five dead images (§2.4 — `#85`).
 - `.fml` files.
 - The equally redundant `doxia-module-markdown` declaration (§1.1).
 - `maven-pdf-plugin`'s dependency list (§1.2).
