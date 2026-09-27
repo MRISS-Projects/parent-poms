@@ -75,7 +75,8 @@ here, and this spec leaves it alone.
 
 ### 1.2 `maven-pdf-plugin` keeps its APT module
 
-`pom.xml:417-421` declares `doxia-module-apt` for `maven-pdf-plugin` too, at
+`pom.xml:417-421` (line numbers here and in Task 5 are as of c8e75441, before the removal) declares
+`doxia-module-apt` for `maven-pdf-plugin` too, at
 `${doxia.pdf.tools.version}` 1.11.1. That plugin predates the bundling (the comment at
 `pom.xml:115-124` explains why it stays on Doxia 1.x). Both archetype templates that generate
 projects with APT pages configure `maven-pdf-plugin`: `module-standard` and `product-parent`. Task 5
@@ -106,7 +107,7 @@ does not touch it.
 | `<<<mono>>>` | `` `mono` `` |
 | `<italic>` | `*italic*` |
 | `{{{url}text}}` | `[text](url)` — the URL kept byte for byte, `.html` targets included |
-| `+---+` verbatim block | fenced block with a language (`bash`, `text`, `ini`, `xml`), or `text` when unsure |
+| `+---+` verbatim block | fenced block with a language (`bash`, `bat`, `text`, `ini`, `xml`), or `text` when unsure |
 | `[[1]]` ordered list | `1.` list, numbered as in the source |
 | `[[a]]` nested list | nested `1.` list, indented under its parent item |
 | `[images/x.png]` figure, no caption | `![](images/x.png)` |
@@ -132,8 +133,9 @@ with the pilot's form:
     * [Section title](#Section_title)
     * [Another section](#Another_section)
 
-The list has one entry per `##` and `###` heading, matching the macro's `fromDepth=2|toDepth=3` at
-`section=1`. `###` entries are indented under their parent. Renaming the heading from
+The list has one entry per `##` and `###` heading below `## Contents`, matching the macro's
+`fromDepth=2|toDepth=3` at `section=1`. It has no entry for `Contents` itself, as in the pilot pages;
+the macro's list did include one for `Table of Contents`. `###` entries are indented under their parent. Renaming the heading from
 `Table of Contents` to `Contents` follows `java.md` and `maven.md`, so the four pages match the two
 pilot pages. This is the one sanctioned deviation from AC006. §4.2 allows for it explicitly.
 
@@ -157,7 +159,8 @@ These are referenced and were never committed. `git log --all --diff-filter=D` f
     infrastructure/src/site/apt/writing-projects-documentation.apt:61,63
         images/apt-editor-edit.png, images/apt-editor-view.png
 
-They are carried across as `![…](images/…)`, still dead. Recreating them or dropping them is a
+They are carried across as §2.1 maps them, still dead: raw `<figure>` HTML for the three captioned
+`os` figures, and `![](images/…)` for the two uncaptioned `writing-projects-documentation` ones. Recreating them or dropping them is a
 content change, and would break AC006. The follow-up question is bigger than five images. These
 pages document tooling that is partly obsolete: an Ubuntu 14.04 proxy setup, Subversion, and an
 editor for the very format this issue retires. So the follow-up asks whether the `infrastructure`
@@ -254,14 +257,15 @@ Anything else is lost or rewritten content, and it fails the page.
 
 Also check two things the text diff cannot see. The number of `<pre` blocks must be the same in both
 renders (a verbatim block that fell out of its list item shows up as a count change or as merged
-text). The `<img` `src` values and `<figcaption>` texts inside `<main>` must be identical, including
-the five dead images. Both are scoped to `<main>` because the skin's footer carries its own `<img>`,
-the "Built by Maven" logo.
+text). The `<img` `src` values and `<figcaption>` texts must be identical, including the five dead
+images. All of these are counted inside `<main>` only, because the skin's footer carries its own
+`<img>`, the "Built by Maven" logo.
 
 ```bash
 for f in "$SCRATCH/baseline/<module>/<name>.html" "<module>/target/site/<name>.html"; do
-  printf '%s pre=%s\n' "$f" "$(grep -o '<pre' "$f" | wc -l)"
-  sed -n '/<main/,/<\/main>/p' "$f" | grep -oE '<img [^>]*src="[^"]*"|<figcaption>[^<]*' |
+  main=$(sed -n '/<main/,/<\/main>/p' "$f")
+  printf '%s pre=%s\n' "$f" "$(printf '%s\n' "$main" | grep -o '<pre' | wc -l)"
+  printf '%s\n' "$main" | grep -oE '<img [^>]*src="[^"]*"|<figcaption>[^<]*' |
     grep -oE 'src="[^"]*"|<figcaption>.*'
 done
 ```
@@ -354,7 +358,8 @@ else the run left behind is a finding, and is not committed.
 
 **Files:** `infrastructure/maven-archetypes/{maven-plugin,module-standard,product-parent}/src/site/{apt → markdown}/{index,usage}`.
 
-The three `index.apt` files are one line each, `Introduction`, with no trailing newline. The
+The three `index.apt` files are a blank CRLF line followed by `Introduction`, with no trailing
+newline. The
 Markdown is `# Introduction` plus a trailing newline. The three `usage.apt` files are nearly
 identical; convert one, then apply the same structure to the others, keeping each file's own
 differences (archetype id, catalog option number).
@@ -404,7 +409,7 @@ This is the only group with `%{toc}` (four pages) and dead images (two pages).
 
 ### Task 5: Remove the redundant dependency, and do the final verification
 
-**Files:** `pom.xml:219-223`.
+**Files:** `pom.xml:219-223` (as of c8e75441).
 
 - [x] **Step 1: delete the `doxia-module-apt` dependency from `maven-site-plugin` only.** Leave
   `pom.xml:417-421` (`maven-pdf-plugin`) alone.
@@ -447,6 +452,17 @@ This is the only group with `%{toc}` (four pages) and dead images (two pages).
     row), and the table class loses `table-bordered`. The cell text, links and rows are unchanged.
   - All pages: `<b>` renders as `<strong>`, and soft line breaks stay as newlines inside `<p>` and
     `<li>`. Neither is visible as content.
+  - `writing-projects-documentation`: the two uncaptioned images move from
+    `<figure><img src="…" /></figure>` to `<p><img src="…" alt="" /></p>`. The `src` values are
+    unchanged, and there was never a caption to lose. Found in local review; the §4.2 image check
+    compares `src` only, so it could not see this.
+  - All pages, outside `<main>`: `<title>` now carries the page heading, for example `Infrastructure`
+    becomes `Subversion – Infrastructure`, and `product-parent` becomes `Usage – product-parent`.
+    Doxia takes the title from the Markdown `#` heading. This matches the pilot (`java.html`:
+    `Installing Java – Infrastructure`). Found in local review; the text diff sees only `<main>`.
+
+  The empty link targets render `href=""`, which §4.3 does not examine: it checks `href="#…"` only.
+  So AC003 passing says nothing about them. They are dead as they were, and `#85` owns them.
 - [x] **Step 3b: confirm no consumer impact** — run `mvn -B dependency:resolve-plugins`
   (redirected to `.logs/`) and confirm that `doxia-module-apt` 2.0.0 still resolves for
   `maven-site-plugin`, through the plugin's own dependency. This is §1.1's claim, checked by running
