@@ -189,20 +189,20 @@ commit on the PR rather than a fix to a `master` that every consumer already run
 
 - [x] **Task 5 — PR into `master`.** [#97](https://github.com/MRISS-Projects/parent-poms/pull/97),
       with `build.yml` green. The human merges it after Tasks 6 to 8.
-- [ ] **Task 6 — snapshot deploy from this branch.** Dispatch `deploy.yml` with
+- [x] **Task 6 — snapshot deploy from this branch.** Dispatch `deploy.yml` with
       `release_type: snapshots` on `issue-95-release-site-test-reports`. That puts
       `com.mriss.mriss-parent:products:3.9.2-SNAPSHOT` in GitHub Packages with §2.1 in it. No consumer
       resolves it yet: DSH names `3.9.0` on every branch. The snapshot path commits a regenerated
       `README.md` to the dispatched branch, which is expected. Redeploy from `master` after the merge,
       which is `dsh#146`'s step P3.
-- [ ] **Task 7 — hotfix proof.** In DSH, create scratch branch `rehearsal-95-hotfix` from
+- [x] **Task 7 — hotfix proof.** In DSH, create scratch branch `rehearsal-95-hotfix` from
       `issue-146-release-0-3-1-with-site-reports` (`0.3.1-SNAPSHOT`). Give it one commit that is never
       merged: the parent pinned to `3.9.2-SNAPSHOT`, and `hotfix.yml`'s `uses:` pointed at
       `project-hotfix.yml@issue-95-release-site-test-reports`. Dispatch it with
       `--ref rehearsal-95-hotfix`, `branch_name=rehearsal-95-hotfix` and `dry_run=true`. Read it
       against §5, record the run here, then delete the branch from the remote. `dsh#146`'s T3, after
       the merge, becomes the confirming run.
-- [ ] **Task 8 — release proof.** In DSH, create scratch branch `rehearsal-95` from `DEVELOP`
+- [x] **Task 8 — release proof.** In DSH, create scratch branch `rehearsal-95` from `DEVELOP`
       (`0.4.0-SNAPSHOT`), with the same kind of commit: the pin, and `release.yml`'s `uses:` pointed at
       `project-release.yml@issue-95-release-site-test-reports`. Dispatch `release.yml` with
       `--ref rehearsal-95`, `branch_name=rehearsal-95`, `current_version=0.4.0`,
@@ -211,6 +211,32 @@ commit on the PR rather than a fix to a `master` that every consumer already run
       here, then delete `rehearsal-95` from the remote. `#69` set the precedent for a scratch branch.
       Only the workflow file comes from the branch. Its actions stay at `@master`, and this PR
       changes nothing in them except a comment.
+
+  **Tasks 6 to 8, results (2026-09-29).**
+  - Task 6: [run 36632858187](https://github.com/MRISS-Projects/parent-poms/actions/runs/36632858187),
+    green. It uploaded `products-3.9.2-20260929.212301-1.pom` and the rest of the reactor, with no
+    409, and committed `27110c1a` (the `README.md`) to this branch.
+  - The scratch commits: `c62af701d` (`rehearsal-95-hotfix`, on `#146`'s task branch) and
+    `023df0a31` (`rehearsal-95`, on `DEVELOP`). Both branches are deleted from the remote.
+
+  | | Task 7, hotfix, [run 36633364595](https://github.com/MRISS-Projects/dsh/actions/runs/36633364595) | Task 8, release, [run 36633369960](https://github.com/MRISS-Projects/dsh/actions/runs/36633369960) |
+  |---|---|---|
+  | Prepare's fork: tests | 146 in 13 summaries. The 127 unit tests of the red run, plus 19 integration tests | the same |
+  | Prepare's fork: plugins | 13 `failsafe:integration-test`, 13 `jacoco:prepare-agent-integration`, `jacoco-badge:badge` in `dsh-coverage-report` | the same |
+  | Site: tests | none | none |
+  | Site: JaCoCo | 21 `Loading execution data file`: `jacoco.exec` in all 8 code modules, and `jacoco-it.exec` in the 5 with integration tests. 5 skips, one each for the root, `dsh-test-dataset`, `dsh-solr`, `dsh-doc-analyser` and `dsh-coverage-report`, none of which has production classes. The red run had 13 skips and no loads | the same |
+  | Site: badge | `- addition releases/products/dsh/dsh-coverage-report/badges/jacoco.svg` in the scm-publish set | the same |
+  | Site version | `0.3.1`, from the tag | `0.4.0`, from the tag |
+  | `rehearsal-verify` | `all 6 declared write point(s) announced exactly once`; remote `byte-for-byte as it was` | `all 9 …`; the same |
+  | `merge-to-develop` | `carried 2 path(s) from v0.3.1 into DEVELOP; 0 lost` | `carried 1 path(s) from v0.4.0 into DEVELOP; 0 lost` |
+
+  DSH remote before and after both runs: `master` `7647692ab`, `DEVELOP` `b3a65eaa9`, `0.3.x`
+  `6932be686`, `gh-pages` `b818352ed`. No `v0.3.1` or `v0.4.0` tag, and no `0.4.x` branch.
+
+  The badge is written by prepare's fork, into `dsh-coverage-report`'s `target/site`, which
+  `site-deploy` publishes. Prepare's PDF step still logs `Image not found …
+  releases/…/badges/jacoco.svg`. That URL is today's 404 on the released site, and it is the
+  defect this release repairs, not a new finding.
 - [ ] **Task 9 — release 3.9.2**, after the merge and the redeploy from `master`, per `dsh#146` §4.3:
       revise `#95` AC004 and `#96` AC003, close both on Tasks 7 and 8, rename the milestone to
       `3.9.2`, then dispatch `deploy.yml` with `release_type: releases`. Expect tag
@@ -249,21 +275,21 @@ and no failsafe in prepare.
 
 From the issues:
 
-- [ ] **`#95` AC001** — the release site is generated from a tree in which the unit and integration
+- [x] **`#95` AC001** — the release site is generated from a tree in which the unit and integration
       tests of the released code have run, for both workflows. Tasks 7 and 8.
-- [ ] **`#95` AC002** — `project-hotfix.yml` is fixed. Task 2, proven by Task 7.
-- [ ] **`#95` AC003** — a rehearsal of each workflow still announces every write point exactly once.
+- [x] **`#95` AC002** — `project-hotfix.yml` is fixed. Task 2, proven by Task 7.
+- [x] **`#95` AC003** — a rehearsal of each workflow still announces every write point exactly once.
       Tasks 7 and 8.
 - [ ] **`#95` AC004** — revised at Task 9: proven by Task 7's rehearsal, with the confirming release
       tracked in `dsh#146` AC004.
-- [ ] **`#96` AC001** — a release publishes `<coverage-module>/badges/jacoco.svg`, for both workflows.
+- [x] **`#96` AC001** — a release publishes `<coverage-module>/badges/jacoco.svg`, for both workflows.
       Tasks 7 and 8.
-- [ ] **`#96` AC002** — the badge is computed from the release's own test run, prepare's fork, and is
+- [x] **`#96` AC002** — the badge is computed from the release's own test run, prepare's fork, and is
       not copied from staging. §2.1 and §2.2.
 - [ ] **`#96` AC003** — revised at Task 9: the confirming release is tracked in `dsh#146` AC005.
 
 Added by this spec:
 
-- [ ] **AC-X1** — a release runs its tests once: unit and integration tests in prepare's fork before
+- [x] **AC-X1** — a release runs its tests once: unit and integration tests in prepare's fork before
       any write, none in perform, none in the site. Tasks 1, 7 and 8.
-- [ ] **AC-X2** — `build.yml` is green on the PR.
+- [x] **AC-X2** — `build.yml` is green on the PR.
