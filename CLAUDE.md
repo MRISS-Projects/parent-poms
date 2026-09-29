@@ -94,9 +94,15 @@ Two Maven lifecycles are involved and are **not interchangeable**:
   that pin.
 
 `release:perform` only runs `deploy` (per the release plugin's `<goals>`), so a real release requires
-both an explicit `site-deploy` **and** an explicit `process-resources` invocation afterward against the
-post-release `master` checkout — see `specs/github-actions-reusable-workflows.md` §3 for the full
-rationale if you touch release automation.
+both an explicit `site-deploy` **and** an explicit `process-resources` invocation afterward — see
+`specs/github-actions-reusable-workflows.md` §3 for the full rationale if you touch release automation.
+The two run in different trees. `process-resources` runs against the post-release `master` checkout
+in `target/checkout`. `site-deploy` runs in the workspace, detached at the release tag, because that
+is where the test output is (`#95`). A release runs its tests **once**: `release:prepare`'s forked
+`clean install`, unit and integration tests, before any write. `products/pom.xml`'s
+`release.forked.test.arguments` defaults to `-DintegrationTests` for that fork, and the workflows
+override it with `-DskipTests` for `release:perform`, which builds the same tag. Do not add a test run
+back to perform or the site step. The reports would be no better, and the release slower.
 
 `generatedSiteDirectory` in `products/pom.xml`'s deployment profile is deliberately redirected to
 `target/generated-site-reports` (not the default `target/generated-site`) because

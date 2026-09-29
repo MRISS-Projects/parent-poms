@@ -179,7 +179,7 @@ workspace, checked out at the release tag:
       exited 0, with all 15 modules `SUCCESS`.
 - [x] **Task 2 — `project-hotfix.yml`.** Both changes. Commit. Later steps checked: `merge-to-develop` works in its own clone under `$RUNNER_TEMP` and only fetches the tag from the workspace, and the README steps `cd target/checkout`, so none depends on the workspace's branch.
 - [x] **Task 3 — `project-release.yml`.** Both changes. Commit. The tag reaches the site step through `env` (`RELEASE_TAG`), not a `${{ }}` in the script, per PR #80's injection review. The release-only steps between prepare and the site (`Create Hotfix Branch`, `Checkout Hotfix Branch and Set Initial Version`, `Verify every module carries the hotfix version`, `Commit the Hotfix Version`) all work in `target/checkout`.
-- [ ] **Task 4 — comments and documentation.** §3's `rehearsal-tag`, `CLAUDE.md` and
+- [x] **Task 4 — comments and documentation.** §3's `rehearsal-tag`, `CLAUDE.md` and
       `specs/github-actions-reusable-workflows.md` rows. Commit.
 - [ ] **Task 5 — PR into `master`.** `build.yml` goes green. Once the PR is merged, the workflow half
       reaches every consumer at `@master`. The POM half reaches only a consumer pinned to
