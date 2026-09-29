@@ -166,12 +166,17 @@ workspace, checked out at the release tag:
 
 ## 4. Tasks
 
-- [ ] **Task 1 — `products/pom.xml`.** §2.1. Check the interpolation with `help:effective-pom` on
+- [x] **Task 1 — `products/pom.xml`.** §2.1. Check the interpolation with `help:effective-pom` on
       `products`, run twice and logged to `.logs/mvn-help-effective-pom.log`. Without `-D`,
       `<arguments>` must contain `-DintegrationTests`. With
       `-Drelease.forked.test.arguments=-DskipTests`, it must contain `-DskipTests` and not
       `-DintegrationTests`. Run `mvn -B clean install`, logged to `.logs/mvn-clean-install.log`, and
       report its exit code. Commit.
+      Done 2026-09-29. The effective `<build><plugins>` release `<arguments>`: by default
+      `-Ddeployment -Drelease-deployment -Dproduct-release-deployment -DintegrationTests -Dsite.deployment.personal.main=file:///tmp/sites`.
+      With the override, the same with `-DskipTests` in place of `-DintegrationTests`. The root's
+      `pluginManagement` entry, which `products` overrides, is unchanged. `mvn -B clean install`
+      exited 0, with all 15 modules `SUCCESS`.
 - [ ] **Task 2 — `project-hotfix.yml`.** Both changes. Commit.
 - [ ] **Task 3 — `project-release.yml`.** Both changes. Commit.
 - [ ] **Task 4 — comments and documentation.** §3's `rehearsal-tag`, `CLAUDE.md` and
