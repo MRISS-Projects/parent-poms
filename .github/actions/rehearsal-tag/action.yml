@@ -50,11 +50,12 @@ runs:
     # is exactly what specs/72's goal statement asks for: every local operation executes for
     # real, every remote write is suppressed.
     #
-    # -DskipTests is a deliberate, stated deviation from what `deploy` would run. The tests
-    # have already executed once in this rehearsal, in prepare's <preparationGoals> fork,
-    # against the same sources; running them a second time would add most of ten minutes to
-    # answer a question already answered. It also disarms the coverage-data guard along with
-    # jacoco, which is the documented behaviour of that flag.
+    # -DskipTests matches what a real perform's `deploy` runs: since #95 the workflows pass
+    # -Drelease.forked.test.arguments=-DskipTests to release:perform, because prepare's
+    # <preparationGoals> fork is the release's only test run, integration tests included.
+    # This install builds the same sources, so it adds no test run either. It also disarms
+    # the coverage-data guard along with jacoco, which is the documented behaviour of that
+    # flag. The site step reads prepare's test output from the workspace, not from here.
     - name: Install the release-version artifacts that perform would have deployed
       shell: bash
       working-directory: target/checkout

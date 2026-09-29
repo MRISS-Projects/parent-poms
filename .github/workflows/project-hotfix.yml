@@ -217,8 +217,14 @@ jobs:
           bash "$RUNNER_TEMP/rehearsal-marker.sh" release-perform-deploy \
             "check out the tag and deploy the artifacts to the registry"
 
+          # #95: prepare's fork is the release's only test run. perform builds the tag prepare
+          # just tested, so it swaps products/pom.xml's -DintegrationTests default for
+          # -DskipTests. Replacing it, not adding to it, keeps the integration-test profile —
+          # and whatever a product starts under it — out of perform. Inert under a parent
+          # older than 3.9.2, which does not interpolate the property.
           mvn -B $RH_RELEASE_DRYRUN \
             -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
+            -Drelease.forked.test.arguments=-DskipTests \
             release:perform
 
       - name: Merge Release Tag to Master
@@ -245,9 +251,15 @@ jobs:
 
           git push $RH_GIT_PUSH_DRYRUN "$REPO_URL" master
 
+      # #95/#96: build the site where release:prepare's fork ran the tests: this workspace.
+      # target/checkout is a fresh master clone with no test output, which is what published
+      # empty reports and no badge. Checking the tag out moves only tracked files; every
+      # target/ is ignored and keeps prepare's surefire/failsafe results, jacoco*.exec and
+      # the badge. The tag is local in both modes: prepare created it, or, in a rehearsal,
+      # the tag bridge did. Nothing since prepare has touched this workspace's tracked files.
       - name: Deploy Site to gh-pages
         run: |
-          cd target/checkout
+          git checkout --quiet --detach "v${HOTFIX_RELEASE_NUMBER}"
           bash "$RUNNER_TEMP/rehearsal-marker.sh" site-deploy \
             "publish the generated site to gh-pages"
           mvn -B $RH_SCMPUBLISH_DRYRUN \

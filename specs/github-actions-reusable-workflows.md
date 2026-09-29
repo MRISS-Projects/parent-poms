@@ -196,7 +196,25 @@ The same two lines appear in `ProjectHotfixJenkinsfile` at lines 98–101.
   - README.md at root is regenerated with the **released version** (since `release-deployment` sets `project.build.version=${project.version}`, removing snapshot identifiers)
   - The updated README.md is committed to the master branch
 
+#### Where `site-deploy` runs (since #95)
+
+The Jenkins lines above ran `site-deploy` in `target/checkout`, the fresh `master` clone. That tree
+has no test output. `release:perform` ran the tests in the `target/checkout` that the clone replaced,
+so every test and coverage report was published empty, with no coverage badge (#95, #96). Since #95:
+
+- `release:prepare`'s forked `clean install` is the release's **only** test run, with unit and
+  integration tests. `products/pom.xml`'s `release.forked.test.arguments` defaults to
+  `-DintegrationTests`, and `release:perform` is passed `-Drelease.forked.test.arguments=-DskipTests`.
+- `site-deploy` runs in the **workspace**, after `git checkout --detach v<version>`. Every `target/`
+  is ignored and keeps prepare's test output. The tag is local both in a real release (prepare created
+  it) and in a rehearsal (the tag bridge did).
+- `process-resources` stays in `target/checkout`. The README is generated and committed on `master`.
+
+See `specs/95-release-site-test-reports.md`.
+
 #### Why `target/checkout`?
+
+This subsection now applies to `process-resources` only.
 
 - `release:perform` checks out the release tag into `target/checkout` of the RC branch workspace
 - The Post Release stage checks out the `master` branch **into** `target/checkout` (overwriting the tag checkout)
@@ -747,12 +765,15 @@ fi
 
    mvn -B \
      -Dsite.deployment.personal.main="${SITE_URL}" \
+     -Drelease.forked.test.arguments=-DskipTests \
      release:perform
    ```
 
-   > `release:perform` internally uses the `<arguments>` from `products/pom.xml`:
-   > `-Ddeployment -Drelease-deployment -Dproduct-release-deployment -Dsite.deployment.personal.main=...`
+   > Both forks use the `<arguments>` from `products/pom.xml`:
+   > `-Ddeployment -Drelease-deployment -Dproduct-release-deployment ${release.forked.test.arguments} -Dsite.deployment.personal.main=...`
    > These activate PDF generation, issue list, artifact deployment. **Not** site-deploy (see §3).
+   > `release.forked.test.arguments` defaults to `-DintegrationTests`, so prepare's fork is the
+   > release's only test run (#95). perform overrides it with `-DskipTests`.
 
 8. **Create hotfix branch** — from `target/checkout` (the released tag state left by `release:perform`):
    ```bash
@@ -842,9 +863,9 @@ fi
     git merge -s recursive -X theirs "$CURRENT_TAG"
     git push "$REPO_URL" master
     ```
-11. **Post-release: deploy site to gh-pages `releases/` area** (see §3 — site-deploy is separate from `release:perform`):
+11. **Post-release: deploy site to gh-pages `releases/` area** (see §3 — site-deploy is separate from `release:perform`). In the workspace, where prepare's fork left the test output (#95), not in `target/checkout`. The tag reaches the step through `env`:
     ```bash
-    cd target/checkout
+    git checkout --quiet --detach "$RELEASE_TAG"   # env: RELEASE_TAG=v${{ inputs.current_version }}
     mvn -B \
       -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
       -Ddeployment \
@@ -1029,6 +1050,7 @@ fi
    mvn -B release:prepare
    mvn -B \
      -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
+     -Drelease.forked.test.arguments=-DskipTests \
      release:perform
    ```
 9. **Post-release: merge release tag to master**:
@@ -1049,9 +1071,9 @@ fi
    git merge -s recursive -X theirs --allow-unrelated-histories "$CURRENT_TAG"
    git push "$REPO_URL" master
    ```
-10. **Post-release: deploy site** (same rationale as §3):
+10. **Post-release: deploy site** (same rationale as §3). In the workspace at the tag, where prepare's fork left the test output (#95):
     ```bash
-    cd target/checkout
+    git checkout --quiet --detach "v${HOTFIX_RELEASE_NUMBER}"
     mvn -B \
       -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
       -Ddeployment \
