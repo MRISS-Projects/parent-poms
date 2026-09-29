@@ -65,27 +65,27 @@ working directory compare against nothing and pass everything.
 
 ### Task 1 — Tests first, red
 
-- [ ] `expect_exit` takes the source as a fourth argument. Every existing case gets a source
+- [x] `expect_exit` takes the source as a fourth argument. Every existing case gets a source
   holding the placeholder it tests, so it still asserts what it asserted.
-- [ ] New cases:
+- [x] New cases:
   - DSH `#115`'s line in the release notes, with a source that has no `${jenkins.build.number}`,
     passes (AC003).
   - A source placeholder left unresolved fails even when the release notes carry an unrelated
     literal (AC002).
   - `${issues.text.list}` left unresolved fails.
   - A missing source fails; no second argument fails.
-- [ ] `sh .github/actions/commit-readme/check-placeholders.test.sh` fails, on the new cases.
+- [x] `sh .github/actions/commit-readme/check-placeholders.test.sh` fails, on the new cases.
 
 ### Task 2 — The script, green
 
-- [ ] Implement §2. Keep the exit-code split that tells no match from a read error, for both files.
-- [ ] Rewrite the header's reasoning to match.
-- [ ] The test suite passes.
+- [x] Implement §2. Keep the exit-code split that tells no match from a read error, for both files.
+- [x] Rewrite the header's reasoning to match.
+- [x] The test suite passes.
 
 ### Task 3 — Callers
 
-- [ ] `action.yml` and both `deploy.yml` invocations pass `src/site/markdown/README.md`.
-- [ ] `grep -rn 'check-placeholders.sh' .github` shows no single-argument call.
+- [x] `action.yml` and both `deploy.yml` invocations pass `src/site/markdown/README.md`.
+- [x] `grep -rn 'check-placeholders.sh' .github` shows no single-argument call.
 
 ### Task 4 — Verify
 
@@ -96,3 +96,14 @@ working directory compare against nothing and pass everything.
 ## 5. Verification
 
 Recorded as tasks complete.
+
+### 5.1 Local (Tasks 1-3), 2026-09-29
+
+- Red: with the new tests against the old script, 4 of 15 cases failed. They were the `#115` line and
+  the three missing-source cases; every existing case still passed.
+- Green: 15 of 15 under Git Bash `sh` and under `dash`, the runners' `/bin/sh`.
+- Against DSH's real `src/site/markdown/README.md`, with the `#115` line substituted for
+  `${issues.text.list}`: exit 0. The same file with `${release.type}` left unresolved: exit 1,
+  reporting only line 3.
+- `grep -rn 'check-placeholders.sh' .github`: all three calls pass the source.
+- Both scripts stay mode `100755` in the index.
