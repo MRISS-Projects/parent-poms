@@ -177,7 +177,7 @@ workspace, checked out at the release tag:
       With the override, the same with `-DskipTests` in place of `-DintegrationTests`. The root's
       `pluginManagement` entry, which `products` overrides, is unchanged. `mvn -B clean install`
       exited 0, with all 15 modules `SUCCESS`.
-- [ ] **Task 2 — `project-hotfix.yml`.** Both changes. Commit.
+- [x] **Task 2 — `project-hotfix.yml`.** Both changes. Commit. Later steps checked: `merge-to-develop` works in its own clone under `$RUNNER_TEMP` and only fetches the tag from the workspace, and the README steps `cd target/checkout`, so none depends on the workspace's branch.
 - [ ] **Task 3 — `project-release.yml`.** Both changes. Commit.
 - [ ] **Task 4 — comments and documentation.** §3's `rehearsal-tag`, `CLAUDE.md` and
       `specs/github-actions-reusable-workflows.md` rows. Commit.
