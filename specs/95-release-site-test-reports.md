@@ -181,23 +181,40 @@ workspace, checked out at the release tag:
 - [x] **Task 3 — `project-release.yml`.** Both changes. Commit. The tag reaches the site step through `env` (`RELEASE_TAG`), not a `${{ }}` in the script, per PR #80's injection review. The release-only steps between prepare and the site (`Create Hotfix Branch`, `Checkout Hotfix Branch and Set Initial Version`, `Verify every module carries the hotfix version`, `Commit the Hotfix Version`) all work in `target/checkout`.
 - [x] **Task 4 — comments and documentation.** §3's `rehearsal-tag`, `CLAUDE.md` and
       `specs/github-actions-reusable-workflows.md` rows. Commit.
-- [ ] **Task 5 — PR into `master`.** `build.yml` goes green. Once the PR is merged, the workflow half
-      reaches every consumer at `@master`. The POM half reaches only a consumer pinned to
-      `3.9.2-SNAPSHOT` or later.
-- [ ] **Task 6 — snapshot deploy.** Dispatch `deploy.yml` with `release_type: snapshots` on `master`.
-      `com.mriss.mriss-parent:products:3.9.2-SNAPSHOT` is then in GitHub Packages, which is `dsh#146`'s
-      step P3.
-- [ ] **Task 7 — hotfix proof.** Covered by `dsh#146`'s T3, a DSH `hotfix.yml` dry run on its task
-      branch, pinned to `3.9.2-SNAPSHOT`. Read it against §5 and record the run here.
+**Tasks 6 to 8 run before the merge.** This was changed in review round 1 of PR #97. Copilot's
+overview flagged that the PR "changes shared downstream release behavior, while the planned release
+and hotfix rehearsals remain incomplete". The original order merged first and proved afterwards,
+because DSH's wrappers call `@master`. The order below proves the branch itself, so a flaw costs a
+commit on the PR rather than a fix to a `master` that every consumer already runs.
+
+- [x] **Task 5 — PR into `master`.** [#97](https://github.com/MRISS-Projects/parent-poms/pull/97),
+      with `build.yml` green. The human merges it after Tasks 6 to 8.
+- [ ] **Task 6 — snapshot deploy from this branch.** Dispatch `deploy.yml` with
+      `release_type: snapshots` on `issue-95-release-site-test-reports`. That puts
+      `com.mriss.mriss-parent:products:3.9.2-SNAPSHOT` in GitHub Packages with §2.1 in it. No consumer
+      resolves it yet: DSH names `3.9.0` on every branch. The snapshot path commits a regenerated
+      `README.md` to the dispatched branch, which is expected. Redeploy from `master` after the merge,
+      which is `dsh#146`'s step P3.
+- [ ] **Task 7 — hotfix proof.** In DSH, create scratch branch `rehearsal-95-hotfix` from
+      `issue-146-release-0-3-1-with-site-reports` (`0.3.1-SNAPSHOT`). Give it one commit that is never
+      merged: the parent pinned to `3.9.2-SNAPSHOT`, and `hotfix.yml`'s `uses:` pointed at
+      `project-hotfix.yml@issue-95-release-site-test-reports`. Dispatch it with
+      `--ref rehearsal-95-hotfix`, `branch_name=rehearsal-95-hotfix` and `dry_run=true`. Read it
+      against §5, record the run here, then delete the branch from the remote. `dsh#146`'s T3, after
+      the merge, becomes the confirming run.
 - [ ] **Task 8 — release proof.** In DSH, create scratch branch `rehearsal-95` from `DEVELOP`
-      (`0.4.0-SNAPSHOT`) and pin its parent to `3.9.2-SNAPSHOT`, in one commit that is never merged.
-      Dispatch DSH `release.yml` with `--ref rehearsal-95`, `branch_name=rehearsal-95`,
-      `current_version=0.4.0`, `next_development_version=0.5.0-SNAPSHOT`, `hotfix_branch=0.4.x`,
+      (`0.4.0-SNAPSHOT`), with the same kind of commit: the pin, and `release.yml`'s `uses:` pointed at
+      `project-release.yml@issue-95-release-site-test-reports`. Dispatch `release.yml` with
+      `--ref rehearsal-95`, `branch_name=rehearsal-95`, `current_version=0.4.0`,
+      `next_development_version=0.5.0-SNAPSHOT`, `hotfix_branch=0.4.x`,
       `initial_hotfix_version=0.4.1-SNAPSHOT` and `dry_run=true`. Read it against §5, record the run
       here, then delete `rehearsal-95` from the remote. `#69` set the precedent for a scratch branch.
-- [ ] **Task 9 — release 3.9.2**, per `dsh#146` §4.3: revise `#95` AC004 and `#96` AC003, close both
-      on Tasks 7 and 8, rename the milestone to `3.9.2`, then dispatch `deploy.yml` with
-      `release_type: releases`. Expect tag `mriss-parent-3.9.2`, and `master` at `3.10.0-SNAPSHOT`.
+      Only the workflow file comes from the branch. Its actions stay at `@master`, and this PR
+      changes nothing in them except a comment.
+- [ ] **Task 9 — release 3.9.2**, after the merge and the redeploy from `master`, per `dsh#146` §4.3:
+      revise `#95` AC004 and `#96` AC003, close both on Tasks 7 and 8, rename the milestone to
+      `3.9.2`, then dispatch `deploy.yml` with `release_type: releases`. Expect tag
+      `mriss-parent-3.9.2`, and `master` at `3.10.0-SNAPSHOT`.
 
 A dry-run `release:perform` builds nothing, so Tasks 7 and 8 cannot show perform's `-DskipTests`.
 Task 1's effective-pom check is its evidence, and the real 3.9.2-based DSH 0.3.1 release
