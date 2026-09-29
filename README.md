@@ -4,7 +4,7 @@
 
 ## Version
 
-3.9.2-SNAPSHOT - 36 - 20260929-220721
+3.9.2
 
 ## Build from Sources
 
@@ -30,6 +30,13 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
 
+### Version 3.9.2
+
+| # | Type | Summary | Assignee | Reporter | Updated |
+| --- | ---- | ------- | -------- | -------- | ------- |
+| [96](https://github.com/MRISS-Projects/parent-poms/issues/96) | bug | Release site publishes no coverage badge, so the released README shows a broken image | null | mriss | 9/29/26 |
+| [95](https://github.com/MRISS-Projects/parent-poms/issues/95) | bug | Release site's test and coverage reports are empty because the site is built without test output | null | mriss | 9/29/26 |
+
 ### Version 3.9.1
 
 | # | Type | Summary | Assignee | Reporter | Updated |
@@ -41,7 +48,7 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 | # | Type | Summary | Assignee | Reporter | Updated |
 | --- | ---- | ------- | -------- | -------- | ------- |
 | [70](https://github.com/MRISS-Projects/parent-poms/issues/70) | task | Convert the remaining APT site pages to Markdown | null | mriss | 9/27/26 |
-| [71](https://github.com/MRISS-Projects/parent-poms/issues/71) | task | commit-readme-md runs three times per staging run, and one commit contains an unresolved 20260929-220721 | null | mriss | 9/27/26 |
+| [71](https://github.com/MRISS-Projects/parent-poms/issues/71) | task | commit-readme-md runs three times per staging run, and one commit contains an unresolved 20260929-225627 | null | mriss | 9/27/26 |
 | [69](https://github.com/MRISS-Projects/parent-poms/issues/69) | task | project-release.yml sets the hotfix version on the root POM only | null | mriss | 9/27/26 |
 | [65](https://github.com/MRISS-Projects/parent-poms/issues/65) | task | Merge release tag back into DEVELOP after project-release.yml / project-hotfix.yml | null | mriss | 9/27/26 |
 | [59](https://github.com/MRISS-Projects/parent-poms/issues/59) | task | Update Maven pinned version from 3.9.9 to 3.9.16 in documentation and GitHub Actions | null | mriss | 9/26/26 |
