@@ -196,7 +196,7 @@ jobs:
       # repository, so the script is on disk.
       - name: Verify the generated README before publishing (snapshot)
         if: ${{ inputs.release_type == 'snapshots' }}
-        run: .github/actions/commit-readme/check-placeholders.sh README.md
+        run: .github/actions/commit-readme/check-placeholders.sh README.md src/site/markdown/README.md
 
       # Mirrors: mvn -Ddeployment site-deploy
       # FR004: replaced -P deployment with -Ddeployment
@@ -360,7 +360,7 @@ jobs:
           # the last point at which an unresolved ${...} can still be stopped, so the same
           # guard the commit-readme composite action uses runs here too. No separate commit
           # step is added for this path: the checkin below already carries the README.
-          .github/actions/commit-readme/check-placeholders.sh README.md
+          .github/actions/commit-readme/check-placeholders.sh README.md src/site/markdown/README.md
 
           # ---- Commit all version changes ----
           # FR004: replaced -P deployment with -Ddeployment
