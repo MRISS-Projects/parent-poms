@@ -89,8 +89,8 @@ working directory compare against nothing and pass everything.
 
 ### Task 4 — Verify
 
-- [ ] `build.yml` green on the PR.
-- [ ] After the merge, DSH staging on `staging-0.3.0-SNAPSHOT-RC` passes the step on the README
+- [x] `build.yml` green on the PR.
+- [x] After the merge, DSH staging on `staging-0.3.0-SNAPSHOT-RC` passes the step on the README
   that failed it (AC006). Record the run URL in §5.
 
 ## 5. Verification
@@ -107,3 +107,15 @@ Recorded as tasks complete.
   reporting only line 3.
 - `grep -rn 'check-placeholders.sh' .github`: all three calls pass the source.
 - Both scripts stay mode `100755` in the index.
+
+### 5.2 After the merge (Task 4), 2026-09-29
+
+- `build.yml` on PR #94: [run 36579167463](https://github.com/MRISS-Projects/parent-poms/actions/runs/36579167463),
+  green, with the new cases in the test step's log. Copilot's review recommended approval with no
+  findings.
+- AC006: DSH staging on `staging-0.3.0-SNAPSHOT-RC`, re-dispatched after the merge (`1e79e944`),
+  [run 36583922126](https://github.com/MRISS-Projects/dsh/actions/runs/36583922126), green. The
+  step ran `check-placeholders.sh README.md src/site/markdown/README.md` from `master` and passed a
+  README whose line 425 still carries DSH `#115`'s literal `${jenkins.build.number}`; the same
+  commit had failed it in run 36574918380. DSH stayed pinned to `3.9.0`, since no Maven artifact
+  changed.
