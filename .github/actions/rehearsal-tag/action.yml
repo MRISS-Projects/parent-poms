@@ -18,7 +18,8 @@ runs:
   steps:
     - name: Build the release tag from the dry run's pom.xml.tag tree
       shell: bash
-      run: ${{ github.action_path }}/build-release-tag.sh
+      run: |
+        "$GITHUB_ACTION_PATH/build-release-tag.sh"
 
     - name: Materialise target/checkout from the tag
       shell: bash
@@ -59,12 +60,15 @@ runs:
     - name: Install the release-version artifacts that perform would have deployed
       shell: bash
       working-directory: target/checkout
+      # #81: the input reaches the script through env, never as a ${{ }} in the body.
+      env:
+        SITE_DEPLOYMENT_URL: ${{ inputs.site_deployment_url }}
       run: |
         set -euo pipefail
         mvn -B -DskipTests \
           -Ddeployment \
           -Drelease-deployment \
           -Dproduct-release-deployment \
-          -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
+          -Dsite.deployment.personal.main="$SITE_DEPLOYMENT_URL" \
           install
         echo "rehearsal-tag: release-version artifacts installed to the local repository."
