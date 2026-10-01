@@ -210,19 +210,25 @@ jobs:
             exit 1
           fi
 
+      # #81: every input reaches a run: body through env and is read quoted, never as a ${{ }}
+      # in the script - see 'Checkout Hotfix Branch and Set Initial Version' for why. The
+      # 'Check no run body interpolates an expression' step in build.yml enforces it.
       - name: Maven Release
+        env:
+          NEXT_DEVELOPMENT_VERSION: ${{ inputs.next_development_version }}
+          CURRENT_VERSION: ${{ inputs.current_version }}
         run: |
           mvn -B \
-            -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.next_development_version }} \
-            -Dbuild.CURRENT_VERSION_NUMBER=${{ inputs.current_version }} \
+            "-Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEVELOPMENT_VERSION" \
+            "-Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION" \
             release:clean
 
           bash "$RUNNER_TEMP/rehearsal-marker.sh" release-prepare \
-            "commit the release POMs, tag v${{ inputs.current_version }} and push both"
+            "commit the release POMs, tag v$CURRENT_VERSION and push both"
 
           mvn -B $RH_RELEASE_DRYRUN \
-            -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.next_development_version }} \
-            -Dbuild.CURRENT_VERSION_NUMBER=${{ inputs.current_version }} \
+            "-Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEVELOPMENT_VERSION" \
+            "-Dbuild.CURRENT_VERSION_NUMBER=$CURRENT_VERSION" \
             release:prepare
 
       # #72 §2.2 — the one rehearsal-only step. `release:prepare -DdryRun=true` creates no
@@ -248,9 +254,9 @@ jobs:
           site_deployment_url: ${{ inputs.site_deployment_url }}
 
       - name: Maven Release Perform
+        env:
+          SITE_URL: ${{ inputs.site_deployment_url }}
         run: |
-          SITE_URL="${{ inputs.site_deployment_url }}"
-
           bash "$RUNNER_TEMP/rehearsal-marker.sh" release-perform-deploy \
             "check out the tag and deploy the artifacts to the registry"
 
@@ -265,11 +271,13 @@ jobs:
             release:perform
 
       - name: Create Hotfix Branch
+        env:
+          HOTFIX_BRANCH: ${{ inputs.hotfix_branch }}
         run: |
           cd target/checkout
           bash "$RUNNER_TEMP/rehearsal-marker.sh" scm-branch \
-            "push the new hotfix branch ${{ inputs.hotfix_branch }} to the remote"
-          mvn -B $RH_SCM_LOCAL_URL -Dbranch=${{ inputs.hotfix_branch }} scm:branch
+            "push the new hotfix branch $HOTFIX_BRANCH to the remote"
+          mvn -B $RH_SCM_LOCAL_URL "-Dbranch=$HOTFIX_BRANCH" scm:branch
 
       - name: Checkout Hotfix Branch and Set Initial Version
         # PR #80 review: a ${{ }} expression is substituted into the script TEXT before bash
@@ -354,9 +362,11 @@ jobs:
           mvn -B $RH_SCM_LOCAL_URL "-Dmessage=[maven-release-plugin] set hotfix version $INITIAL_HOTFIX_VERSION" scm:checkin
 
       - name: Merge Release Tag to Master
+        env:
+          CURRENT_TAG: v${{ inputs.current_version }}
+          GIT_PROJECT: ${{ inputs.git_project }}
         run: |
-          CURRENT_TAG="v${{ inputs.current_version }}"
-          REPO_URL="https://x-access-token:${DEPLOY_TOKEN}@github.com/MRISS-Projects/${{ inputs.git_project }}.git"
+          REPO_URL="https://x-access-token:${DEPLOY_TOKEN}@github.com/MRISS-Projects/${GIT_PROJECT}.git"
 
           rm -rf target/checkout
 
@@ -390,12 +400,13 @@ jobs:
       - name: Deploy Site to gh-pages
         env:
           RELEASE_TAG: v${{ inputs.current_version }}
+          SITE_URL: ${{ inputs.site_deployment_url }}
         run: |
           git checkout --quiet --detach "$RELEASE_TAG"
           bash "$RUNNER_TEMP/rehearsal-marker.sh" site-deploy \
             "publish the generated site to gh-pages"
           mvn -B $RH_SCMPUBLISH_DRYRUN \
-            -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
+            -Dsite.deployment.personal.main="${SITE_URL}" \
             -Ddeployment \
             -Drelease-deployment \
             site-deploy
@@ -421,15 +432,18 @@ jobs:
           dry-run: ${{ inputs.dry_run }}
 
       - name: Remove RC Branch
+        env:
+          GIT_PROJECT: ${{ inputs.git_project }}
+          BRANCH_NAME: ${{ inputs.branch_name }}
         run: |
-          REPO_URL="https://x-access-token:${DEPLOY_TOKEN}@github.com/MRISS-Projects/${{ inputs.git_project }}.git"
+          REPO_URL="https://x-access-token:${DEPLOY_TOKEN}@github.com/MRISS-Projects/${GIT_PROJECT}.git"
           bash "$RUNNER_TEMP/rehearsal-marker.sh" remove-rc-branch \
-            "delete the RC branch ${{ inputs.branch_name }} from the remote"
+            "delete the RC branch $BRANCH_NAME from the remote"
           # Verified against a scratch repository rather than assumed: --delete changes the
           # refspec shape, and --dry-run still prints " - [deleted] <branch>" while leaving
           # the ref in place. That printed line is precisely why the marker above exists
           # instead of trusting git's own output.
-          git push $RH_GIT_PUSH_DRYRUN "$REPO_URL" --delete ${{ inputs.branch_name }}
+          git push $RH_GIT_PUSH_DRYRUN "$REPO_URL" --delete "$BRANCH_NAME"
 
       # #65: carry the release into the development branch, which keeps its own version.
       # Last on purpose: if a real conflict stops it, the release is already complete and only
