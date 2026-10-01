@@ -46,7 +46,7 @@ runs:
       env:
         DECLARED_MARKERS: ${{ inputs.declared_markers }}
       run: |
-        "${{ github.action_path }}/assert-markers.sh" \
+        "$GITHUB_ACTION_PATH/assert-markers.sh" \
           "$RUNNER_TEMP/rehearsal-markers" \
           "$DECLARED_MARKERS"
 
@@ -62,5 +62,5 @@ runs:
         DISPATCH_BRANCH: ${{ inputs.dispatch_branch }}
         HOTFIX_BRANCH: ${{ inputs.hotfix_branch }}
       run: |
-        "${{ github.action_path }}/assert-no-writes.sh" \
+        "$GITHUB_ACTION_PATH/assert-no-writes.sh" \
           "$GIT_PROJECT" "$CURRENT_VERSION" "$DISPATCH_BRANCH" "$HOTFIX_BRANCH"
