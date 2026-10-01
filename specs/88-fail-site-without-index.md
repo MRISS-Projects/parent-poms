@@ -207,7 +207,7 @@ All on 2026-10-01 (UTC).
 
 - **Red.** Against a stub that always passes, 10 of the 11 cases failed. The eleventh is a
   "must not be named" check, which a silent stub satisfies.
-- **Green.** All 11 pass against `verify-staged-site.sh`.
+- **Green.** All 11 pass against `verify-staged-site.sh`. Review round 1 (§7.5) added a twelfth.
 - **Real data.** Run against DSH's published `releases` and `rcs` trees from `gh-pages`, it finds
   46 module sites, all with an `index.html`.
 - **CI.** [Run 36930489167](https://github.com/MRISS-Projects/parent-poms/actions/runs/36930489167),
@@ -266,3 +266,18 @@ not removed, in either flow.
 ### 7.4 The real publish
 
 Task 8, after the merge.
+
+### 7.5 Review round 1, 2026-10-01
+
+Copilot reviewed `6354cb4b` and raised one finding. It was valid.
+
+- **The finding.** The module list came from `find … | sort`. A pipeline returns its last command's
+  status, so `set -e` never saw `find` fail. A traversal that failed partway left the check passing
+  on the part of the tree it had reached.
+- **Reproduced.** With a `find` on the `PATH` that prints one complete module and then exits 1, the
+  script printed `all 1 module site(s) … have an index.html` and exited 0.
+- **The fix.** `find` runs on its own, and its failure fails the check with
+  `could not be read in full`. The suite gained that case as its twelfth. It failed against the old
+  script, and all 12 pass against the new one.
+- **How likely it was.** Unlikely on a runner, where the same user writes `/tmp/sites` and reads it
+  back. It is fixed anyway, because the check exists to stop a publish it cannot vouch for.
