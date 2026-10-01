@@ -98,18 +98,23 @@ in `wiki-sync.yml`, which no caller can set. They are out of scope here.
 
 ### 2.2 The guard, in `build.yml`
 
-A new step, `Check no run: body interpolates an expression`, sits beside the existing guards
-(`#71`, `#72`, `#78`). It uses their style: inline, `set -euo pipefail`, a `::error::` naming every
-offending line, and a short reason.
+A new step, `Check no run body interpolates an expression`, sits beside the existing guards
+(`#71`, `#72`, `#78`). It prints a `::error::` naming every offending line, and a short reason.
 
-- **What it scans.** An `awk` pass tracks `run:` bodies. Those are a `run: |` or `run: >` block
-  until the indentation returns to the `run:` key, or a single-line `run: …`. It fails on any
-  `${{` inside one, across `.github/workflows/*.yml` and `.github/actions/*/action.yml`.
-- **Red first.** Against `ca7a6e5f` it reports every line of §1.1 and §1.3, 31 in all: 25 caller inputs and 6 `github.action_path`. That run is
-  the guard's red, recorded in task 1.
-- **Self-check.** The step's own body names the pattern only inside a regular expression, never as
-  a literal `${{`, so the guard does not flag itself. The task 1 run proves that too: the guard step
-  is not among the offenders.
+- **Where the scan lives.** `.github/scripts/check-run-interpolation.sh`, with its tests in
+  `check-run-interpolation.test.sh`. The step runs the tests, then the script. As first built, the
+  scan was inline in the step and had no tests. Review round 1 (§7.3) showed what that cost.
+- **What it scans.** A body is whatever a `run:` key holds: the rest of its own line, and every
+  following line indented deeper than the key. That one rule covers a block scalar under any
+  header, a script that starts on the next line, and a plain scalar continued over several lines.
+  It fails on any `${{` inside one, across `.yml` and `.yaml` workflows and `action.yml` and
+  `action.yaml` files.
+- **The one exception.** The `run:` mapping under `defaults:` holds settings, not a script, and is
+  skipped.
+- **Red first.** Against `ca7a6e5f` it reports every line of §1.1 and §1.3, 31 in all: 25 caller
+  inputs and 6 `github.action_path`. That run is the guard's red, recorded in task 1.
+- **Self-check.** Neither the step nor the script holds a literal `${{` in a `run:` body, so the
+  guard does not flag itself.
 
 ### 2.3 Not in scope
 
@@ -128,7 +133,8 @@ offending line, and a short reason.
 | `.github/workflows/project-staging.yml` | §1.1, 2 steps |
 | `.github/actions/rehearsal-tag/action.yml` | §1.1 `inputs.site_deployment_url`; §1.3 `github.action_path` |
 | `.github/actions/commit-readme/action.yml`, `rehearsal-setup/action.yml`, `rehearsal-verify/action.yml` | §1.3 `github.action_path` → `$GITHUB_ACTION_PATH` |
-| `.github/workflows/build.yml` | the guard (§2.2) |
+| `.github/workflows/build.yml` | the guard step (§2.2) |
+| `.github/scripts/check-run-interpolation.sh`, `.test.sh` | the scan and its tests (§2.2), added in review round 1 |
 
 ## 4. Verification design
 
@@ -184,7 +190,7 @@ commit SHAs are recorded in §7.
 - [x] **Task 4.** Rehearsal R1.
 - [x] **Task 5.** Rehearsal R2, the awkward input.
 - [x] **Task 6.** Rehearsal R3, the hotfix path.
-- [ ] **Task 7.** Delete the scratch branches, record the runs in §7, and open a PR into `master`
+- [x] **Task 7.** Delete the scratch branches, record the runs in §7, and open a PR into `master`
       that references `#81`.
 
 ## 6. Acceptance criteria
@@ -232,3 +238,24 @@ All on 2026-10-01 (UTC).
   `hotfix branch 0.4.x`, the `0.4.1-SNAPSHOT version change`, and `RC branch rehearsal-81`.
 
 Both scratch branches were deleted from the DSH remote after R3.
+
+### 7.3 Review round 1, 2026-10-01
+
+Copilot reviewed `e70ae985` and raised two findings. Both were valid.
+
+1. **The guard could be bypassed** (`build.yml`). It matched only a bare `|` or `>` block header,
+   and only `*.yml` and `action.yml` files.
+   - **Reproduced.** The committed guard was run against a fixture of nine legal ways to write a
+     `run:` body, each holding an expression. It caught two: a plain block and a single line.
+   - **Seven forms got through.** The review named four: a header followed by a comment, a header
+     with an indentation indicator, and the two `.yaml` file names. The fixture found three more:
+     a folded header with chomping and indentation indicators, a script starting on the line after
+     `run:`, and a plain scalar continued on a second line.
+   - **Nothing in the tree was missed.** The repository uses none of those forms and has no `.yaml`
+     file, so the 31 lines of §7.1 were the complete set.
+   - **The fix.** The scan moved to `.github/scripts/check-run-interpolation.sh`, with the rule in
+     §2.2, and gained an 18-case test suite. Against the old logic, 7 of the 18 failed, the seven
+     forms above. Against the new, all pass. The rewritten scan still reports the same 31 lines on
+     `ca7a6e5f`.
+2. **Task 7 was unticked**, though the scratch branches were deleted, §7 was written and the PR was
+   open. Ticked.
