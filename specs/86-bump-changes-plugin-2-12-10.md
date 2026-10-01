@@ -119,12 +119,12 @@ occurrence, and is checked there (task 5).
 ## 5. Tasks
 
 - [x] **Task 1.** Add AC004 to `#86`, once the wording is approved.
-- [ ] **Task 2.** Bump `changes.plugin.version` and add `includeEmptyMilestones` to both executions.
+- [x] **Task 2.** Bump `changes.plugin.version` and add `includeEmptyMilestones` to both executions.
       Run `mvn -B -U clean install` until it is green, and confirm `2.12.10` resolves.
-- [ ] **Task 3.** Verify a DSH README against local `3.10.0-SNAPSHOT` (§3.2), with `#146` unlabelled
+- [x] **Task 3.** Verify a DSH README against local `3.10.0-SNAPSHOT` (§3.2), with `#146` unlabelled
       for the run (§3.1). **Restore the label straight after**, and record the README excerpt as
       evidence in the PR.
-- [ ] **Task 4.** Compare parent-poms' site report with its README (§3.3), and record the issue sets
+- [x] **Task 4.** Compare parent-poms' site report with its README (§3.3), and record the issue sets
       and the version order.
 - [ ] **Task 5.** At the 3.10.0 release, check that the README and the site report list
       `3.10.0` above `3.9.2`. This is a check for the release run, recorded on `#86`'s PR. It is not
@@ -139,3 +139,37 @@ occurrence, and is checked there (task 5).
 | AC002: an unlabelled closed issue in a milestone is listed, with a Type that is not `null` | §3.1, §3.2, task 3 |
 | AC003: the site report and the README list the same issues | §3.3, task 4 |
 | AC004: a closed milestone with no issues renders its section, through `includeEmptyMilestones` on both executions | §2.2, §3.2, task 3 |
+
+## 7. Verification results, 2026-09-30
+
+**Task 3: a DSH README against local `3.10.0-SNAPSHOT`.** The build used a scratch clone of DSH
+`DEVELOP` with its parent re-pointed, and ran `mvn -B -N -Ddeployment process-resources`. The log
+shows `changes:2.12.10:github-text-list (generate-list-of-issues)`. DSH `#146` had its `bug` label
+removed for the run, and the label was restored straight after. The generated release notes:
+
+```text
+### Version 0.3.2
+
+| # | Tipo | Descrição | Responsável | Relator | Atualizado |
+| --- | ---- | --------- | ----------- | ------- | ---------- |
+| [146](https://github.com/MRISS-Projects/dsh/issues/146) | n/a | [STORY] Release DSH 0.3.1 with a release site that carries its test reports and coverage badge | null | mriss | 30/09/2026 |
+
+### Version 0.3.1
+
+| # | Tipo | Descrição | Responsável | Relator | Atualizado |
+| --- | ---- | --------- | ----------- | ------- | ---------- |
+| - | - | No issues | - | - | - |
+```
+
+- AC002: the unlabelled `#146` is listed, with Type `n/a`.
+- AC004: DSH's empty `0.3.1` renders its section, with the `No issues` row.
+- The sections run `0.3.2`, `0.3.1`, `0.3.0`, `0.2.4`, … `0.0.1`, descending.
+- The headers are Portuguese because the local machine's locale is `pt_BR`. CI generates them in
+  English. The Assignee `null` is the defect that fork `#36` left out of scope.
+
+**Task 4: parent-poms' site report against its README.** The run was `mvn -B -N -Ddeployment
+process-resources`, then `mvn -B -N -Ddeployment -Drelease-deployment site`.
+
+- AC003: both list the same 47 issues.
+- Both order versions the same way, descending: `3.9.2 3.9.1 3.9.0 3.8.0 3.7.1 3.7.0 3.6.3 3.6.2
+  3.6.1 3.6.0 3.5.0 3.4.0 3.3.1 3.3.0 3.2.0 3.1.2 3.1.1 3.0.0`.
