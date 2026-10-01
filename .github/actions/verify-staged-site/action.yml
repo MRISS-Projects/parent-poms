@@ -1,0 +1,25 @@
+name: Verify the staged site
+description: >
+  Fail if a module's staged site has no index.html. Runs between staging the site
+  (`site-deploy` with -Dscmpublish.skipDeploy=true) and publishing it
+  (`scm-publish:publish-scm`), so a site with a missing home page is never pushed to
+  gh-pages — see specs/88-fail-site-without-index.md.
+
+inputs:
+  path:
+    description: >
+      The directory site:deploy staged the site into. Default: /tmp/sites, which is what
+      -Dsite.deployment.personal.main=file:///tmp/sites produces and what the deployment
+      profile's publish-scm execution pushes.
+    required: false
+    default: '/tmp/sites'
+
+runs:
+  using: composite
+  steps:
+    - name: Check every module site has an index.html
+      shell: bash
+      env:
+        STAGED_SITE: ${{ inputs.path }}
+      run: |
+        "$GITHUB_ACTION_PATH/verify-staged-site.sh" "$STAGED_SITE"

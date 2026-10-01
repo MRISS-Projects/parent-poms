@@ -1,0 +1,312 @@
+# Spec: fail site publication when a module's staged site has no `index.html` (`#88`)
+
+| | |
+|---|---|
+| Issue | [`#88`](https://github.com/MRISS-Projects/parent-poms/issues/88): fail staging/release site publication when a module's staged site has no `index.html` |
+| Milestone | `3.10.0-SNAPSHOT` |
+| Branch | `issue-88-fail-site-without-index`, cut from `master` at `5fc7d5e9` |
+| Origin | `MRISS-Projects/dsh#90`: every DSH module published a site with no `index.html`, 2,600+ files, and no workflow noticed |
+
+> **For agentic workers:** implement this task-by-task. Steps use checkbox (`- [ ]`) syntax.
+
+**Goal.** A site whose module has no `index.html` is never pushed to `gh-pages`. The run fails
+first, and names the module.
+
+**Architecture.** Today one `mvn site-deploy` generates, stages and pushes, module by module, so
+there is no point at which a workflow can look at the result before it is published. The step is
+split in three: stage everything without publishing, check the staged tree, then publish once.
+
+**Tech stack.** GitHub Actions, one new composite action with a POSIX `sh` script and its test
+suite, and two `maven-scm-publish-plugin` user properties. No POM changes.
+
+## 1. What happens today
+
+All three workflows publish with a single command, `mvn … site-deploy`, plus their own flags. The
+log of DSH run 36876508148, a dry-run release, shows what it does, in reactor order:
+
+```text
+site:3.21.0:deploy (default-deploy) @ dsh
+scm-publish:3.3.0:publish-scm (publish-to-github) @ dsh
+site:3.21.0:deploy (default-deploy) @ dsh-test-dataset
+scm-publish:3.3.0:publish-scm (publish-to-github) @ dsh-test-dataset
+…
+```
+
+- **`site:deploy` stages.** It copies the module's `target/site` into
+  `/tmp/sites/<release.type>/…`, because every workflow passes
+  `-Dsite.deployment.personal.main=file:///tmp/sites`.
+- **`publish-scm` pushes, once per module.** The `deployment` profile binds it to the `site-deploy`
+  phase with `<content>/tmp/sites</content>`, and every module inherits the binding. So the root
+  module pushes before the second module has generated anything. DSH pushes 13 times in a run.
+
+**Consequence for this issue.** A check added inside that Maven run, at any phase, cannot meet
+the first acceptance criterion. By the time a late module turns out to have no `index.html`, the
+earlier modules are already on `gh-pages`.
+
+## 2. Design
+
+### 2.1 The step becomes three
+
+```yaml
+      - name: Stage the site
+        run: |
+          mvn -B … -Dscmpublish.skipDeploy=true site-deploy
+
+      - name: Verify every staged module site has an index.html
+        uses: MRISS-Projects/parent-poms/.github/actions/verify-staged-site@master
+
+      - name: Publish the staged site to gh-pages
+        run: |
+          mvn -B -N -Ddeployment … scm-publish:publish-scm@publish-to-github
+```
+
+1. **Stage.** The existing command, with `-Dscmpublish.skipDeploy=true` added. `site:deploy` still
+   fills `/tmp/sites` for every module. `publish-scm` still executes in each module, but skips
+   itself. Nothing reaches the remote.
+2. **Verify.** The new action checks the staged tree (§2.2). If it fails, the job stops here, with
+   nothing pushed.
+3. **Publish.** `publish-scm` is an aggregator goal, so it is run once, from the root (`-N`), as
+   `scm-publish:publish-scm@publish-to-github`. The `@publish-to-github` suffix makes Maven use the
+   profile's own execution configuration (`content`, `scmBranch`, `pubScmUrl`, `serverId`), so
+   nothing is restated in the workflow.
+
+What else changes, and what does not:
+
+- **One push instead of one per module.** `gh-pages` gets a single commit per run,
+  `Publishing <root project name> site <version>`, where DSH got 13. The published content is the
+  same: every module's push already sent the whole of `/tmp/sites` as it stood.
+- **No POM change, so no re-pin.** Both properties and the `publish-to-github` execution id exist
+  in every released parent. A consumer still pinned to `3.9.2`, as DSH is, gets the check as soon as
+  this merges, because the wrappers call `@master`.
+- **Rehearsals.** `$RH_SCMPUBLISH_DRYRUN` moves to the publish step. The `site-deploy` marker moves
+  with it, so it still announces the one suppressed write.
+- **`#81`'s rule holds.** No new `run:` body interpolates an expression.
+
+### 2.2 The check: `verify-staged-site`
+
+A composite action at `.github/actions/verify-staged-site/`, with `verify-staged-site.sh` and
+`verify-staged-site.test.sh`. The `Test the action scripts` step in `build.yml` picks the suite up
+with no edit.
+
+- **What a module's site is.** A directory under the staged root that holds `project-info.html`.
+  parent-poms' own `<reporting>` gives that page to every module. On DSH's published release site
+  exactly 13 directories hold it, one per module. It is also the page that kept publishing during
+  `dsh#90` while `index.html` was missing.
+- **The rule.** Every such directory must also hold `index.html`. The action prints each one that
+  does not, as a path relative to the staged root (for example `rcs/products/dsh/dsh-data`), and
+  fails.
+- **An empty stage is a failure, not a pass.** If the root does not exist, or no directory under it
+  holds `project-info.html`, the action fails. Otherwise a run that staged nothing would pass.
+- **It checks the staged tree, not `target/site`.** `dsh#90` suspected the loss happened between
+  generation and publication. The staged tree is exactly what `publish-scm` pushes.
+- **Input.** `path`, default `/tmp/sites`, passed through `env:`.
+
+**Known limit.** A module whose site has no `project-info.html` is not recognised as a module, so
+it is not checked. That needs a consumer to remove parent-poms' project-info reports.
+
+### 2.3 Which workflows
+
+| Workflow | Step today | In scope |
+|---|---|---|
+| `project-staging.yml` | `Deploy Staging Site` | Yes, named by the issue. This is where `dsh#90` happened |
+| `project-release.yml` | `Deploy Site to gh-pages` | Yes, named by the issue |
+| `project-hotfix.yml` | `Deploy Site to gh-pages` | Yes, named by the issue |
+| `deploy.yml` | `Deploy Snapshot Site` | Yes, added by this spec. It is parent-poms' own snapshot site, built the same way. It is also the only one of the four that can prove the real, non-dry-run publish cheaply (§3.3) |
+
+### 2.4 Not in scope
+
+- Moving the `publish-scm` binding out of the `deployment` profile. A consumer running
+  `mvn -Ddeployment site-deploy` by hand keeps today's behaviour.
+- Checking pages other than `index.html`.
+
+## 3. Verification design
+
+### 3.1 The script's tests
+
+`verify-staged-site.test.sh`, written first and run red against a stub. The cases:
+
+- a tree where every module has `index.html` passes;
+- a missing `index.html` in the root module fails, and the output names it;
+- a missing one in a nested module (`dsh-doc-analyser/dsh-keyword-extractor`) fails, and names it;
+- two modules missing it are both named;
+- a report directory without `project-info.html` (`jacoco/`, `apidocs/`) is not treated as a
+  module;
+- a missing root directory fails, and so does a root with no module site at all.
+
+### 3.2 Dry-run rehearsals from DSH
+
+These follow `#95` and `#81`, with one addition. The new action does not exist at `@master` until
+this merges, and `build.yml` forbids pinning an action to a task branch.
+
+- **Scratch branch in parent-poms.** `rehearsal-88` is this branch plus one commit that points the
+  three `verify-staged-site@master` references at `@rehearsal-88`. It is never merged.
+- **Scratch branches in DSH.** Each has its wrapper pointing at `project-*.yml@rehearsal-88`.
+- **Nothing is pushed to DSH while a rehearsal runs.** That is `#81`'s lesson.
+
+| Run | Setup | Expect |
+|---|---|---|
+| R1, release | DSH `rehearsal-88`, from `DEVELOP` | Green. `Stage the site` shows no push. The check lists 13 module sites. `publish-scm` executes once, at the root, in dry-run. All nine markers appear, and the remote is unchanged |
+| R2, release, a module with no index | DSH `rehearsal-88-noindex`: the same, minus `dsh-test-dataset/src/site/markdown/index.md` | Red at the verify step, naming `…/dsh-test-dataset`. The publish step does not run. The remote is unchanged |
+| R3, hotfix | DSH `rehearsal-88-hotfix`, from `0.3.x` | Green, as R1 |
+
+**R2's assumption.** Deleting a module's `index.md` is assumed to leave it with no `index.html`.
+If Maven still generates one, R2 goes green and proves nothing. The fixture is then changed and
+the spec says how.
+
+### 3.3 The real publish
+
+A dry run never pushes, so R1 to R3 do not prove that the new publish step can push. Staging cannot
+be rehearsed at all, because `project-staging.yml` has no `dry_run`. The proof is `deploy.yml`:
+
+- **After the merge**, dispatch parent-poms' `deploy.yml` on `master` with
+  `release_type: snapshots`. This is the routine snapshot deploy of the light round trip. It
+  publishes parent-poms' snapshot site through the same three steps.
+- **Pass condition.** The verify step lists parent-poms' module sites, the publish step pushes one
+  commit to `gh-pages`, and the snapshot site is reachable.
+- **Why after the merge.** Dispatched from the task branch, `deploy.yml` would commit a generated
+  `README.md` to the PR branch.
+
+DSH's staging first runs the new steps for real at the 0.4.0 RC.
+
+## 4. Files to change
+
+| File | Change |
+|---|---|
+| `.github/actions/verify-staged-site/action.yml`, `verify-staged-site.sh`, `verify-staged-site.test.sh` | new (§2.2) |
+| `.github/workflows/project-staging.yml`, `project-release.yml`, `project-hotfix.yml`, `deploy.yml` | the three-step split (§2.1) |
+| `CLAUDE.md` | the split, in the paragraph of the Profiles section that describes `site-deploy` |
+
+## 5. Tasks
+
+- [x] **Task 1 (red).** Write `verify-staged-site.test.sh` and a stub script that always passes. Run
+      the suite, and record which cases fail.
+- [x] **Task 2 (green).** Write `verify-staged-site.sh` and `action.yml`, with the script committed
+      as mode `100755`. Run the suite until it is green.
+- [x] **Task 3.** Split the step in the four workflows (§2.1). The `#81` guard and the rest of
+      `build.yml` must stay green.
+- [x] **Task 4.** Create parent-poms `rehearsal-88` and the DSH scratch branches. Run R1.
+- [x] **Task 5.** Run R2, the module with no index.
+- [x] **Task 6.** Run R3, the hotfix path.
+- [x] **Task 7.** Delete every scratch branch, record the runs in §7, and open a PR into `master`
+      that references `#88`.
+- [ ] **Task 8, after the merge.** Dispatch `deploy.yml` snapshots on `master` (§3.3) and record
+      the run on the PR.
+
+## 6. Acceptance criteria
+
+| Criterion (from the issue) | Covered by |
+|---|---|
+| A run where a module has no `index.html` fails before anything is pushed to `gh-pages`, and names the module | §2.1's order, §2.2, the script's tests, R2 |
+| A normal run passes | R1, R3, task 8 |
+
+## 7. Verification results
+
+All on 2026-10-01 (UTC).
+
+### 7.1 The script's tests
+
+- **Red.** Against a stub that always passes, 10 of the 11 cases failed. The eleventh is a
+  "must not be named" check, which a silent stub satisfies.
+- **Green.** All 11 pass against `verify-staged-site.sh`. Review round 1 (§7.5) added a twelfth.
+- **Real data.** Run against DSH's published `releases` and `rcs` trees from `gh-pages`, it finds
+  46 module sites, all with an `index.html`.
+- **CI.** [Run 36930489167](https://github.com/MRISS-Projects/parent-poms/actions/runs/36930489167),
+  at `004bcf5e`, is green, with the suite picked up by `Test the action scripts`.
+
+### 7.2 The Maven mechanics, locally
+
+On parent-poms' root module, with `-N`:
+
+- **Staging.** `site-deploy` with `-Dscmpublish.skipDeploy=true` filled `/tmp/sites/snapshots` and
+  logged `scmpublish.skipDeploy = true: Skipping site deployment`.
+- **Publishing.** `scm-publish:publish-scm@publish-to-github` took the profile's configuration: the
+  `gh-pages` branch, the repository URL and the `github.com` server credentials. It could not finish
+  on the development machine. Checking out parent-poms' `gh-pages` fails on Windows with
+  `Filename too long`, and the plugin then throws while formatting git's error. The Linux runners
+  do the same checkout today. R1 and R3 below complete it.
+
+### 7.3 Rehearsals from DSH
+
+Scratch branches: parent-poms `rehearsal-88` (`731acd41`), and DSH `rehearsal-88` (`32e6e3f03`),
+`rehearsal-88-noindex` (`f2d1ed72b`) and `rehearsal-88-hotfix` (`31288af39`). All were pushed before
+the first dispatch and deleted after the last run.
+
+| Run | Result |
+|---|---|
+| R1, release | [36930577451](https://github.com/MRISS-Projects/dsh/actions/runs/36930577451): **green** |
+| R2, release, `dsh-test-dataset` with no `index.md` | [36930620664](https://github.com/MRISS-Projects/dsh/actions/runs/36930620664): **red at the verify step, as intended** |
+| R3, hotfix | [36930581504](https://github.com/MRISS-Projects/dsh/actions/runs/36930581504): **green** |
+
+**R1 and R3.**
+
+- `Skipping site deployment` is logged 13 times, once per module, in `Stage the Site`.
+- The check prints `verify-staged-site: all 13 module site(s) under '/tmp/sites' have an
+  index.html.`
+- `publish-scm` then executes once more, at the root `dsh`, in dry-run. That makes 14 executions
+  in the log: 13 skipped and 1 real.
+- The `site-deploy` marker is announced from the publish step. Heads, tags and packages are
+  unchanged, and the release tag is absent.
+
+**R2.**
+
+- The check prints `verify-staged-site: 1 of 13 module site(s) have no index.html:` and names
+  `releases/products/dsh/dsh-test-dataset`.
+- `Deploy Site to gh-pages` did not run. The log has 13 `publish-scm` executions, all skipped, and
+  no fourteenth.
+- `Rehearsal verify` is red on missing markers, which is expected for a run that stops early. Heads,
+  tags and packages are unchanged.
+- The assumption in §3.2 held: deleting a module's `index.md` leaves it without `index.html`.
+
+**The single publish sends what the per-module publishes sent.** In R1 the one publish reports
+`0 addition(s), 2608 update(s), 10326 delete(s)`. In run 36876508148, under the old flow, the last
+of the 13 per-module publishes reported exactly the same. The "deletes" are the plugin's count of
+`gh-pages` files outside the staged tree. `skipDeletedFiles` is `true` in the profile, so they are
+not removed, in either flow.
+
+### 7.4 The real publish
+
+Task 8, after the merge.
+
+### 7.5 Review round 1, 2026-10-01
+
+Copilot reviewed `6354cb4b` and raised one finding. It was valid.
+
+- **The finding.** The module list came from `find … | sort`. A pipeline returns its last command's
+  status, so `set -e` never saw `find` fail. A traversal that failed partway left the check passing
+  on the part of the tree it had reached.
+- **Reproduced.** With a `find` on the `PATH` that prints one complete module and then exits 1, the
+  script printed `all 1 module site(s) … have an index.html` and exited 0.
+- **The fix.** `find` runs on its own, and its failure fails the check with
+  `could not be read in full`. The suite gained that case as its twelfth. It failed against the old
+  script, and all 12 pass against the new one.
+- **How likely it was.** Unlikely on a runner, where the same user writes `/tmp/sites` and reads it
+  back. It is fixed anyway, because the check exists to stop a publish it cannot vouch for.
+
+### 7.6 Review round 2, 2026-10-01
+
+Copilot reviewed again and raised one new finding. It was valid, and older than this PR.
+
+- **The finding.** Release and hotfix accept a `site_deployment_url` input for where the site is
+  staged, but the verify step always checks `/tmp/sites`.
+- **The cause is in the POM.** The `deployment` profile's `publish-scm` execution fixes
+  `<content>/tmp/sites</content>`. So the input never had a working value other than its default:
+  any other staged one directory and published another. No consumer passes it.
+- **Why the path was not made configurable.** An explicit `<content>` in the POM beats the
+  `scmpublish.content` user property, so it needs a POM change and a re-pin. This PR deliberately
+  has neither.
+- **The fix.** A pre-flight step, `Check the site staging path`, in `project-release.yml` and
+  `project-hotfix.yml`. It refuses any value other than `file:///tmp/sites`, with or without a
+  trailing slash. It sits before `Maven Release`, the first write. Left to the verify step, the
+  refusal would come after the tag, the artifact deploy and the merge to `master`.
+- **Proof.** Two dry-run rehearsals passing `file:///tmp/custom-sites`, from scratch branches now
+  deleted:
+  - release, [36939474158](https://github.com/MRISS-Projects/dsh/actions/runs/36939474158): refused
+    at the new step in under a minute, with `Maven Release` and `Stage the Site` skipped;
+  - hotfix, [36939477538](https://github.com/MRISS-Projects/dsh/actions/runs/36939477538): the same,
+    in under two minutes.
+
+  Both print `site_deployment_url is 'file:///tmp/custom-sites', but only file:///tmp/sites is
+  supported`. Heads, tags and packages are unchanged in both. Their `Rehearsal verify` is red
+  because no write point was reached, which is expected.
+- **Not re-run.** The default value passing the new step. The condition was tested locally against
+  six values. R1 and R3 (§7.3) ran before the step existed.

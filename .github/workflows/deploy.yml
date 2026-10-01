@@ -200,14 +200,32 @@ jobs:
 
       # Mirrors: mvn -Ddeployment site-deploy
       # FR004: replaced -P deployment with -Ddeployment
-      - name: Deploy Snapshot Site
+      #
+      # #88: staging, verifying and publishing the site are three steps, as in the reusable
+      # project workflows; project-release.yml's 'Stage the Site' has the reason.
+      # -Dscmpublish.skipDeploy=true makes each module's publish-scm skip itself, so the
+      # staged site can be checked before anything is pushed.
+      - name: Stage the Snapshot Site
         if: ${{ inputs.release_type == 'snapshots' }}
         run: >
           mvn -B -Ddeployment
           -Drelease.type=snapshots
           -Dbuild.number=${GITHUB_RUN_NUMBER}
           -Dsite.deployment.personal.main=file:///tmp/sites
+          -Dscmpublish.skipDeploy=true
           site-deploy
+
+      - name: Verify every staged module site has an index.html
+        if: ${{ inputs.release_type == 'snapshots' }}
+        uses: ./.github/actions/verify-staged-site
+
+      # One publish for the whole site, from the root (-N), using the deployment profile's
+      # own publish-to-github execution configuration.
+      - name: Publish the Snapshot Site to gh-pages
+        if: ${{ inputs.release_type == 'snapshots' }}
+        run: >
+          mvn -B -N -Ddeployment
+          scm-publish:publish-scm@publish-to-github
 
       # #71: this repository is its own consumer. deploy.yml is dispatched rather than
       # reusable, so it cannot inherit the step from project-staging.yml and calls the same

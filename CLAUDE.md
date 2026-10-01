@@ -85,6 +85,14 @@ Two Maven lifecycles are involved and are **not interchangeable**:
   and `maven-javadoc-plugin` each contribute `aggregate` and `test-aggregate` reports whose mojos
   declare `executePhase` `compile`/`test-compile`, so the site build forks the default lifecycle four
   times and replays `process-resources` with it. That is the whole cause of `#71`.
+  **The workflows no longer let it push.** Run by hand, `site-deploy` pushes once per module, the
+  root first, because the `deployment` profile binds `publish-scm` to every module's `site-deploy`
+  phase. Since `#88` the four workflows split it in three: `site-deploy` with
+  `-Dscmpublish.skipDeploy=true` stages every module under `/tmp/sites` and pushes nothing;
+  `.github/actions/verify-staged-site` fails the run if a module's staged site has no `index.html`;
+  then `mvn -N -Ddeployment scm-publish:publish-scm@publish-to-github` publishes once, from the
+  root. Do not fold the three back into one command: there is then no point at which the staged
+  site can be checked before it is public.
 - `mvn ... process-resources` → default lifecycle: regenerates root `README.md`. It does **not** commit
   it (since `#71`) and does **not** publish the site.
 - Committing the regenerated `README.md` is a **workflow** step, not a Maven one:
