@@ -15,7 +15,7 @@ on:
         type: string
         required: false
         default: 'file:///tmp/sites'
-        description: 'Site staging path. Default: file:///tmp/sites'
+        description: 'Site staging path. Must be file:///tmp/sites, the directory the site is verified in and published from; any other value fails the run before it writes anything'
       dry_run:
         type: boolean
         required: false
@@ -184,6 +184,22 @@ jobs:
           HOTFIX_RELEASE_NUMBER=$(mvn -q help:evaluate -Dexpression=project.version -DforceStdout -N \
             | sed 's/-SNAPSHOT//')
           echo "HOTFIX_RELEASE_NUMBER=${HOTFIX_RELEASE_NUMBER}" >> $GITHUB_ENV
+
+      # #88: the staged site is verified at /tmp/sites and published from /tmp/sites, because
+      # the deployment profile's publish-scm execution fixes <content>/tmp/sites</content>
+      # (root pom.xml). Any other site_deployment_url would stage the site in one directory
+      # and publish another, so it is refused here, before the first write, rather than at
+      # the verify step, which runs after the tag, the artifact deploy and the master merge.
+      - name: Check the site staging path
+        env:
+          SITE_URL: ${{ inputs.site_deployment_url }}
+        run: |
+          if [ "${SITE_URL%/}" != "file:///tmp/sites" ]; then
+            echo "::error::site_deployment_url is '$SITE_URL', but only file:///tmp/sites is" \
+                 "supported: the site is published from /tmp/sites (publish-scm's <content>" \
+                 "in parent-poms' root pom.xml)."
+            exit 1
+          fi
 
       - name: Validate version
         run: |
