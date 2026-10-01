@@ -302,6 +302,11 @@
                                 <configuration>
                                     <includeOpenIssues>false</includeOpenIssues>
                                     <onlyMilestoneIssues>true</onlyMilestoneIssues>
+                                    <!-- maven-changes-plugin#38 (2.12.10): a closed milestone with no issues still gets its
+                                         section, with a "No issues" row. Set on both github-text-list executions, root
+                                         readme-generation and products product-release-deployment: they share this execution
+                                         id and are both active in a product release. -->
+                                    <includeEmptyMilestones>true</includeEmptyMilestones>
                                     <columnNames>Id,Type,Summary,Assignee,Reporter,Updated</columnNames>
                                     <failOnError>false</failOnError>
                                     <githubAPIServerId>github.com</githubAPIServerId>
