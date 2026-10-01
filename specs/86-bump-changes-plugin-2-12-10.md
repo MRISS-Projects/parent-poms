@@ -129,7 +129,7 @@ occurrence, and is checked there (task 5).
 - [ ] **Task 5.** At the 3.10.0 release, check that the README and the site report list
       `3.10.0` above `3.9.2`. This is a check for the release run, recorded on `#86`'s PR. It is not
       a task on this branch.
-- [ ] **Task 6.** Open a PR into `master` that references `#86`.
+- [x] **Task 6.** Open a PR into `master` that references `#86`.
 
 ## 6. Acceptance criteria
 
