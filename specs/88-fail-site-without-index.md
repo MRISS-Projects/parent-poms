@@ -174,15 +174,15 @@ DSH's staging first runs the new steps for real at the 0.4.0 RC.
 |---|---|
 | `.github/actions/verify-staged-site/action.yml`, `verify-staged-site.sh`, `verify-staged-site.test.sh` | new (§2.2) |
 | `.github/workflows/project-staging.yml`, `project-release.yml`, `project-hotfix.yml`, `deploy.yml` | the three-step split (§2.1) |
-| `CLAUDE.md` | one paragraph on the split, if its Profiles section describes site publication |
+| `CLAUDE.md` | the split, in the paragraph of the Profiles section that describes `site-deploy` |
 
 ## 5. Tasks
 
-- [ ] **Task 1 (red).** Write `verify-staged-site.test.sh` and a stub script that always passes. Run
+- [x] **Task 1 (red).** Write `verify-staged-site.test.sh` and a stub script that always passes. Run
       the suite, and record which cases fail.
-- [ ] **Task 2 (green).** Write `verify-staged-site.sh` and `action.yml`, with the script committed
+- [x] **Task 2 (green).** Write `verify-staged-site.sh` and `action.yml`, with the script committed
       as mode `100755`. Run the suite until it is green.
-- [ ] **Task 3.** Split the step in the four workflows (§2.1). The `#81` guard and the rest of
+- [x] **Task 3.** Split the step in the four workflows (§2.1). The `#81` guard and the rest of
       `build.yml` must stay green.
 - [ ] **Task 4.** Create parent-poms `rehearsal-88` and the DSH scratch branches. Run R1.
 - [ ] **Task 5.** Run R2, the module with no index.
