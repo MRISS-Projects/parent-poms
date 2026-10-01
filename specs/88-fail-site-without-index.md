@@ -187,7 +187,7 @@ DSH's staging first runs the new steps for real at the 0.4.0 RC.
 - [x] **Task 4.** Create parent-poms `rehearsal-88` and the DSH scratch branches. Run R1.
 - [x] **Task 5.** Run R2, the module with no index.
 - [x] **Task 6.** Run R3, the hotfix path.
-- [ ] **Task 7.** Delete every scratch branch, record the runs in §7, and open a PR into `master`
+- [x] **Task 7.** Delete every scratch branch, record the runs in §7, and open a PR into `master`
       that references `#88`.
 - [ ] **Task 8, after the merge.** Dispatch `deploy.yml` snapshots on `master` (§3.3) and record
       the run on the PR.
