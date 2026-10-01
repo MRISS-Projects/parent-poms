@@ -281,3 +281,32 @@ Copilot reviewed `6354cb4b` and raised one finding. It was valid.
   script, and all 12 pass against the new one.
 - **How likely it was.** Unlikely on a runner, where the same user writes `/tmp/sites` and reads it
   back. It is fixed anyway, because the check exists to stop a publish it cannot vouch for.
+
+### 7.6 Review round 2, 2026-10-01
+
+Copilot reviewed again and raised one new finding. It was valid, and older than this PR.
+
+- **The finding.** Release and hotfix accept a `site_deployment_url` input for where the site is
+  staged, but the verify step always checks `/tmp/sites`.
+- **The cause is in the POM.** The `deployment` profile's `publish-scm` execution fixes
+  `<content>/tmp/sites</content>`. So the input never had a working value other than its default:
+  any other staged one directory and published another. No consumer passes it.
+- **Why the path was not made configurable.** An explicit `<content>` in the POM beats the
+  `scmpublish.content` user property, so it needs a POM change and a re-pin. This PR deliberately
+  has neither.
+- **The fix.** A pre-flight step, `Check the site staging path`, in `project-release.yml` and
+  `project-hotfix.yml`. It refuses any value other than `file:///tmp/sites`, with or without a
+  trailing slash. It sits before `Maven Release`, the first write. Left to the verify step, the
+  refusal would come after the tag, the artifact deploy and the merge to `master`.
+- **Proof.** Two dry-run rehearsals passing `file:///tmp/custom-sites`, from scratch branches now
+  deleted:
+  - release, [36939474158](https://github.com/MRISS-Projects/dsh/actions/runs/36939474158): refused
+    at the new step in under a minute, with `Maven Release` and `Stage the Site` skipped;
+  - hotfix, [36939477538](https://github.com/MRISS-Projects/dsh/actions/runs/36939477538): the same,
+    in under two minutes.
+
+  Both print `site_deployment_url is 'file:///tmp/custom-sites', but only file:///tmp/sites is
+  supported`. Heads, tags and packages are unchanged in both. Their `Rehearsal verify` is red
+  because no write point was reached, which is expected.
+- **Not re-run.** The default value passing the new step. The condition was tested locally against
+  six values. R1 and R3 (§7.3) ran before the step existed.
