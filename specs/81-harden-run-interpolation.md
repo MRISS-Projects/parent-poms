@@ -176,14 +176,14 @@ commit SHAs are recorded in §7.
 
 ## 5. Tasks
 
-- [ ] **Task 1 (red).** Add the guard step to `build.yml`, push, and record the CI run that fails,
+- [x] **Task 1 (red).** Add the guard step to `build.yml`, push, and record the CI run that fails,
       listing the 31 offending lines.
-- [ ] **Task 2.** Rewrite the 13 steps of §1.1 and the six `github.action_path` uses of §1.3 (five steps), one
+- [x] **Task 2.** Rewrite the 13 steps of §1.1 and the six `github.action_path` uses of §1.3 (five steps), one
       commit per file.
-- [ ] **Task 3 (green).** Push, and record the green CI run, with the guard passing.
-- [ ] **Task 4.** Rehearsal R1.
-- [ ] **Task 5.** Rehearsal R2, the awkward input.
-- [ ] **Task 6.** Rehearsal R3, the hotfix path.
+- [x] **Task 3 (green).** Push, and record the green CI run, with the guard passing.
+- [x] **Task 4.** Rehearsal R1.
+- [x] **Task 5.** Rehearsal R2, the awkward input.
+- [x] **Task 6.** Rehearsal R3, the hotfix path.
 - [ ] **Task 7.** Delete the scratch branches, record the runs in §7, and open a PR into `master`
       that references `#81`.
 
@@ -202,4 +202,33 @@ to the following:
 
 ## 7. Verification results
 
-To be filled in during the build.
+All on 2026-10-01 (UTC).
+
+### 7.1 Static: the guard
+
+- **Red.** [Run 36798605107](https://github.com/MRISS-Projects/parent-poms/actions/runs/36798605107),
+  at `6fcd0d5b`, with the guard alone. It failed at `Check no run body interpolates an expression`,
+  listing 31 lines, and no earlier step failed.
+- **Green.** [Run 36798832857](https://github.com/MRISS-Projects/parent-poms/actions/runs/36798832857),
+  at `4f58f59b`, after the rewrite. The guard, `Build and Install` and `Generate Site` all passed.
+
+### 7.2 Dynamic: rehearsals from DSH
+
+| Run | Scratch commit | Result |
+|---|---|---|
+| R1, release, ordinary inputs | `af01900eb` on `rehearsal-81`, from `DEVELOP` | [36798919172](https://github.com/MRISS-Projects/dsh/actions/runs/36798919172), attempt 2: **green**. All nine markers announced, heads, tags and packages unchanged, tag `v0.4.0` absent |
+| R2, release, awkward input | the same | [36803349619](https://github.com/MRISS-Projects/dsh/actions/runs/36803349619): **passes**. `INJ81` appears 0 times. Maven received the whole literal value and rejected it: `0.4.1-SNAPSHOT$(printf "INJ%s" 81 >&2) is invalid, expected a snapshot`. Heads, tags and packages unchanged |
+| R3, hotfix | `822c6ba1f` on `rehearsal-81-hotfix`, from `0.3.x` | [36803455529](https://github.com/MRISS-Projects/dsh/actions/runs/36803455529): **green**. All six markers announced, heads, tags and packages unchanged, tag `v0.3.3` absent |
+
+- **R1's first attempt went red at `Rehearsal verify`, and the cause was the rehearsal process, not
+  this change.** Its heads diff had one entry, `refs/heads/rehearsal-81-hotfix`. That was R3's
+  scratch branch, pushed to DSH while R1 was running. The guard was right to flag it. Attempt 2 ran
+  with nothing pushed to DSH, and went green.
+- **The lesson:** do not push to the rehearsing repository during a rehearsal.
+- **R2's red `Rehearsal verify` is expected.** The run stopped at `Maven Release`, so later write
+  points never announced themselves. The pass condition is the absent `INJ81` and the unchanged
+  remote.
+- **R1's markers print the values read from env correctly:** `tag v0.4.0`,
+  `hotfix branch 0.4.x`, the `0.4.1-SNAPSHOT version change`, and `RC branch rehearsal-81`.
+
+Both scratch branches were deleted from the DSH remote after R3.
