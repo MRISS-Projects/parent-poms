@@ -142,9 +142,15 @@ jobs:
       # -Dproject.dev.<groupId>:<artifactId>=<version> is intentionally omitted: it is
       # unnecessary once the correct property is used, and when targeting the root
       # module's own GAV it incorrectly bumps the root POM's version on the RC branch too.
+      #
+      # #81: the input reaches the script through env and is read quoted, never as a ${{ }}
+      # in the body. The 'Check no run body interpolates an expression' step in build.yml
+      # enforces it.
       - name: Create RC branch
+        env:
+          NEXT_DEVELOPMENT_VERSION: ${{ inputs.next_development_version }}
         run: |
           mvn -B \
-            -Dbuild.NEXT_DEVELOPMENT_VERSION=${{ inputs.next_development_version }} \
+            "-Dbuild.NEXT_DEVELOPMENT_VERSION=$NEXT_DEVELOPMENT_VERSION" \
             -DautoVersionSubmodules=true \
             release:branch
