@@ -102,7 +102,7 @@
         <sure-fire-report.plugin.version>3.5.5</sure-fire-report.plugin.version>
         <jar.plugin.version>3.4.2</jar.plugin.version>
         <project-info-reports.plugin.version>3.9.0</project-info-reports.plugin.version>
-        <changes.plugin.version>2.12.9</changes.plugin.version>
+        <changes.plugin.version>2.12.10</changes.plugin.version>
         <assembly.plugin.version>3.7.1</assembly.plugin.version>
         <dependency.plugin.version>3.8.1</dependency.plugin.version>
         <deploy.plugin.version>3.1.4</deploy.plugin.version>
@@ -1082,6 +1082,11 @@
                                 <configuration>
                                     <includeOpenIssues>false</includeOpenIssues>
                                     <onlyMilestoneIssues>true</onlyMilestoneIssues>
+                                    <!-- maven-changes-plugin#38 (2.12.10): a closed milestone with no issues still gets its
+                                         section, with a "No issues" row. Set on both github-text-list executions, root
+                                         readme-generation and products product-release-deployment: they share this execution
+                                         id and are both active in a product release. -->
+                                    <includeEmptyMilestones>true</includeEmptyMilestones>
                                     <columnNames>Id,Type,Summary,Assignee,Reporter,Updated</columnNames>
                                     <failOnError>false</failOnError>
                                     <githubAPIServerId>github.com</githubAPIServerId>
