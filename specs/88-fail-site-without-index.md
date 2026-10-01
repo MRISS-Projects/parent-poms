@@ -184,9 +184,9 @@ DSH's staging first runs the new steps for real at the 0.4.0 RC.
       as mode `100755`. Run the suite until it is green.
 - [x] **Task 3.** Split the step in the four workflows (§2.1). The `#81` guard and the rest of
       `build.yml` must stay green.
-- [ ] **Task 4.** Create parent-poms `rehearsal-88` and the DSH scratch branches. Run R1.
-- [ ] **Task 5.** Run R2, the module with no index.
-- [ ] **Task 6.** Run R3, the hotfix path.
+- [x] **Task 4.** Create parent-poms `rehearsal-88` and the DSH scratch branches. Run R1.
+- [x] **Task 5.** Run R2, the module with no index.
+- [x] **Task 6.** Run R3, the hotfix path.
 - [ ] **Task 7.** Delete every scratch branch, record the runs in §7, and open a PR into `master`
       that references `#88`.
 - [ ] **Task 8, after the merge.** Dispatch `deploy.yml` snapshots on `master` (§3.3) and record
@@ -201,4 +201,68 @@ DSH's staging first runs the new steps for real at the 0.4.0 RC.
 
 ## 7. Verification results
 
-To be filled in during the build.
+All on 2026-10-01 (UTC).
+
+### 7.1 The script's tests
+
+- **Red.** Against a stub that always passes, 10 of the 11 cases failed. The eleventh is a
+  "must not be named" check, which a silent stub satisfies.
+- **Green.** All 11 pass against `verify-staged-site.sh`.
+- **Real data.** Run against DSH's published `releases` and `rcs` trees from `gh-pages`, it finds
+  46 module sites, all with an `index.html`.
+- **CI.** [Run 36930489167](https://github.com/MRISS-Projects/parent-poms/actions/runs/36930489167),
+  at `004bcf5e`, is green, with the suite picked up by `Test the action scripts`.
+
+### 7.2 The Maven mechanics, locally
+
+On parent-poms' root module, with `-N`:
+
+- **Staging.** `site-deploy` with `-Dscmpublish.skipDeploy=true` filled `/tmp/sites/snapshots` and
+  logged `scmpublish.skipDeploy = true: Skipping site deployment`.
+- **Publishing.** `scm-publish:publish-scm@publish-to-github` took the profile's configuration: the
+  `gh-pages` branch, the repository URL and the `github.com` server credentials. It could not finish
+  on the development machine. Checking out parent-poms' `gh-pages` fails on Windows with
+  `Filename too long`, and the plugin then throws while formatting git's error. The Linux runners
+  do the same checkout today. R1 and R3 below complete it.
+
+### 7.3 Rehearsals from DSH
+
+Scratch branches: parent-poms `rehearsal-88` (`731acd41`), and DSH `rehearsal-88` (`32e6e3f03`),
+`rehearsal-88-noindex` (`f2d1ed72b`) and `rehearsal-88-hotfix` (`31288af39`). All were pushed before
+the first dispatch and deleted after the last run.
+
+| Run | Result |
+|---|---|
+| R1, release | [36930577451](https://github.com/MRISS-Projects/dsh/actions/runs/36930577451): **green** |
+| R2, release, `dsh-test-dataset` with no `index.md` | [36930620664](https://github.com/MRISS-Projects/dsh/actions/runs/36930620664): **red at the verify step, as intended** |
+| R3, hotfix | [36930581504](https://github.com/MRISS-Projects/dsh/actions/runs/36930581504): **green** |
+
+**R1 and R3.**
+
+- `Skipping site deployment` is logged 13 times, once per module, in `Stage the Site`.
+- The check prints `verify-staged-site: all 13 module site(s) under '/tmp/sites' have an
+  index.html.`
+- `publish-scm` then executes once more, at the root `dsh`, in dry-run. That makes 14 executions
+  in the log: 13 skipped and 1 real.
+- The `site-deploy` marker is announced from the publish step. Heads, tags and packages are
+  unchanged, and the release tag is absent.
+
+**R2.**
+
+- The check prints `verify-staged-site: 1 of 13 module site(s) have no index.html:` and names
+  `releases/products/dsh/dsh-test-dataset`.
+- `Deploy Site to gh-pages` did not run. The log has 13 `publish-scm` executions, all skipped, and
+  no fourteenth.
+- `Rehearsal verify` is red on missing markers, which is expected for a run that stops early. Heads,
+  tags and packages are unchanged.
+- The assumption in §3.2 held: deleting a module's `index.md` leaves it without `index.html`.
+
+**The single publish sends what the per-module publishes sent.** In R1 the one publish reports
+`0 addition(s), 2608 update(s), 10326 delete(s)`. In run 36876508148, under the old flow, the last
+of the 13 per-module publishes reported exactly the same. The "deletes" are the plugin's count of
+`gh-pages` files outside the staged tree. `skipDeletedFiles` is `true` in the profile, so they are
+not removed, in either flow.
+
+### 7.4 The real publish
+
+Task 8, after the merge.
