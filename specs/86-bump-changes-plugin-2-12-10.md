@@ -73,7 +73,7 @@ All verification is local. Nothing in this section pushes a README or a site.
 
 No closed, milestoned, unlabelled issue exists any more, in parent-poms or in DSH. The six that
 existed were labelled as a data fix after `#86` was raised. The proof therefore needs a deliberate
-one: **remove the `task` label from DSH `#146` for the length of one local generation, then put it
+one: **remove the `bug` label from DSH `#146` for the length of one local generation, then put it
 back.** `#146` is the only issue in DSH's closed milestone `0.3.2`.
 
 - **Why `#146`.** DSH's README is also where `#38` shows (DSH `0.3.1` is closed and empty), so one
