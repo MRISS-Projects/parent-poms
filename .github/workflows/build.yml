@@ -165,6 +165,22 @@ jobs:
           fi
           echo "No reusable project workflow declares service containers."
 
+      # #81: an expression inside a run: body is substituted into the script TEXT before bash
+      # parses it, so a caller-supplied input holding shell metacharacters becomes code - and a
+      # `#` in it can swallow the rest of a command, leaving a green step that did nothing.
+      # Every value a script needs goes through the step's env: and is read as a quoted
+      # variable. The rule is absolute, with no allowlist to keep current.
+      #
+      # The scan lives in a script with its own tests, which run first: finding a run: body
+      # is parsing, and PR #100's review showed an untested inline version missing seven of
+      # the nine legal ways to write one. 'Test the action scripts' above globs
+      # .github/actions only, so this suite is run here, next to the check it guards.
+      - name: Check no run body interpolates an expression
+        run: |
+          set -euo pipefail
+          sh .github/scripts/check-run-interpolation.test.sh
+          sh .github/scripts/check-run-interpolation.sh
+
       # Configure Maven settings so it can read from the GitHub Packages registry
       # (https://maven.pkg.github.com/MRISS-Projects/maven-repo) where
       # com.mriss:mriss-parent is hosted.

@@ -48,7 +48,8 @@ runs:
     - name: Verify the generated README has no unresolved placeholders
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: ${{ github.action_path }}/check-placeholders.sh README.md src/site/markdown/README.md
+      run: |
+        "$GITHUB_ACTION_PATH/check-placeholders.sh" README.md src/site/markdown/README.md
 
     - name: Commit and push README.md
       if: ${{ inputs.verify-only != 'true' }}

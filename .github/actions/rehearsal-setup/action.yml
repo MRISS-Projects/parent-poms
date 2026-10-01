@@ -70,11 +70,11 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        cp "${{ github.action_path }}/marker.sh" "$RUNNER_TEMP/rehearsal-marker.sh"
+        cp "$GITHUB_ACTION_PATH/marker.sh" "$RUNNER_TEMP/rehearsal-marker.sh"
         # snapshot-packages.sh is installed rather than called in place because
         # rehearsal-verify must run the identical script to produce the 'after' half of the
         # diff, and a composite action cannot address a sibling action's action_path.
-        cp "${{ github.action_path }}/snapshot-packages.sh" "$RUNNER_TEMP/rehearsal-snapshot-packages.sh"
+        cp "$GITHUB_ACTION_PATH/snapshot-packages.sh" "$RUNNER_TEMP/rehearsal-snapshot-packages.sh"
         chmod +x "$RUNNER_TEMP/rehearsal-marker.sh" "$RUNNER_TEMP/rehearsal-snapshot-packages.sh"
         # Start from a clean slate so a re-run on a reused runner cannot inherit ids.
         rm -f "$RUNNER_TEMP/rehearsal-markers"

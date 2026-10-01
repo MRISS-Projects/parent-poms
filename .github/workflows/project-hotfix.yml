@@ -212,7 +212,13 @@ jobs:
         with:
           site_deployment_url: ${{ inputs.site_deployment_url }}
 
+      # #81: every input reaches a run: body through env and is read quoted, never as a ${{ }}
+      # in the script. The 'Check no run body interpolates an expression' step in build.yml
+      # enforces it; project-release.yml's 'Checkout Hotfix Branch and Set Initial Version'
+      # has the reason.
       - name: Maven Release Perform
+        env:
+          SITE_URL: ${{ inputs.site_deployment_url }}
         run: |
           bash "$RUNNER_TEMP/rehearsal-marker.sh" release-perform-deploy \
             "check out the tag and deploy the artifacts to the registry"
@@ -223,14 +229,16 @@ jobs:
           # and whatever a product starts under it — out of perform. Inert under a parent
           # older than 3.9.2, which does not interpolate the property.
           mvn -B $RH_RELEASE_DRYRUN \
-            -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
+            -Dsite.deployment.personal.main="${SITE_URL}" \
             -Drelease.forked.test.arguments=-DskipTests \
             release:perform
 
       - name: Merge Release Tag to Master
+        env:
+          GIT_PROJECT: ${{ inputs.git_project }}
         run: |
           CURRENT_TAG="v${HOTFIX_RELEASE_NUMBER}"
-          REPO_URL="https://x-access-token:${DEPLOY_TOKEN}@github.com/MRISS-Projects/${{ inputs.git_project }}.git"
+          REPO_URL="https://x-access-token:${DEPLOY_TOKEN}@github.com/MRISS-Projects/${GIT_PROJECT}.git"
 
           rm -rf target/checkout
 
@@ -258,12 +266,14 @@ jobs:
       # the badge. The tag is local in both modes: prepare created it, or, in a rehearsal,
       # the tag bridge did. Nothing since prepare has touched this workspace's tracked files.
       - name: Deploy Site to gh-pages
+        env:
+          SITE_URL: ${{ inputs.site_deployment_url }}
         run: |
           git checkout --quiet --detach "v${HOTFIX_RELEASE_NUMBER}"
           bash "$RUNNER_TEMP/rehearsal-marker.sh" site-deploy \
             "publish the generated site to gh-pages"
           mvn -B $RH_SCMPUBLISH_DRYRUN \
-            -Dsite.deployment.personal.main="${{ inputs.site_deployment_url }}" \
+            -Dsite.deployment.personal.main="${SITE_URL}" \
             -Ddeployment \
             -Drelease-deployment \
             site-deploy

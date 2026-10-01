@@ -1,0 +1,261 @@
+# Spec: no `${{ }}` in any `run:` body (`#81`)
+
+| | |
+|---|---|
+| Issue | [`#81`](https://github.com/MRISS-Projects/parent-poms/issues/81): harden `project-release.yml`, where dispatch inputs are interpolated into `run:` bodies in 12 more steps |
+| Milestone | `3.10.0-SNAPSHOT` |
+| Branch | `issue-81-harden-run-interpolation`, cut from `master` at `ca7a6e5f` |
+| Precedent | PR #80 fixed its own two steps with the `env:` pattern. `#95` set the scratch-branch rehearsal used in §4 |
+
+> **For agentic workers:** implement this task-by-task. Steps use checkbox (`- [ ]`) syntax.
+
+**Goal.** No caller-supplied value is ever parsed as shell code, in any reusable workflow or
+composite action in this repository. A guard in `build.yml` keeps it that way.
+
+**Architecture.** Every `${{ }}` expression inside a `run:` body moves into the step's `env:` block,
+and the script reads it as a quoted variable. This is PR #80's pattern, already used by
+`Check the development branch exists`, `Create Hotfix Branch` and others. Once every body is clean,
+the rule is simple enough to enforce mechanically: **no `${{` in any `run:` body**.
+
+**Tech stack.** GitHub Actions YAML and bash. The proof is a static guard plus dry-run rehearsals
+from DSH.
+
+## 1. The audit
+
+The issue's list was written against `project-release.yml` before later changes, and asked for the
+other workflows to be audited "in the same pass". A scan of every `run:` body (block and
+single-line, in `.github/workflows/*.yml` and `.github/actions/*/action.yml`) on `ca7a6e5f` finds
+the following.
+
+### 1.1 Caller-supplied inputs in `run:` bodies: the defect
+
+| File | Step | Inputs interpolated |
+|---|---|---|
+| `project-release.yml` | `Maven Release` | `next_development_version`, `current_version` (×3 across both branches of the dry-run `if`) |
+| `project-release.yml` | `Maven Release Perform` | `site_deployment_url` |
+| `project-release.yml` | `Create Hotfix Branch` | `hotfix_branch` (×2) |
+| `project-release.yml` | `Merge Release Tag to Master` | `current_version`, `git_project` |
+| `project-release.yml` | `Deploy Site to gh-pages` | `site_deployment_url` |
+| `project-release.yml` | `Remove RC Branch` | `git_project`, `branch_name` (×2) |
+| `project-hotfix.yml` | `Maven Release Perform` | `site_deployment_url` |
+| `project-hotfix.yml` | `Merge Release Tag to Master` | `git_project` |
+| `project-hotfix.yml` | `Deploy Site to gh-pages` | `site_deployment_url` |
+| `project-stage.yml` | `Create RC branch` | `next_development_version` |
+| `project-staging.yml` | `Build and Deploy Staging Artifacts` | `build_number`, `appengine_project_version` (×2), `cloudrun_project_version` (×2) |
+| `project-staging.yml` | `Deploy Staging Site` | `build_number` |
+| `actions/rehearsal-tag` | `Install the release-version artifacts…` | `inputs.site_deployment_url` |
+
+That is 13 steps. `build.yml` and `deploy.yml` have none.
+
+### 1.2 Issue entries that are not `run:` interpolation
+
+Six of the issue's twelve have no `${{ }}` in a `run:` body:
+
+- `Checkout`, `Rehearsal setup`, `Rehearsal tag bridge`, `Rehearsal verify`,
+  `Render consumer Maven properties` and `Commit generated README.md on Master` are `uses:` steps.
+- They pass inputs through `with:`, which is data, not script. The composite actions behind them
+  then read those inputs safely through `env:`. The one exception is `rehearsal-tag`, listed in
+  §1.1.
+
+### 1.3 Runner-supplied values: not a defect, cleaned anyway
+
+`${{ github.action_path }}` appears in five composite-action steps (`commit-readme`,
+`rehearsal-setup`, `rehearsal-tag`, `rehearsal-verify` ×2). No caller can set it. It is replaced by
+`$GITHUB_ACTION_PATH`, which the runner exports in composite actions and which `maven-properties` and
+`merge-to-develop` already use. That makes the guard's rule absolute, with no allowlist to maintain.
+
+### 1.4 DSH, the consumer
+
+DSH's own workflows were scanned too. Their only `run:` interpolation is `${{ github.repository }}`,
+in `wiki-sync.yml`, which no caller can set. They are out of scope here.
+
+## 2. Design
+
+### 2.1 The rewrite, per step
+
+```yaml
+      - name: Remove RC Branch
+        env:
+          GIT_PROJECT: ${{ inputs.git_project }}
+          BRANCH_NAME: ${{ inputs.branch_name }}
+        run: |
+          REPO_URL="https://x-access-token:${DEPLOY_TOKEN}@github.com/MRISS-Projects/${GIT_PROJECT}.git"
+          git push $RH_GIT_PUSH_DRYRUN "$REPO_URL" --delete "$BRANCH_NAME"
+```
+
+- **One name per input.** The `env:` name is the input's name in upper case
+  (`NEXT_DEVELOPMENT_VERSION`, `SITE_DEPLOYMENT_URL`), the convention the existing hardened steps use.
+- **Merging with existing `env:`.** A step that already has an `env:` block gets the new names added
+  to it.
+- **Quoting.** Every use is double-quoted, including inside `-Dprop="$VAR"` and the
+  `rehearsal-marker.sh` message strings.
+- **Composite actions.** `${{ inputs.x }}` becomes `env: X: ${{ inputs.x }}` on the step.
+- **`dry_run`.** `inputs.dry_run` stays in `if:` conditions. An `if:` is an expression, not a
+  script, so it is not affected.
+- **Existing unquoted variables are left alone.** `$RH_GIT_PUSH_DRYRUN` and `$RH_SCM_LOCAL_URL` are
+  set by the workflow itself, are never caller input, and are deliberately unquoted so that an empty
+  value adds no argument. Changing them is a different change.
+
+### 2.2 The guard, in `build.yml`
+
+A new step, `Check no run body interpolates an expression`, sits beside the existing guards
+(`#71`, `#72`, `#78`). It prints a `::error::` naming every offending line, and a short reason.
+
+- **Where the scan lives.** `.github/scripts/check-run-interpolation.sh`, with its tests in
+  `check-run-interpolation.test.sh`. The step runs the tests, then the script. As first built, the
+  scan was inline in the step and had no tests. Review round 1 (§7.3) showed what that cost.
+- **What it scans.** A body is whatever a `run:` key holds: the rest of its own line, and every
+  following line indented deeper than the key. That one rule covers a block scalar under any
+  header, a script that starts on the next line, and a plain scalar continued over several lines.
+  It fails on any `${{` inside one, across `.yml` and `.yaml` workflows and `action.yml` and
+  `action.yaml` files.
+- **The one exception.** The `run:` mapping under `defaults:` holds settings, not a script, and is
+  skipped.
+- **Red first.** Against `ca7a6e5f` it reports every line of §1.1 and §1.3, 31 in all: 25 caller
+  inputs and 6 `github.action_path`. That run is the guard's red, recorded in task 1.
+- **Self-check.** Neither the step nor the script holds a literal `${{` in a `run:` body, so the
+  guard does not flag itself.
+
+### 2.3 Not in scope
+
+- **Validating version shapes.** The issue excludes this, and `#69` already rejects a malformed
+  version at `release:update-versions`.
+- **`with:` values passed to third-party actions.** They are data.
+- **DSH's workflows** (§1.4).
+
+## 3. Files to change
+
+| File | Change |
+|---|---|
+| `.github/workflows/project-release.yml` | §1.1, 6 steps |
+| `.github/workflows/project-hotfix.yml` | §1.1, 3 steps |
+| `.github/workflows/project-stage.yml` | §1.1, 1 step |
+| `.github/workflows/project-staging.yml` | §1.1, 2 steps |
+| `.github/actions/rehearsal-tag/action.yml` | §1.1 `inputs.site_deployment_url`; §1.3 `github.action_path` |
+| `.github/actions/commit-readme/action.yml`, `rehearsal-setup/action.yml`, `rehearsal-verify/action.yml` | §1.3 `github.action_path` → `$GITHUB_ACTION_PATH` |
+| `.github/workflows/build.yml` | the guard step (§2.2) |
+| `.github/scripts/check-run-interpolation.sh`, `.test.sh` | the scan and its tests (§2.2), added in review round 1 |
+
+## 4. Verification design
+
+### 4.1 Static: the guard
+
+The guard runs on every push. It goes red on the unfixed tree (task 1) and green on the fixed one
+(task 3). It also checks the whole tree, including the steps no rehearsal can reach.
+
+### 4.2 Dynamic: dry-run rehearsals from DSH
+
+These follow `#95`'s method. A scratch DSH branch points one wrapper at
+`project-*.yml@issue-81-harden-run-interpolation`, and is dispatched with `dry_run=true`. The
+composite actions stay at `@master` during these runs, as in `#95`. Their changes are covered by the
+guard, and run for real at the next release.
+
+- **R1, the release path, ordinary inputs.** Scratch branch `rehearsal-81` from DSH `DEVELOP`.
+  `release.yml` is dispatched with `branch_name=rehearsal-81`, `current_version=0.4.0`,
+  `next_development_version=0.4.1-SNAPSHOT`, `hotfix_branch=0.4.x`,
+  `initial_hotfix_version=0.4.1-SNAPSHOT` and `dry_run=true`. Expect green, with `rehearsal-verify`
+  announcing every write point and the remote unchanged. This proves the rewrite did not break the
+  release path.
+- **R2, the release path, an awkward input**, as the issue asks. It is the same as R1, but with
+  `next_development_version='0.4.1-SNAPSHOT$(printf "INJ%s" 81 >&2)'`.
+  - **Why this payload.** It is chosen so that a failure is still harmless. Executed as code, it
+    prints `INJ81` to stderr, and the substitution captures nothing. So the command line keeps all
+    its arguments, `-DdryRun` included, and nothing is truncated. Its literal text contains
+    `INJ%s`, never `INJ81`.
+  - **Pass condition.** The job log contains no `INJ81`. Maven receives the value as data: it either
+    rejects it as an invalid version, or carries it through the dry run. Either outcome passes,
+    provided no `INJ81` appears.
+  - **No red rehearsal against `@master`.** The issue's own payload shape (`; …`) truncates the
+    command line. In `Maven Release`, the truncation could drop the arguments that make the run a
+    dry run, and turn a rehearsal into a real `release:prepare`. The guard's red (§4.1) is the
+    evidence that the defect exists.
+- **R3, the hotfix path.** Scratch branch `rehearsal-81-hotfix` from DSH `0.3.x`. `hotfix.yml`
+  points at the task branch, and is dispatched with `branch_name=rehearsal-81-hotfix` and
+  `dry_run=true`. Expect green.
+- **Stage and staging cannot be rehearsed.** `project-stage.yml` and `project-staging.yml` have no
+  `dry_run` input, and a run writes: an RC branch, a version bump, staging packages and a site.
+  Their three steps are covered by the guard and by review. They run for real at DSH's next staging,
+  0.4.0's RC, which should be watched with this change in mind.
+
+All scratch branches are deleted from the remote after their run. The run URLs and the scratch
+commit SHAs are recorded in §7.
+
+## 5. Tasks
+
+- [x] **Task 1 (red).** Add the guard step to `build.yml`, push, and record the CI run that fails,
+      listing the 31 offending lines.
+- [x] **Task 2.** Rewrite the 13 steps of §1.1 and the six `github.action_path` uses of §1.3 (five steps), one
+      commit per file.
+- [x] **Task 3 (green).** Push, and record the green CI run, with the guard passing.
+- [x] **Task 4.** Rehearsal R1.
+- [x] **Task 5.** Rehearsal R2, the awkward input.
+- [x] **Task 6.** Rehearsal R3, the hotfix path.
+- [x] **Task 7.** Delete the scratch branches, record the runs in §7, and open a PR into `master`
+      that references `#81`.
+
+## 6. Acceptance criteria
+
+The issue states its fix and validation in prose, not as numbered criteria. This spec holds itself
+to the following:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | No `run:` body in any workflow or composite action interpolates a `${{ }}` expression | §2.1, task 2 |
+| 2 | The build fails if one is reintroduced | §2.2, tasks 1 and 3 |
+| 3 | The release and hotfix paths still rehearse green | R1, R3 |
+| 4 | An awkward caller value is received as data, not executed | R2 |
+| 5 | `deploy.yml`, `project-hotfix.yml` and the staging workflows are audited, as the issue asks | §1 |
+
+## 7. Verification results
+
+All on 2026-10-01 (UTC).
+
+### 7.1 Static: the guard
+
+- **Red.** [Run 36798605107](https://github.com/MRISS-Projects/parent-poms/actions/runs/36798605107),
+  at `6fcd0d5b`, with the guard alone. It failed at `Check no run body interpolates an expression`,
+  listing 31 lines, and no earlier step failed.
+- **Green.** [Run 36798832857](https://github.com/MRISS-Projects/parent-poms/actions/runs/36798832857),
+  at `4f58f59b`, after the rewrite. The guard, `Build and Install` and `Generate Site` all passed.
+
+### 7.2 Dynamic: rehearsals from DSH
+
+| Run | Scratch commit | Result |
+|---|---|---|
+| R1, release, ordinary inputs | `af01900eb` on `rehearsal-81`, from `DEVELOP` | [36798919172](https://github.com/MRISS-Projects/dsh/actions/runs/36798919172), attempt 2: **green**. All nine markers announced, heads, tags and packages unchanged, tag `v0.4.0` absent |
+| R2, release, awkward input | the same | [36803349619](https://github.com/MRISS-Projects/dsh/actions/runs/36803349619): **passes**. `INJ81` appears 0 times. Maven received the whole literal value and rejected it: `0.4.1-SNAPSHOT$(printf "INJ%s" 81 >&2) is invalid, expected a snapshot`. Heads, tags and packages unchanged |
+| R3, hotfix | `822c6ba1f` on `rehearsal-81-hotfix`, from `0.3.x` | [36803455529](https://github.com/MRISS-Projects/dsh/actions/runs/36803455529): **green**. All six markers announced, heads, tags and packages unchanged, tag `v0.3.3` absent |
+
+- **R1's first attempt went red at `Rehearsal verify`, and the cause was the rehearsal process, not
+  this change.** Its heads diff had one entry, `refs/heads/rehearsal-81-hotfix`. That was R3's
+  scratch branch, pushed to DSH while R1 was running. The guard was right to flag it. Attempt 2 ran
+  with nothing pushed to DSH, and went green.
+- **The lesson:** do not push to the rehearsing repository during a rehearsal.
+- **R2's red `Rehearsal verify` is expected.** The run stopped at `Maven Release`, so later write
+  points never announced themselves. The pass condition is the absent `INJ81` and the unchanged
+  remote.
+- **R1's markers print the values read from env correctly:** `tag v0.4.0`,
+  `hotfix branch 0.4.x`, the `0.4.1-SNAPSHOT version change`, and `RC branch rehearsal-81`.
+
+Both scratch branches were deleted from the DSH remote after R3.
+
+### 7.3 Review round 1, 2026-10-01
+
+Copilot reviewed `e70ae985` and raised two findings. Both were valid.
+
+1. **The guard could be bypassed** (`build.yml`). It matched only a bare `|` or `>` block header,
+   and only `*.yml` and `action.yml` files.
+   - **Reproduced.** The committed guard was run against a fixture of nine legal ways to write a
+     `run:` body, each holding an expression. It caught two: a plain block and a single line.
+   - **Seven forms got through.** The review named four: a header followed by a comment, a header
+     with an indentation indicator, and the two `.yaml` file names. The fixture found three more:
+     a folded header with chomping and indentation indicators, a script starting on the line after
+     `run:`, and a plain scalar continued on a second line.
+   - **Nothing in the tree was missed.** The repository uses none of those forms and has no `.yaml`
+     file, so the 31 lines of §7.1 were the complete set.
+   - **The fix.** The scan moved to `.github/scripts/check-run-interpolation.sh`, with the rule in
+     §2.2, and gained an 18-case test suite. Against the old logic, 7 of the 18 failed, the seven
+     forms above. Against the new, all pass. The rewritten scan still reports the same 31 lines on
+     `ca7a6e5f`.
+2. **Task 7 was unticked**, though the scratch branches were deleted, §7 was written and the PR was
+   open. Ticked.
