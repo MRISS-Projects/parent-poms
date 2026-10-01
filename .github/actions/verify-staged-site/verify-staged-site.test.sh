@@ -125,6 +125,21 @@ expect "a stage with pages but no project-info.html fails" 1 "no module site"
 n=$((n + 1)); stage="$TMP/$n-missing"
 expect "a stage directory that does not exist fails" 1 "does not exist"
 
+# PR #101 review: a traversal that fails partway has verified only the part it reached. A
+# find that prints one complete module and then fails, as it does on an unreadable
+# directory, stands in for it; it is put first on PATH for this one case.
+new_stage
+module rcs/products/dsh
+shim="$TMP/shim"
+mkdir -p "$shim"
+printf '#!/bin/sh\necho "%s/rcs/products/dsh/project-info.html"\necho "find: Permission denied" >&2\nexit 1\n' \
+  "$stage" > "$shim/find"
+chmod +x "$shim/find"
+saved_path="$PATH"
+PATH="$shim:$PATH"
+expect "a find that fails partway fails the check, whatever it found first" 1 "could not be read"
+PATH="$saved_path"
+
 if [ "$failures" -ne 0 ]; then
   echo "$failures test(s) failed."
   exit 1

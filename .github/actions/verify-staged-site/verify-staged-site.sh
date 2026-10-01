@@ -27,9 +27,19 @@ if [ ! -d "$ROOT" ]; then
   exit 1
 fi
 
+found="$(mktemp)"
 list="$(mktemp)"
-trap 'rm -f "$list"' EXIT
-find "$ROOT" -type f -name project-info.html | sort > "$list"
+trap 'rm -f "$found" "$list"' EXIT
+
+# find runs on its own, not piped into sort: a pipeline returns its last command's status,
+# so `find | sort` hid a traversal that failed partway, and the check then passed on the
+# part of the tree it had reached.
+if ! find "$ROOT" -type f -name project-info.html > "$found"; then
+  echo "::error::verify-staged-site: the staged site under '$ROOT' could not be read in full."
+  echo "Nothing is verified, so the site is not published."
+  exit 1
+fi
+sort "$found" > "$list"
 
 total=0
 missing=0
