@@ -165,6 +165,43 @@ jobs:
           fi
           echo "No reusable project workflow declares service containers."
 
+      # #81: an expression inside a run: body is substituted into the script TEXT before bash
+      # parses it, so a caller-supplied input holding shell metacharacters becomes code - and a
+      # `#` in it can swallow the rest of a command, leaving a green step that did nothing.
+      # Every value a script needs goes through the step's env: and is read as a quoted
+      # variable; inside a composite action, $GITHUB_ACTION_PATH replaces the action_path
+      # expression. The rule is absolute, with no allowlist to keep current.
+      #
+      # A run: body is a `run: |` or `run: >` block until the indentation returns to the run:
+      # key, or a single-line `run: ...`. The pattern below is a regex, so this step never
+      # contains the sequence it looks for.
+      - name: Check no run body interpolates an expression
+        run: |
+          set -euo pipefail
+          bad=$(awk '
+            function indent(s) { match(s, /^ */); return RLENGTH }
+            {
+              if (inrun) {
+                if ($0 ~ /^ *$/ || indent($0) > runind) {
+                  if ($0 ~ /\$\{\{/) print FILENAME ":" FNR ": " $0
+                  next
+                }
+                inrun = 0
+              }
+              if ($0 ~ /^ *(- )?run: *[|>][-+]? *$/) {
+                line = $0; sub(/- /, "  ", line); runind = indent(line); inrun = 1; next
+              }
+              if ($0 ~ /^ *(- )?run: / && $0 ~ /\$\{\{/) print FILENAME ":" FNR ": " $0
+            }
+          ' .github/workflows/*.yml .github/actions/*/action.yml)
+          if [ -n "$bad" ]; then
+            echo "::error::a run: body interpolates an expression (see #81):"
+            echo "$bad"
+            echo "Move each value into the step's env: and read it as a quoted variable."
+            exit 1
+          fi
+          echo "No run: body interpolates an expression."
+
       # Configure Maven settings so it can read from the GitHub Packages registry
       # (https://maven.pkg.github.com/MRISS-Projects/maven-repo) where
       # com.mriss:mriss-parent is hosted.
