@@ -397,19 +397,41 @@ jobs:
       # the tag bridge did. Nothing since prepare has touched this workspace's tracked files:
       # every step in between works in target/checkout. The tag comes through env, not a
       # ${{ }} in the script, for the reason given at 'Checkout Hotfix Branch'.
-      - name: Deploy Site to gh-pages
+      #
+      # #88: staging, verifying and publishing the site are three steps, not one site-deploy.
+      # The deployment profile binds scm-publish:publish-scm to the site-deploy phase of every
+      # module, so a single site-deploy pushed to gh-pages once per module, the root first,
+      # and left no point at which the staged site could be looked at before it was public.
+      # -Dscmpublish.skipDeploy=true makes each module's publish-scm skip itself: site:deploy
+      # still fills /tmp/sites, and nothing reaches the remote, in a real run as in a rehearsal.
+      - name: Stage the Site
         env:
           RELEASE_TAG: v${{ inputs.current_version }}
           SITE_URL: ${{ inputs.site_deployment_url }}
         run: |
           git checkout --quiet --detach "$RELEASE_TAG"
-          bash "$RUNNER_TEMP/rehearsal-marker.sh" site-deploy \
-            "publish the generated site to gh-pages"
-          mvn -B $RH_SCMPUBLISH_DRYRUN \
+          mvn -B \
             -Dsite.deployment.personal.main="${SITE_URL}" \
             -Ddeployment \
             -Drelease-deployment \
+            -Dscmpublish.skipDeploy=true \
             site-deploy
+
+      - name: Verify every staged module site has an index.html
+        uses: MRISS-Projects/parent-poms/.github/actions/verify-staged-site@master
+
+      # publish-scm is an aggregator goal, so it runs once, from the root (-N). The
+      # @publish-to-github suffix makes Maven use the deployment profile's own execution
+      # configuration (content, scmBranch, pubScmUrl, serverId). This is the one remote
+      # write of the three steps, so the rehearsal marker and the dry-run flag live here.
+      - name: Deploy Site to gh-pages
+        run: |
+          bash "$RUNNER_TEMP/rehearsal-marker.sh" site-deploy \
+            "publish the generated site to gh-pages"
+          mvn -B -N $RH_SCMPUBLISH_DRYRUN \
+            -Ddeployment \
+            -Drelease-deployment \
+            scm-publish:publish-scm@publish-to-github
 
       # #71: generation and committing are now two steps. Generation stays in Maven via the
       # inherited readme-generation profile; the commit is a workflow step so a forked

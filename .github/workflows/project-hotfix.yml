@@ -265,18 +265,35 @@ jobs:
       # target/ is ignored and keeps prepare's surefire/failsafe results, jacoco*.exec and
       # the badge. The tag is local in both modes: prepare created it, or, in a rehearsal,
       # the tag bridge did. Nothing since prepare has touched this workspace's tracked files.
-      - name: Deploy Site to gh-pages
+      #
+      # #88: staging, verifying and publishing the site are three steps, not one site-deploy;
+      # project-release.yml's 'Stage the Site' has the reason. -Dscmpublish.skipDeploy=true
+      # makes each module's publish-scm skip itself, so nothing reaches the remote here.
+      - name: Stage the Site
         env:
           SITE_URL: ${{ inputs.site_deployment_url }}
         run: |
           git checkout --quiet --detach "v${HOTFIX_RELEASE_NUMBER}"
-          bash "$RUNNER_TEMP/rehearsal-marker.sh" site-deploy \
-            "publish the generated site to gh-pages"
-          mvn -B $RH_SCMPUBLISH_DRYRUN \
+          mvn -B \
             -Dsite.deployment.personal.main="${SITE_URL}" \
             -Ddeployment \
             -Drelease-deployment \
+            -Dscmpublish.skipDeploy=true \
             site-deploy
+
+      - name: Verify every staged module site has an index.html
+        uses: MRISS-Projects/parent-poms/.github/actions/verify-staged-site@master
+
+      # One publish for the whole site, from the root. This is the one remote write of the
+      # three steps, so the rehearsal marker and the dry-run flag live here.
+      - name: Deploy Site to gh-pages
+        run: |
+          bash "$RUNNER_TEMP/rehearsal-marker.sh" site-deploy \
+            "publish the generated site to gh-pages"
+          mvn -B -N $RH_SCMPUBLISH_DRYRUN \
+            -Ddeployment \
+            -Drelease-deployment \
+            scm-publish:publish-scm@publish-to-github
 
       # #71: generation and committing are now two steps. Generation stays in Maven via the
       # inherited readme-generation profile; the commit is a workflow step so a forked
