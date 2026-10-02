@@ -7,8 +7,8 @@ it is build configuration, inherited.
 ## What a project inherits
 
 - Plugin and dependency versions, managed in one place.
-- A Java 17 build, with unit tests under surefire and integration tests under failsafe.
-- A coverage gate: 95% line and 95% branch coverage per module, measured on unit tests.
+- A Java 17 build with unit tests, integration tests and a coverage gate. The
+  [README](README.html) says how they run and what the gate measures.
 - Maven site generation, with this site's skins and reports.
 - The staging, release and hotfix pipelines, as reusable GitHub Actions workflows.
 
