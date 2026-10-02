@@ -153,7 +153,7 @@ Each is checked again against the tree in task 1, before the page is written.
 - [x] **Task 1.** Re-check §3's facts against the tree.
 - [x] **Task 2.** Replace `src/site/markdown/index.md` with §2.
 - [x] **Task 3.** Render it locally (§4) and record what was checked.
-- [ ] **Task 4.** Open a PR into `master` that references `#74`.
+- [x] **Task 4.** Open a PR into `master` that references `#74`.
 - [ ] **Task 5, after the merge.** Check the page on `gh-pages` after the snapshot deploy, and record
       it on the PR.
 
