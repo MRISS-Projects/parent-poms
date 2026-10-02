@@ -132,8 +132,16 @@ DSH has no RC branch at the moment.
 **Decided on 2026-10-01: defer it, and close `#89` on the local evidence.**
 
 - §4.1 proves what the staged tree holds. The PR records it.
-- The live URL is checked at DSH's next real staging, the 0.4.0 RC, after DSH is re-pinned to
-  3.10.0 (task 5). `#89` does not wait for it.
+- **The live URL is checked at `MRISS-Projects/dsh#127`** (task 5), not at the 0.4.0 RC. `#127`
+  deploys DSH's snapshot site from `DEVELOP`, a real publish. It is done first once the
+  `3.10.0-SNAPSHOT` milestone here is clear, with DSH pointed at `3.10.0-SNAPSHOT`, before 3.10.0
+  is released. So if the link, or anything else in this milestone, needs adjusting, it is adjusted
+  in the `-SNAPSHOT` and not in a 3.10.1. `#89` does not wait for it.
+- **What `#127` needs from here.** A deployed `3.10.0-SNAPSHOT` that contains this fix: the
+  routine `deploy.yml` snapshots run on `master`, after this merges.
+- **What it checks.** `https://mriss-projects.github.io/dsh/snapshots/products/index.html`
+  redirects to the `products` page, and the "Products" link on DSH's snapshot home page reaches
+  it.
 - **Not chosen:** a real staging run now, from a scratch RC branch cut from `DEVELOP`. It would
   meet the criterion to the letter, but it overwrites DSH's public `rcs` site with
   `0.4.0-SNAPSHOT` content and deploys RC packages.
@@ -153,7 +161,8 @@ DSH has no RC branch at the moment.
 - [ ] **Task 2.** Add the property and the execution. Run `mvn -B clean install` until it is green.
 - [ ] **Task 3 (green).** Run §4.1 steps 2 and 3, and record the results.
 - [ ] **Task 4.** Update `CLAUDE.md`. Open a PR into `master` that references `#89`.
-- [ ] **Task 5, later.** Check the live link at DSH's first staging on a parent with this fix (§4.2).
+- [ ] **Task 5, later.** Check the live link at `MRISS-Projects/dsh#127`, DSH's snapshot site deploy against
+      `3.10.0-SNAPSHOT`, before 3.10.0 is released (§4.2).
 
 ## 7. Acceptance criteria
 
@@ -161,7 +170,7 @@ DSH has no RC branch at the moment.
 |---|---|
 | On a staged consumer site, the parent menu's "Products" entry resolves to a published `products` page | §3.1, §4.1 step 2 |
 | The fix is made here, not by a per-consumer override in `site.xml` | §3.2: `products/pom.xml` only |
-| Verified by a DSH staging run against a `-SNAPSHOT` containing the fix | Deferred to the 0.4.0 RC, by decision (§4.2). §4.1 stands in for it until then |
+| Verified by a DSH staging run against a `-SNAPSHOT` containing the fix | Met by `dsh#127`'s snapshot site deploy against `3.10.0-SNAPSHOT`, by decision (§4.2). §4.1 stands in for it until then |
 
 ## 8. Verification results
 
