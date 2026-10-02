@@ -63,8 +63,8 @@ it is build configuration, inherited.
 
 ```text
 com.mriss:mriss-parent                    the root POM
-├── com.mriss.mriss-parent:framework      parent for framework-level modules
-└── com.mriss.mriss-parent:products       parent for product repositories
+|-- com.mriss.mriss-parent:framework      parent for framework-level modules
+`-- com.mriss.mriss-parent:products       parent for product repositories
 ```
 
 **A product repository inherits from `products`, not from the root.** `products` inherits from the
@@ -78,10 +78,10 @@ tooling the hierarchy itself uses, in four groups:
 
 ```text
 infrastructure
-├── skins                     company-skin, product-module-skin, products-skin
-├── announcement-templates    default-announcement-template
-├── maven-archetypes          module-standard, product-parent, maven-plugin
-└── maven-plugins             no module yet
+|-- skins                     company-skin, product-module-skin, products-skin
+|-- announcement-templates    default-announcement-template
+|-- maven-archetypes          module-standard, product-parent, maven-plugin
+`-- maven-plugins             no module yet
 ```
 
 `infrastructure` and the four groups are aggregators only. The modules inside each group are
@@ -150,9 +150,9 @@ Each is checked again against the tree in task 1, before the page is written.
 
 ## 5. Tasks
 
-- [ ] **Task 1.** Re-check §3's facts against the tree.
-- [ ] **Task 2.** Replace `src/site/markdown/index.md` with §2.
-- [ ] **Task 3.** Render it locally (§4) and record what was checked.
+- [x] **Task 1.** Re-check §3's facts against the tree.
+- [x] **Task 2.** Replace `src/site/markdown/index.md` with §2.
+- [x] **Task 3.** Render it locally (§4) and record what was checked.
 - [ ] **Task 4.** Open a PR into `master` that references `#74`.
 - [ ] **Task 5, after the merge.** Check the page on `gh-pages` after the snapshot deploy, and record
       it on the PR.
@@ -167,4 +167,25 @@ Each is checked again against the tree in task 1, before the page is written.
 
 ## 7. Verification results
 
-To be filled in during the build.
+On 2026-10-02, on the development machine.
+
+- **Facts (task 1).** §3's sources were re-read. One correction came from review before the page
+  was written: `infrastructure` is two levels of aggregator over seven separately versioned
+  modules, not part of the inheritance hierarchy (§1).
+- **The page (task 2).** `src/site/markdown/index.md` is §2's block, extracted from this file, not
+  retyped. A `cmp` of the two matches.
+- **Local render (task 3).** `mvn -B -N site` at the root, then `target/site/index.html`:
+  - six headings: the title, "What a project inherits", "The hierarchy", "Infrastructure",
+    "Using it" and "Where to go next";
+  - three code blocks. The XML block keeps its angle brackets, as `&lt;parent&gt;`;
+  - `README.html` and `releases-history.html` exist in the rendered site. `infrastructure/`,
+    `framework/` and `products/` are the module sites, which answer 200 on the live snapshot site;
+  - the `CLAUDE.md` link is the address GitHub's API gives for the file on `master`.
+- **No duplication (AC003).** The page holds no `mvn` command, no site address and no version
+  number.
+- **A defect found by the render, and fixed.** The two tree diagrams were first drawn with
+  box-drawing characters. In the local render they came out garbled: the POM sets no source
+  encoding, so the site plugin read the UTF-8 file in the platform's encoding, Windows-1252 here.
+  A Linux runner would probably have rendered them, but the page should not depend on the machine
+  that builds it. The diagrams are now plain ASCII, and the page has no non-ASCII character.
+- **On `gh-pages` (AC002).** Task 5, after the merge.
