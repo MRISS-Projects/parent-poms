@@ -160,7 +160,7 @@ DSH has no RC branch at the moment.
       `/tmp/sites/rcs/products/index.html` is absent.
 - [x] **Task 2.** Add the property and the execution. Run `mvn -B clean install` until it is green.
 - [x] **Task 3 (green).** Run §4.1 steps 2 and 3, and record the results.
-- [ ] **Task 4.** Update `CLAUDE.md`. Open a PR into `master` that references `#89`.
+- [x] **Task 4.** Update `CLAUDE.md`. Open a PR into `master` that references `#89`.
 - [ ] **Task 5, later.** Check the live link at `MRISS-Projects/dsh#127`, DSH's snapshot site deploy against
       `3.10.0-SNAPSHOT`, before 3.10.0 is released (§4.2).
 
