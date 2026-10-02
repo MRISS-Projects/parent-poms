@@ -54,8 +54,8 @@ it is build configuration, inherited.
 ## What a project inherits
 
 - Plugin and dependency versions, managed in one place.
-- A Java 17 build, with unit tests under surefire and integration tests under failsafe.
-- A coverage gate: 95% line and 95% branch coverage per module, measured on unit tests.
+- A Java 17 build with unit tests, integration tests and a coverage gate. The
+  [README](README.html) says how they run and what the gate measures.
 - Maven site generation, with this site's skins and reports.
 - The staging, release and hotfix pipelines, as reusable GitHub Actions workflows.
 
@@ -127,7 +127,6 @@ declares the repository under the same id.
 |---|---|
 | The three coordinates of the hierarchy and `pom` packaging | each module's `pom.xml` |
 | Java 17 | `<java.version>` in the root `pom.xml` |
-| 95% line and branch coverage, on unit tests | the `jacoco:check` configuration in the root `pom.xml`; `README.md`'s "Build from Sources" |
 | Products inherit from `products` | `CLAUDE.md`, "Module layout"; DSH's root `pom.xml` |
 | `infrastructure` and its four groups are aggregators; the seven modules below them have their own version | each `pom.xml` under `infrastructure/`: the groups inherit the root version, the leaf modules declare `2.0.0-SNAPSHOT` with a released group as parent |
 | A release of the parent POMs does not release those modules | `deploy.yml`'s release step, which skips recursion into the four groups ("released independently") |
@@ -189,3 +188,18 @@ On 2026-10-02, on the development machine.
   A Linux runner would probably have rendered them, but the page should not depend on the machine
   that builds it. The diagrams are now plain ASCII, and the page has no non-ASCII character.
 - **On `gh-pages` (AC002).** Task 5, after the merge.
+
+### 7.1 Review round 1, 2026-10-02
+
+Copilot reviewed `78ca86a5` and raised one finding, on the page and on this file's copy of it. It
+was valid.
+
+- **The finding.** Two bullets under "What a project inherits" restated what the README's "Build
+  from Sources" section says: that unit tests and integration tests run separately, and that the
+  95% coverage gate measures unit tests. AC003 asks for a link where the two overlap.
+- **Why the build's own check missed it.** That check looked for build commands, site addresses and
+  version numbers. It did not look for prose making the same statements.
+- **The fix.** One bullet replaces the two: a Java 17 build with unit tests, integration tests and a
+  coverage gate, linking to the README for how they run and what the gate measures. §2's block and
+  `index.md` were changed together and still match. §3 no longer lists the coverage figures, because
+  the page no longer states them.
