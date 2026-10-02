@@ -101,6 +101,17 @@ Two Maven lifecycles are involved and are **not interchangeable**:
   relative `./` path resolves against the *caller's* workspace and fails — and `build.yml` enforces
   that pin.
 
+**A consumer's "Products" parent link is a redirect page, on purpose (`#89`).** `maven-site-plugin`
+builds `<menu ref="parent"/>` from the relative path between the parent's and the child's
+`distributionManagement` site URLs, not from `<url>`. A child's is always its parent's plus its
+artifactId, so a consumer's root site always links "Products" to `../index.html`, while `products`
+itself is published in this repository's Pages. The link cannot be changed from here.
+`products/pom.xml`'s `link-parent-products-site` execution (profile `deployment`, phase `post-site`)
+therefore writes a one-page redirect at that address, pointing at
+`${parent.poms.site.url}/releases/products/`. It acts only in a module whose parent is `products`.
+Do not "fix" the relative link in a consumer's `site.xml`, and do not expect a `products/` directory
+in a consumer's staged site to be a real site: it holds that one page.
+
 `release:perform` only runs `deploy` (per the release plugin's `<goals>`), so a real release requires
 both an explicit `site-deploy` **and** an explicit `process-resources` invocation afterward — see
 `specs/github-actions-reusable-workflows.md` §3 for the full rationale if you touch release automation.

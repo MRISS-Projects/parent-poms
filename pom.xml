@@ -88,6 +88,11 @@
         <sites.server>https://mriss-projects.github.io/parent-poms</sites.server>
         <sites.url>${sites.server}</sites.url>
         <site.deployment>${site.deployment.personal.main}</site.deployment>
+        <!-- #89: where parent-poms' own site is published. Separate from sites.server, which a
+             consumer may override for its own site: this one always names this repository's
+             Pages, and products/pom.xml's link-parent-products-site redirects a consumer's
+             "Products" parent link to it. -->
+        <parent.poms.site.url>https://mriss-projects.github.io/parent-poms</parent.poms.site.url>
 
         <release.type>snapshots</release.type>
 
