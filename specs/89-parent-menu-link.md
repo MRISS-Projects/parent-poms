@@ -129,14 +129,16 @@ The issue asks for "a DSH staging run against a `-SNAPSHOT` containing the fix".
 has no dry-run mode. It needs an RC branch, deploys `-RC` artifacts, and publishes DSH's `rcs` site.
 DSH has no RC branch at the moment.
 
-**Decided on 2026-10-01: defer it, and close `#89` on the local evidence.**
+**Decided on 2026-10-01: defer it. Revised on 2026-10-02 (review round 1, §8.5): `#89` stays open
+until `dsh#127` validates the live link.**
 
 - §4.1 proves what the staged tree holds. The PR records it.
 - **The live URL is checked at `MRISS-Projects/dsh#127`** (task 5), not at the 0.4.0 RC. `#127`
-  deploys DSH's snapshot site from `DEVELOP`, a real publish. It is done first once the
-  `3.10.0-SNAPSHOT` milestone here is clear, with DSH pointed at `3.10.0-SNAPSHOT`, before 3.10.0
+  deploys DSH's snapshot site from `DEVELOP`, a real publish. It is done first once the rest of the
+  `3.10.0-SNAPSHOT` milestone here is done, with DSH pointed at `3.10.0-SNAPSHOT`, before 3.10.0
   is released. So if the link, or anything else in this milestone, needs adjusting, it is adjusted
-  in the `-SNAPSHOT` and not in a 3.10.1. `#89` does not wait for it.
+  in the `-SNAPSHOT` and not in a 3.10.1. The fix merges without waiting for it; the issue does not
+  close until it passes.
 - **What `#127` needs from here.** A deployed `3.10.0-SNAPSHOT` that contains this fix: the
   routine `deploy.yml` snapshots run on `master`, after this merges.
 - **What it checks.** `https://mriss-projects.github.io/dsh/snapshots/products/index.html`
@@ -170,7 +172,7 @@ DSH has no RC branch at the moment.
 |---|---|
 | On a staged consumer site, the parent menu's "Products" entry resolves to a published `products` page | §3.1, §4.1 step 2 |
 | The fix is made here, not by a per-consumer override in `site.xml` | §3.2: `products/pom.xml` only |
-| Verified by a DSH staging run against a `-SNAPSHOT` containing the fix | Met by `dsh#127`'s snapshot site deploy against `3.10.0-SNAPSHOT`, by decision (§4.2). §4.1 stands in for it until then |
+| Verified by a DSH staging run against a `-SNAPSHOT` containing the fix | **Open.** To be met by `dsh#127`'s snapshot site deploy against `3.10.0-SNAPSHOT` (§4.2). `#89` stays open until then |
 
 ## 8. Verification results
 
@@ -211,3 +213,18 @@ is `products`' real home page.
 - A consumer's whole reactor, and a real publish. Both come with `dsh#127` (§4.2).
 - Linux. The path handling was exercised on Windows only, where `/tmp/sites` resolves to the
   current drive. On a runner it is a plain absolute path.
+
+### 8.5 Review round 1, 2026-10-02
+
+Copilot reviewed `b27d2245` and raised one finding. It was valid, and it changed a decision.
+
+- **The finding.** The issue's third criterion asks for a DSH staging run against a `-SNAPSHOT`. No
+  real publish has been run, task 5 is open and `dsh#127` is open, so the criterion is not met.
+  Local staging cannot stand in for it, and the PR said `Closes #89`.
+- **The earlier decision** was to close `#89` on the local evidence. It was taken when the live
+  check was expected at DSH's 0.4.0 RC, some way off.
+- **What changed.** `dsh#127` now does the live check before 3.10.0 is released. Keeping `#89` open
+  until then costs nothing, and it fits the rule to clear the milestone before a release: the
+  issue closes when the link is seen working, and the release follows.
+- **The outcome.** The PR says `Refs #89`. The fix merges, and the issue stays open on
+  `3.10.0-SNAPSHOT` until task 5 passes. No code changed in this round.
