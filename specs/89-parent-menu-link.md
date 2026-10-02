@@ -156,10 +156,10 @@ DSH has no RC branch at the moment.
 
 ## 6. Tasks
 
-- [ ] **Task 1 (red).** Run §4.1 step 2 against the unchanged `3.10.0-SNAPSHOT`. Record that
+- [x] **Task 1 (red).** Run §4.1 step 2 against the unchanged `3.10.0-SNAPSHOT`. Record that
       `/tmp/sites/rcs/products/index.html` is absent.
-- [ ] **Task 2.** Add the property and the execution. Run `mvn -B clean install` until it is green.
-- [ ] **Task 3 (green).** Run §4.1 steps 2 and 3, and record the results.
+- [x] **Task 2.** Add the property and the execution. Run `mvn -B clean install` until it is green.
+- [x] **Task 3 (green).** Run §4.1 steps 2 and 3, and record the results.
 - [ ] **Task 4.** Update `CLAUDE.md`. Open a PR into `master` that references `#89`.
 - [ ] **Task 5, later.** Check the live link at `MRISS-Projects/dsh#127`, DSH's snapshot site deploy against
       `3.10.0-SNAPSHOT`, before 3.10.0 is released (§4.2).
@@ -174,4 +174,40 @@ DSH has no RC branch at the moment.
 
 ## 8. Verification results
 
-To be filled in during the build.
+All on 2026-10-01, on the development machine. `/tmp/sites` there is `C:\tmp\sites`. The DSH tree is
+a scratch clone of `DEVELOP` at `46ceee936`, with its parent re-pointed to `3.10.0-SNAPSHOT`. The
+staging command is §4.1's.
+
+### 8.1 Red: before the change
+
+Against `3.10.0-SNAPSHOT` installed from `master`, staging DSH's root (`-N`) leaves
+`rcs/products/` holding only `dsh/`. There is no `rcs/products/index.html`, and DSH's home page
+links `<a href="../index.html">Products</a>`.
+
+### 8.2 Green: a consumer
+
+Against `3.10.0-SNAPSHOT` installed from this branch:
+
+- **The root module.** The log shows `antrun:3.2.0:run (link-parent-products-site) @ dsh` and
+  `[mkdir] Created dir: C:\tmp\sites\rcs\products`. `rcs/products/index.html` exists, with
+  `<meta http-equiv="refresh" content="0; url=https://mriss-projects.github.io/parent-poms/releases/products/">`
+  and a plain link to the same address. DSH's home page still links "Products" to `../index.html`,
+  which now exists.
+- **A sub-module.** Staging `dsh-test-dataset` runs the execution and writes nothing. DSH's home
+  page is byte-for-byte unchanged, and the module's own parent link, `../index.html`, still names
+  DSH's root.
+- **The whole tree.** `rcs/products/index.html` is the only redirect page in it.
+- **`#88`'s check.** `verify-staged-site` prints `all 2 module site(s) … have an index.html`. The
+  redirect directory is not counted.
+
+### 8.3 Green: parent-poms itself
+
+Staging the root and `products` (`-pl .,products`) runs the execution in `products` and writes
+nothing. No redirect page appears anywhere under `/tmp/sites`, and `snapshots/products/index.html`
+is `products`' real home page.
+
+### 8.4 Not run here
+
+- A consumer's whole reactor, and a real publish. Both come with `dsh#127` (§4.2).
+- Linux. The path handling was exercised on Windows only, where `/tmp/sites` resolves to the
+  current drive. On a runner it is a plain absolute path.
