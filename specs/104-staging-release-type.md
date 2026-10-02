@@ -111,9 +111,9 @@ fi
 
 - [x] **Task 1.** Record what the current lines produce for the default case, as the baseline.
 - [x] **Task 2.** Make the change (§2).
-- [ ] **Task 3.** Run the local checks (§3), and record them. Push, and record the CI run.
-- [ ] **Task 4.** Hand over to `dsh#127` for the proof run. Record its run here.
-- [ ] **Task 5.** Open a PR into `master` that references `#104`.
+- [x] **Task 3.** Run the local checks (§3), and record them. Push, and record the CI run.
+- [x] **Task 4.** Hand over to `dsh#127` for the proof run. Record its run here.
+- [x] **Task 5.** Open a PR into `master` that references `#104`.
 
 ## 6. Acceptance criteria
 
@@ -150,4 +150,17 @@ The `rcs` rows match the baseline exactly (AC002).
 
 ### 7.3 CI, and the proof run
 
-Recorded below as they happen.
+- **CI.** [Run 37030175384](https://github.com/MRISS-Projects/parent-poms/actions/runs/37030175384),
+  at `26a6ae93`, is green, with the `#81` guard passing (AC004).
+- **The proof run (AC003, AC005).**
+  [MRISS-Projects/dsh run 37032819476](https://github.com/MRISS-Projects/dsh/actions/runs/37032819476):
+  DSH's `deploy.yml`, calling this branch's `project-staging.yml` with `release_type: snapshots`, on
+  DSH's `#127` task branch. Green.
+  - `Check the release type` passed.
+  - `0.4.0-SNAPSHOT` POMs were uploaded for all 13 DSH modules.
+  - The site was published under `snapshots/products/dsh/`, in one `gh-pages` commit. Nothing under
+    `rcs/` or `releases/` changed.
+  - The generated README's version line is `0.4.0-SNAPSHOT - 1 - 20261002-162717`: the build number
+    has no `RC` prefix.
+  - The full record is in `dsh/specs/stories/127-deploy-snapshot-site.md` §8.3.
+- **Not run:** the `rcs` path, as §3 says. Its first real run is DSH's 0.4.0 RC.
