@@ -259,6 +259,69 @@
                                      make this a no-op wherever generated-site/site.xml does not exist
                                      (e.g. sub-modules that don't run the pdf plugin). -->
                             </execution>
+                            <execution>
+                                <!-- #89: a consumer's site links its parent menu's "Products" entry to
+                                     ../index.html, and nothing is published there. maven-site-plugin builds
+                                     <menu ref="parent"/> from the relative path between the parent's and the
+                                     child's distributionManagement site URLs, and a child's is always its
+                                     parent's plus its artifactId - so the link is relative whatever this POM
+                                     declares, while 'products' itself is published in parent-poms' Pages,
+                                     not the consumer's. The link cannot be changed from here, so its target
+                                     is made to exist: a one-page redirect to the published 'products' site,
+                                     written one level above the consumer's staged root site.
+
+                                     Inherited by every descendant, and a no-op in all but one: it acts only
+                                     where the parent IS 'products', which is a consumer's root module - not
+                                     its sub-modules (their parent is the consumer's root, in the same site,
+                                     and their link is right), and not 'products' itself. It also needs a
+                                     file: staging URL, since it cannot write to a remote deployment.
+
+                                     post-site, so the page is in the staged tree before site-deploy
+                                     publishes anything. verify-staged-site (#88) ignores the directory: it
+                                     has no project-info.html, so it is not a module site. -->
+                                <id>link-parent-products-site</id>
+                                <phase>post-site</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target xmlns:if="ant:if">
+                                        <property name="parent.link.site.url"
+                                                  value="${project.distributionManagement.site.url}"/>
+                                        <condition property="parent.link.applies">
+                                            <and>
+                                                <equals arg1="${project.parent.groupId}" arg2="com.mriss.mriss-parent"/>
+                                                <equals arg1="${project.parent.artifactId}" arg2="products"/>
+                                                <matches pattern="^file:" string="${parent.link.site.url}"/>
+                                            </and>
+                                        </condition>
+                                        <loadresource property="parent.link.stage.dir" if:set="parent.link.applies">
+                                            <propertyresource name="parent.link.site.url"/>
+                                            <filterchain>
+                                                <tokenfilter>
+                                                    <replaceregex pattern="^file:/*" replace="/"/>
+                                                </tokenfilter>
+                                            </filterchain>
+                                        </loadresource>
+                                        <mkdir dir="${parent.link.stage.dir}/.." if:set="parent.link.applies"/>
+                                        <echo file="${parent.link.stage.dir}/../index.html" encoding="UTF-8"
+                                              if:set="parent.link.applies"><![CDATA[<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Products</title>
+<meta http-equiv="refresh" content="0; url=${parent.poms.site.url}/releases/products/">
+<link rel="canonical" href="${parent.poms.site.url}/releases/products/">
+</head>
+<body>
+<p>The Products parent site is published at
+<a href="${parent.poms.site.url}/releases/products/">${parent.poms.site.url}/releases/products/</a>.</p>
+</body>
+</html>
+]]></echo>
+                                    </target>
+                                </configuration>
+                            </execution>
                         </executions>
                     </plugin>
                     <!-- maven-site-plugin auto-scans target/generated-site as an additional site
