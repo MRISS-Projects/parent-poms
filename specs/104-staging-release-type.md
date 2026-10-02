@@ -109,8 +109,8 @@ fi
 
 ## 5. Tasks
 
-- [ ] **Task 1.** Record what the current lines produce for the default case, as the baseline.
-- [ ] **Task 2.** Make the change (§2).
+- [x] **Task 1.** Record what the current lines produce for the default case, as the baseline.
+- [x] **Task 2.** Make the change (§2).
 - [ ] **Task 3.** Run the local checks (§3), and record them. Push, and record the CI run.
 - [ ] **Task 4.** Hand over to `dsh#127` for the proof run. Record its run here.
 - [ ] **Task 5.** Open a PR into `master` that references `#104`.
@@ -127,4 +127,27 @@ fi
 
 ## 7. Verification results
 
-To be filled in during the build.
+On 2026-10-02.
+
+### 7.1 The argument logic, locally
+
+The snippet of §2.3, run with `GITHUB_RUN_NUMBER=42`:
+
+| `release_type` | `build_number` | Result |
+|---|---|---|
+| baseline, the lines before this change | empty | `-Drelease.type=rcs -Dbuild.number=RC42` |
+| baseline | `7` | `-Drelease.type=rcs -Dbuild.number=RC7` |
+| `rcs` | empty | `-Drelease.type=rcs -Dbuild.number=RC42` |
+| `rcs` | `7` | `-Drelease.type=rcs -Dbuild.number=RC7` |
+| `snapshots` | empty | `-Drelease.type=snapshots -Dbuild.number=42` |
+| `snapshots` | `7` | `-Drelease.type=snapshots -Dbuild.number=7` |
+
+The `rcs` rows match the baseline exactly (AC002).
+
+### 7.2 The pre-flight check, locally
+
+`rcs` and `snapshots` are accepted. An empty value, `releases` and `RCS` are refused (AC001).
+
+### 7.3 CI, and the proof run
+
+Recorded below as they happen.
