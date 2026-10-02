@@ -10,7 +10,17 @@ on:
       branch_name:
         type: string
         required: true
-        description: 'RC branch name, e.g. staging-0.3.0-SNAPSHOT-RC'
+        description: >-
+          The branch to build and publish: an RC branch for release_type 'rcs', e.g.
+          staging-0.3.0-SNAPSHOT-RC, or a development branch for 'snapshots'.
+      release_type:
+        type: string
+        required: false
+        default: 'rcs'
+        description: >-
+          'rcs' stages a release candidate: the site goes under rcs/ and the build number is
+          RC<n>. 'snapshots' deploys a development snapshot: the site goes under snapshots/ and
+          the build number is <n>. Any other value fails the run before it writes anything.
       appengine_project_version:
         type: string
         required: false
@@ -25,7 +35,7 @@ on:
         type: string
         required: false
         default: ''
-        description: 'Build number; resolved to RC<n> in step'
+        description: 'Build number; resolved to RC<n> for rcs, and to <n> for snapshots, in step'
       maven_properties:
         type: string
         required: false
@@ -157,17 +167,39 @@ jobs:
           git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+      # #104: release_type picks what this workflow deploys. 'rcs', the default, is a release
+      # candidate: -Drelease.type=rcs and a build number of RC<n>, as this workflow always did.
+      # 'snapshots' is a development snapshot: -Drelease.type=snapshots and a plain <n>, which
+      # is what this repository's own deploy.yml passes. A workflow_call input cannot be a
+      # choice, so the two values are enforced here, before the first write.
+      - name: Check the release type
+        env:
+          RELEASE_TYPE: ${{ inputs.release_type }}
+        run: |
+          case "$RELEASE_TYPE" in
+            rcs|snapshots) ;;
+            *)
+              echo "::error::release_type is '$RELEASE_TYPE', but only 'rcs' and 'snapshots'" \
+                   "are supported."
+              exit 1
+              ;;
+          esac
+
       # #81: inputs reach the script through env and are read quoted, never as a ${{ }} in the
       # body; the 'Check no run body interpolates an expression' step in build.yml enforces it.
       # GCP_FLAGS is an array so that each flag stays one argument: the string it used to be
       # was expanded unquoted, and would have split a value at any space.
       - name: Build and Deploy Staging Artifacts
         env:
+          RELEASE_TYPE: ${{ inputs.release_type }}
           BUILD_NUMBER: ${{ inputs.build_number }}
           APPENGINE_PROJECT_VERSION: ${{ inputs.appengine_project_version }}
           CLOUDRUN_PROJECT_VERSION: ${{ inputs.cloudrun_project_version }}
         run: |
           BUILD_NUM="${BUILD_NUMBER:-${GITHUB_RUN_NUMBER}}"
+          if [ "$RELEASE_TYPE" = "rcs" ]; then
+            BUILD_NUM="RC${BUILD_NUM}"
+          fi
 
           GCP_FLAGS=()
           if [ -n "$APPENGINE_PROJECT_VERSION" ]; then
@@ -181,8 +213,8 @@ jobs:
           output=$(mvn -B -U \
             -Ddeployment \
             -DintegrationTests \
-            -Drelease.type=rcs \
-            "-Dbuild.number=RC${BUILD_NUM}" \
+            "-Drelease.type=$RELEASE_TYPE" \
+            "-Dbuild.number=${BUILD_NUM}" \
             "${GCP_FLAGS[@]}" \
             clean deploy 2>&1)
           rc=$?
@@ -220,14 +252,18 @@ jobs:
       # still fills /tmp/sites, and nothing reaches the remote.
       - name: Stage the Staging Site
         env:
+          RELEASE_TYPE: ${{ inputs.release_type }}
           BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
           BUILD_NUM="${BUILD_NUMBER:-${GITHUB_RUN_NUMBER}}"
+          if [ "$RELEASE_TYPE" = "rcs" ]; then
+            BUILD_NUM="RC${BUILD_NUM}"
+          fi
 
           mvn -B -U \
             -Ddeployment \
-            -Drelease.type=rcs \
-            "-Dbuild.number=RC${BUILD_NUM}" \
+            "-Drelease.type=$RELEASE_TYPE" \
+            "-Dbuild.number=${BUILD_NUM}" \
             -Dsite.deployment.personal.main=file:///tmp/sites \
             -Dscmpublish.skipDeploy=true \
             site-deploy
