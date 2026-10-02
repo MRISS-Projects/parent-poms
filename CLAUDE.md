@@ -147,6 +147,12 @@ including exact reusable-workflow inputs/secrets and a Jenkinsfile-to-step mappi
   release/hotfix flow used by downstream product repos; being replaced by reusable
   `project-stage.yml` / `project-staging.yml` / `project-release.yml` / `project-hotfix.yml` workflows
   called from each product repo via `uses: MRISS-Projects/parent-poms/.github/workflows/<name>.yml@ref`.
+- `project-staging.yml` is also a consumer's **snapshot deploy** (`#104`). Its `release_type` input
+  defaults to `rcs`, a release candidate: the site under `rcs/`, the build number `RC<n>`. With
+  `snapshots` it deploys a development branch: the site under `snapshots/`, a plain `<n>`. The
+  consumer needs only a wrapper that passes it (DSH's `deploy.yml`). `deploy.yml` here does the same
+  job for this repository, but it is dispatched, not reusable. The workflow has no dry run in either
+  mode.
 
 Required secret: `DEPLOY_TOKEN` (a cross-repo PAT — the default `GITHUB_TOKEN` cannot read/write
 `MRISS-Projects/maven-repo`, which is a separate repository from this one). JDK 17 (Temurin) +
