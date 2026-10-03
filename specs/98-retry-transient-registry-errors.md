@@ -294,7 +294,7 @@ Evidence before the change. Nothing in this task is committed except the record 
 **Files:** modify `.github/workflows/build.yml`, inserting after the
 `Check the reusable workflows declare no service containers` step.
 
-- [ ] **Step 1: add the step.**
+- [x] **Step 1: add the step.**
 
   ```yaml
       # #98: a release's deploy must retry a transient 5xx from GitHub Packages. The retry
@@ -318,10 +318,10 @@ Evidence before the change. Nothing in this task is committed except the record 
           exit "$status"
   ```
 
-- [ ] **Step 2: run it locally, red.** Extract the `run:` body to a scratch script and run it
+- [x] **Step 2: run it locally, red.** Extract the `run:` body to a scratch script and run it
   from the repository root. Expected: four `::error` lines, two per file, and exit 1.
 
-- [ ] **Step 3: commit the red guard.**
+- [x] **Step 3: commit the red guard.**
 
   ```bash
   git add .github/workflows/build.yml
@@ -333,23 +333,23 @@ Evidence before the change. Nothing in this task is committed except the record 
 **Files:** modify `.github/workflows/project-release.yml` (job `release`, `env:`) and
 `.github/workflows/project-hotfix.yml` (job `hotfix`, `env:`).
 
-- [ ] **Step 1: add the `MAVEN_ARGS` block from §2.1 to both jobs, verbatim, comment included.**
+- [x] **Step 1: add the `MAVEN_ARGS` block from §2.1 to both jobs, verbatim, comment included.**
 
-- [ ] **Step 2: run the guard's script again, green.** Expected: `Both release workflows retry
+- [x] **Step 2: run the guard's script again, green.** Expected: `Both release workflows retry
   transient registry errors.` and exit 0.
 
-- [ ] **Step 3: run the existing interpolation check**, which must stay green. The new lines sit
+- [x] **Step 3: run the existing interpolation check**, which must stay green. The new lines sit
   in `env:`, not in a `run:` body:
 
   ```bash
   sh .github/scripts/check-run-interpolation.test.sh && sh .github/scripts/check-run-interpolation.sh
   ```
 
-- [ ] **Step 4: confirm the folded value.** It must be one line, with the two `-D` flags
+- [x] **Step 4: confirm the folded value.** It must be one line, with the two `-D` flags
   separated by a single space. Check it with any YAML parser to hand, or by reading the block:
   `>-` folds the two lines with a space and strips the trailing newline.
 
-- [ ] **Step 5: commit.**
+- [x] **Step 5: commit.**
 
   ```bash
   git add .github/workflows/project-release.yml .github/workflows/project-hotfix.yml
