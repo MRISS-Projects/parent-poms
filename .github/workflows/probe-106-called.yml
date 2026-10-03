@@ -1,0 +1,26 @@
+# #106 throwaway probe: does job-level queue: max work in a called workflow? Deleted before the PR.
+name: Probe 106 Called
+
+on:
+  workflow_call:
+    inputs:
+      git_project:
+        type: string
+        required: true
+      label:
+        type: string
+        required: true
+
+jobs:
+  hold:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ inputs.git_project }}-site
+      cancel-in-progress: false
+    env:
+      LABEL: ${{ inputs.label }}
+    steps:
+      - run: |
+          echo "start $LABEL $(date -u +%T)"
+          sleep 60
+          echo "end $LABEL $(date -u +%T)"
