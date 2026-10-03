@@ -17,6 +17,7 @@ jobs:
     concurrency:
       group: ${{ inputs.git_project }}-site
       cancel-in-progress: false
+      queue: max
     env:
       LABEL: ${{ inputs.label }}
     steps:
