@@ -262,7 +262,9 @@ different concurrency groups, so a release and a hotfix can both clone the devel
 and the second push is then rejected as non-fast-forward. The conclusion was right, but that
 mechanism is the rarest way to reach it. The common one is **any PR merged into the development
 branch during the minutes a release takes**, and no concurrency group can prevent that. So the
-fix is a retry, not serialization. `push-merge-back.sh` follows `commit-readme`'s loop: three
+fix is a retry, not serialization. (Since `#106` release and hotfix share one group,
+`<git_project>-site`, so the first mechanism is gone. The second remains, and so does the retry.)
+`push-merge-back.sh` follows `commit-readme`'s loop: three
 attempts, and a retry only when the fetched tip is not an ancestor of HEAD, meaning the branch
 really advanced. It differs in one place. A merge is redone rather than rebased: reset to the
 new tip and run `merge-into-develop.sh` again, so both assertions are proven again against what
