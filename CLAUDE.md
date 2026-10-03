@@ -153,6 +153,11 @@ including exact reusable-workflow inputs/secrets and a Jenkinsfile-to-step mappi
   consumer needs only a wrapper that passes it (DSH's `deploy.yml`). `deploy.yml` here does the same
   job for this repository, but it is dispatched, not reusable. The workflow has no dry run in either
   mode.
+- The three workflows that publish a consumer's site (`project-staging.yml`, `project-release.yml`,
+  `project-hotfix.yml`) share one job-level concurrency group, `<git_project>-site` (`#106`), with
+  `cancel-in-progress: false` and `queue: max`. Every run that pushes to a consumer's `gh-pages` waits
+  for the one before it, and none is cancelled. A caller must not give its own workflow-level group
+  that name.
 
 Required secret: `DEPLOY_TOKEN` (a cross-repo PAT — the default `GITHUB_TOKEN` cannot read/write
 `MRISS-Projects/maven-repo`, which is a separate repository from this one). JDK 17 (Temurin) +
