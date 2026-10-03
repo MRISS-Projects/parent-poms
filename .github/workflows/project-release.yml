@@ -66,8 +66,8 @@ jobs:
     # caller's name, so 'Staging' and 'Deploy Snapshot' would get separate groups and race.
     # Never cancel-in-progress: a run cancelled after its artifact deploy leaves a partial
     # deployment. queue: max keeps every waiting run; by default a newer one would cancel the
-    # one pending, and that could be a release. A caller must not name its own workflow-level
-    # group <git_project>-site: its job would wait on its own run.
+    # one pending, and that could be a release. A caller must not use <git_project>-site for a
+    # group of its own, at workflow or job level: the called job would wait on its own caller.
     concurrency:
       group: ${{ inputs.git_project }}-site
       cancel-in-progress: false

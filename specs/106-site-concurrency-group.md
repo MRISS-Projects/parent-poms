@@ -79,8 +79,8 @@ This goes in all three workflows, job level, directly after `permissions:`. In
     # caller's name, so 'Staging' and 'Deploy Snapshot' would get separate groups and race.
     # Never cancel-in-progress: a run cancelled after its artifact deploy leaves a partial
     # deployment. queue: max keeps every waiting run; by default a newer one would cancel the
-    # one pending, and that could be a release. A caller must not name its own workflow-level
-    # group <git_project>-site: its job would wait on its own run.
+    # one pending, and that could be a release. A caller must not use <git_project>-site for a
+    # group of its own, at workflow or job level: the called job would wait on its own caller.
     concurrency:
       group: ${{ inputs.git_project }}-site
       cancel-in-progress: false
@@ -102,8 +102,9 @@ A bullet after the `#104` one:
 - The three workflows that publish a consumer's site (`project-staging.yml`, `project-release.yml`,
   `project-hotfix.yml`) share one job-level concurrency group, `<git_project>-site` (`#106`), with
   `cancel-in-progress: false` and `queue: max`. Every run that pushes to a consumer's `gh-pages` waits
-  for the one before it, and none is cancelled. A caller must not give its own workflow-level group
-  that name.
+  for the one before it, and this group cancels none of them. A caller's own group can still drop a
+  run before it gets there, unless it queues too. A caller must not use that name for a group of its
+  own, at workflow or job level: the called job would wait on its own caller.
 ```
 
 ### 2.4 The fallback, if task 1 fails
