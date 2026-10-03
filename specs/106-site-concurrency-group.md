@@ -243,9 +243,9 @@ cancelled. Then:
 
 ### Task 2: the change
 
-- [ ] **Step 1.** Delete the three `probe-106-*.yml` files.
-- [ ] **Step 2.** Apply §2.2 to the three workflows, or under §2.4 the staging-only variant.
-- [ ] **Step 3.** Check the result:
+- [x] **Step 1.** Delete the three `probe-106-*.yml` files.
+- [x] **Step 2.** Apply §2.2 to the three workflows, or under §2.4 the staging-only variant.
+- [x] **Step 3.** Check the result:
 
   ```bash
   grep -n -A3 'concurrency:' .github/workflows/project-{staging,release,hotfix}.yml
@@ -253,16 +253,16 @@ cancelled. Then:
 
   Expected: three blocks with `${{ inputs.git_project }}-site`, `cancel-in-progress: false` and
   `queue: max`. Under §2.4: one block, in staging, and the release and hotfix blocks unchanged.
-- [ ] **Step 4.** Add the `CLAUDE.md` bullet (§2.3).
-- [ ] **Step 5.** Commit (`ci(#106): one gh-pages concurrency group per consumer`) and push.
+- [x] **Step 4.** Add the `CLAUDE.md` bullet (§2.3).
+- [x] **Step 5.** Commit (`ci(#106): one gh-pages concurrency group per consumer`) and push.
   `build.yml` must be green. Record the run in §7.2.
 
 ### Task 3: the proof in DSH
 
-- [ ] **Step 1.** In DSH, cut a throwaway branch `proof-parent-poms-106` from `DEVELOP`. Point
+- [x] **Step 1.** In DSH, cut a throwaway branch `proof-parent-poms-106` from `DEVELOP`. Point
   `deploy.yml` and `hotfix.yml` at `@issue-106-site-concurrency-group`, commit and push. Under §2.4,
   only `deploy.yml` is changed, and the second dispatch below is another `Deploy Snapshot`.
-- [ ] **Step 2.** Dispatch both on that branch, the second while the first runs:
+- [x] **Step 2.** Dispatch both on that branch, the second while the first runs:
 
   ```bash
   gh workflow run deploy.yml -R MRISS-Projects/dsh --ref proof-parent-poms-106
@@ -270,9 +270,9 @@ cancelled. Then:
     -f branch_name=0.3.x -f dry_run=true
   ```
 
-- [ ] **Step 3.** It passes if the hotfix job's log shows it waiting on `dsh-site`, it starts only
+- [x] **Step 3.** It passes if the hotfix job's log shows it waiting on `dsh-site`, it starts only
   after the snapshot job ends, and both runs end `success`.
-- [ ] **Step 4.** Delete the DSH branch. Record the runs in §7.3, and comment them on `dsh#149`.
+- [x] **Step 4.** Delete the DSH branch. Record the runs in §7.3, and comment them on `dsh#149`.
 
 ### Task 4: the PR
 
@@ -314,8 +314,24 @@ Task 1 passes, so §2.4's fallback does not apply.
 
 ### 7.2 CI
 
-Not yet run.
+[Build run 37125553093](https://github.com/MRISS-Projects/parent-poms/actions/runs/37125553093), at
+`20aedb3a`, is green, with the `#81` guard passing. The three blocks match §2.2 (task 2, step 3).
 
 ### 7.3 The proof in DSH
 
-Not yet run.
+On 2026-10-03, on DSH's throwaway branch `proof-parent-poms-106`, deleted afterwards. `deploy.yml` and
+`hotfix.yml` called this branch's `project-staging.yml` and `project-hotfix.yml` at `20aedb3a`.
+
+| Run | Dispatched | Job | Started | Ended | Result |
+|---|---|---|---|---|---|
+| [Deploy Snapshot 37125567724](https://github.com/MRISS-Projects/dsh/actions/runs/37125567724) | 13:15:38Z | `deploy / staging` | 13:15:47Z | 13:33:21Z | `success` |
+| [Hotfix 37125601861](https://github.com/MRISS-Projects/dsh/actions/runs/37125601861), `0.3.x`, dry run | 13:16:12Z | `hotfix / hotfix` | 13:33:23Z | 13:49:16Z | `success` |
+
+- **AC001.** The hotfix job was `pending` for the whole 17 minutes of the snapshot job and started
+  two seconds after it ended. Before this change the two workflows shared no group, and the hotfix
+  job would have started at once.
+- **AC002.** Neither run was cancelled.
+- **A deviation from task 3, step 3.** The group's name in the wait message ("waiting for … in
+  group `dsh-site`") is shown only on the run page. The REST API reports a waiting job as
+  `pending`, with no reason. The timing above is the evidence instead. Task 1 already showed the
+  group name in the cancellation message.
