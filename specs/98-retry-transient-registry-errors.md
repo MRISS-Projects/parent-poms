@@ -14,9 +14,9 @@ Packages answers with a transient 5xx is retried, rather than failing the releas
 
 **Architecture.** One job-level `MAVEN_ARGS` environment variable in each of the two reusable
 workflows widens the resolver's existing HTTP retry to cover 500, 502 and 504, and raises the retry
-count. Maven's own `mvn` script appends `MAVEN_ARGS` to every invocation, and the release plugin's
-forked build inherits the environment, so the setting reaches the `deploy` that
-`release:perform` forks. A `build.yml` check keeps the line from being dropped. No POM change, no
+count. Maven's own `mvn` script adds `MAVEN_ARGS` to every invocation, ahead of the command's own
+arguments, and the release plugin's forked build inherits the environment, so the setting reaches
+the `deploy` that `release:perform` forks. A `build.yml` check keeps the line from being dropped. No POM change, no
 new action.
 
 ## 1. What is true today
@@ -34,7 +34,11 @@ Verified against the jars the workflows run: Maven 3.9.16 (pinned by `Set up Mav
    the body. It retries the one failed request, not the module.
 3. **Its count and interval are configurable.** `aether.connector.http.retryHandler.count`
    (default 3), `.interval` (default 5000 ms) and `.intervalMax` (default 300000 ms). A
-   `Retry-After` header, when the server sends one, takes precedence over the interval.
+   `Retry-After` header, when the server sends one, takes precedence over the interval. The wait
+   grows with each attempt: `interval × attempt`, so five retries wait 5 + 10 + 15 + 20 + 25 =
+   75 s. The same `count` also goes to HttpClient's I/O retry handler, which under the default
+   `retryHandler.name` is `StandardHttpRequestRetryHandler(count, false)`, so raising it also allows more retries after an I/O failure on a request that was not fully
+   sent. That is harmless, and useful against the same kind of transient trouble.
 4. **`maven-deploy-plugin` 3.1.4 still has `retryFailedDeploymentCount`, and it is the wrong
    tool.** It re-runs the deploy of the whole module, so files that already went up are PUT
    again. GitHub Packages answers a second upload of a release version's file with 409 Conflict,
@@ -43,6 +47,8 @@ Verified against the jars the workflows run: Maven 3.9.16 (pinned by `Set up Mav
    from `<arguments>` (root `pom.xml`, overridden in `products/pom.xml`). The `mvn` the fork
    launches is the same Maven 3.9.16 script, though, and it reads `MAVEN_ARGS` from the
    inherited environment (`bin/mvn`, line 216: `${CLASSWORLDS_LAUNCHER} ${MAVEN_ARGS} "$@"`).
+   `MAVEN_ARGS` comes before the command's own arguments (line 26: "passed to Maven before CLI
+   arguments"), so a `-D` for the same key on a command overrides it.
 6. **Neither workflow sets `MAVEN_ARGS` or `MAVEN_OPTS` today.** Each job has a job-level `env:`
    holding only `DEPLOY_TOKEN`: `release` in `project-release.yml`, `hotfix` in
    `project-hotfix.yml`.
@@ -62,7 +68,8 @@ Both jobs get the same variable, next to `DEPLOY_TOKEN`:
       # 500, and the release stopped with its tag pushed and 12 of 13 modules published. The
       # resolver retries a failed request on its own, but by default only on 429 and 503. This
       # adds 500, 502 and 504, and allows five attempts. It is MAVEN_ARGS, not a -D on a
-      # command: Maven's mvn script appends it to every invocation, and release:perform's
+      # command: Maven's mvn script adds it to every invocation, ahead of the command's own
+      # arguments, so a -D for the same key on one command still wins. release:perform's
       # forked deploy inherits the environment, which a -D on the outer mvn never reaches.
       MAVEN_ARGS: >-
         -Daether.connector.http.retryHandler.serviceUnavailable=429,500,502,503,504
@@ -90,7 +97,9 @@ Both jobs get the same variable, next to `DEPLOY_TOKEN`:
 ### 2.3 The guard
 
 A new `build.yml` step fails the build if either workflow loses the setting. It sits next to
-`Check the reusable workflows declare no service containers` and follows that check's shape.
+`Check the reusable workflows declare no service containers` and follows that check's shape. It
+requires a `MAVEN_ARGS:` key, and each flag as a whole line of its own, so a flag left behind in
+a comment, a near miss like `count=50`, or a flag moved onto one `mvn` command does not pass.
 
 ### 2.4 Known limit
 
@@ -298,17 +307,25 @@ Evidence before the change. Nothing in this task is committed except the record 
 
   ```yaml
       # #98: a release's deploy must retry a transient 5xx from GitHub Packages. The retry
-      # lives in one MAVEN_ARGS line per release workflow (see specs/98-...md §2.1), and
-      # nothing else would notice it was gone until the next 500 split a release in half.
+      # lives in one MAVEN_ARGS line per release workflow (see
+      # specs/98-retry-transient-registry-errors.md §2.1), and nothing else would notice it was
+      # gone until the next 500 split a release in half. Each flag must be a whole line of
+      # its own, the way the folded MAVEN_ARGS value writes it: a substring match would also
+      # accept a flag left in a comment, count=50, or a -D on one mvn command, which never
+      # reaches release:perform's fork.
       - name: Check the release workflows retry transient registry errors
         run: |
           set -euo pipefail
           status=0
           for f in .github/workflows/project-release.yml .github/workflows/project-hotfix.yml; do
+            if ! grep -qE '^[[:space:]]+MAVEN_ARGS:' "$f"; then
+              echo "::error file=$f::$f does not set MAVEN_ARGS (see #98)."
+              status=1
+            fi
             for want in \
                 '-Daether.connector.http.retryHandler.serviceUnavailable=429,500,502,503,504' \
                 '-Daether.connector.http.retryHandler.count=5'; do
-              if ! grep -qF -- "$want" "$f"; then
+              if ! grep -qxE -- "[[:space:]]+${want//./[.]}" "$f"; then
                 echo "::error file=$f::$f does not set $want in MAVEN_ARGS (see #98)."
                 status=1
               fi
@@ -319,7 +336,12 @@ Evidence before the change. Nothing in this task is committed except the record 
   ```
 
 - [x] **Step 2: run it locally, red.** Extract the `run:` body to a scratch script and run it
-  from the repository root. Expected: four `::error` lines, two per file, and exit 1.
+  from the repository root. Expected: `::error` lines for both files, and exit 1.
+
+  Review round 1 hardened the guard from a substring match to the whole-line match above. Its
+  red was three scratch copies of the two workflows: the flags only in a comment, `count=50`,
+  and the flags on a single `mvn` command line instead of `MAVEN_ARGS`. The substring guard
+  passed all three. The whole-line guard fails all three, and passes the real workflows.
 
 - [x] **Step 3: commit the red guard.**
 
@@ -364,8 +386,11 @@ Consumers call the workflows at `@master`, so a rehearsal before the merge would
 version. This task runs after the PR is merged.
 
 - [ ] **Step 1:** dispatch DSH's `release.yml` with `dry_run: true`, using the inputs of its last
-  rehearsal. Expected: green, and the `Maven Release Perform` step's log shows the fork's command
-  line with no error about the new flags.
+  rehearsal. Expected: green. In a rehearsal `release:perform` does not fork, because
+  `-DdryRun=true` creates no `target/checkout` (see the comment above `Rehearsal tag bridge` in
+  `project-release.yml`). The forks that run are `release:prepare`'s, in the `Maven Release`
+  step, and the `rehearsal-tag` action's build. Both inherit `MAVEN_ARGS`, so a bad flag would
+  surface there. `MAVEN_ARGS` is environment, so it never shows in a logged command line.
 - [ ] **Step 2:** comment the run URL on `#98`.
 
 A dry run deploys nothing, so it cannot show a retry. Probe A carries that claim.
