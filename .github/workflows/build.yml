@@ -165,6 +165,27 @@ jobs:
           fi
           echo "No reusable project workflow declares service containers."
 
+      # #98: a release's deploy must retry a transient 5xx from GitHub Packages. The retry
+      # lives in one MAVEN_ARGS line per release workflow (see
+      # specs/98-retry-transient-registry-errors.md §2.1), and nothing else would notice it was
+      # gone until the next 500 split a release in half.
+      - name: Check the release workflows retry transient registry errors
+        run: |
+          set -euo pipefail
+          status=0
+          for f in .github/workflows/project-release.yml .github/workflows/project-hotfix.yml; do
+            for want in \
+                '-Daether.connector.http.retryHandler.serviceUnavailable=429,500,502,503,504' \
+                '-Daether.connector.http.retryHandler.count=5'; do
+              if ! grep -qF -- "$want" "$f"; then
+                echo "::error file=$f::$f does not set $want in MAVEN_ARGS (see #98)."
+                status=1
+              fi
+            done
+          done
+          [ "$status" -eq 0 ] && echo "Both release workflows retry transient registry errors."
+          exit "$status"
+
       # #81: an expression inside a run: body is substituted into the script TEXT before bash
       # parses it, so a caller-supplied input holding shell metacharacters becomes code - and a
       # `#` in it can swallow the rest of a command, leaving a green step that did nothing.
