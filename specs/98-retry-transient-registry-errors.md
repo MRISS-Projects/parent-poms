@@ -128,7 +128,7 @@ Evidence before the change. Nothing in this task is committed except the record 
 
 **Files:** scratch only: `FakeRegistry.java`, `probe-a/pom.xml`, `probe-b/pom.xml`.
 
-- [ ] **Step 1: write the fake registry.** It answers the first PUT of each `.pom` with 500 and
+- [x] **Step 1: write the fake registry.** It answers the first PUT of each `.pom` with 500 and
   every other PUT with 201, and logs each request.
 
   ```java
@@ -165,7 +165,7 @@ Evidence before the change. Nothing in this task is committed except the record 
 
   Start it in the background: `java FakeRegistry.java > fake-registry.log 2>&1 &`.
 
-- [ ] **Step 2: write probe A.** It's a release-version POM-packaged project, so the only upload
+- [x] **Step 2: write probe A.** It's a release-version POM-packaged project, so the only upload
   that can fail is the `.pom`, the same file that failed in DSH 0.3.1.
 
   ```xml
@@ -186,7 +186,7 @@ Evidence before the change. Nothing in this task is committed except the record 
   </project>
   ```
 
-- [ ] **Step 3: red.** Deploy without the setting:
+- [x] **Step 3: red.** Deploy without the setting:
 
   ```bash
   (cd probe-a && mvn -B deploy -DaltDeploymentRepository=fake::http://127.0.0.1:8099/repo) \
@@ -196,7 +196,7 @@ Evidence before the change. Nothing in this task is committed except the record 
   Expected: non-zero exit; the log names `status code: 500`; `fake-registry.log` shows one
   `PUT /repo/probe/probe-a/1.0/probe-a-1.0.pom -> 500` and no second PUT of that path.
 
-- [ ] **Step 4: green.** Restart the fake registry so its memory is empty, then deploy with the
+- [x] **Step 4: green.** Restart the fake registry so its memory is empty, then deploy with the
   setting:
 
   ```bash
@@ -206,7 +206,7 @@ Evidence before the change. Nothing in this task is committed except the record 
 
   Expected: exit 0; `fake-registry.log` shows the `.pom` path twice, `-> 500` then `-> 201`.
 
-- [ ] **Step 5: write probe B.** It's a `SNAPSHOT` in a local git repository whose only check is
+- [x] **Step 5: write probe B.** It's a `SNAPSHOT` in a local git repository whose only check is
   an enforcer rule, bound to `validate`, that requires a property named `probe`. The release
   plugin runs `validate` as its preparation goal, so the rule runs only in the fork.
 
@@ -251,7 +251,7 @@ Evidence before the change. Nothing in this task is committed except the record 
   Then `git init`, `git add pom.xml` and `git commit -m probe` inside `probe-b`, so
   `release:prepare` finds no local modifications.
 
-- [ ] **Step 6: red, then the control, then green.** Each run is `release:prepare -DdryRun=true`,
+- [x] **Step 6: red, then the control, then green.** Each run is `release:prepare -DdryRun=true`,
   and each is preceded by `mvn -B release:clean`:
 
   ```bash
@@ -267,7 +267,7 @@ Evidence before the change. Nothing in this task is committed except the record 
   expected to fail. If it passes, record that: the design still holds, because `MAVEN_ARGS` is
   on the outer command line too, but §1.5 and the comment in §2.1 must be corrected.
 
-- [ ] **Step 7: probe C.** In this parent-poms checkout, the version capture used by both
+- [x] **Step 7: probe C.** In this parent-poms checkout, the version capture used by both
   workflows prints the same thing with and without the setting:
 
   ```bash
@@ -278,10 +278,10 @@ Evidence before the change. Nothing in this task is committed except the record 
 
   Expected: `same`.
 
-- [ ] **Step 8: stop the fake registry.** Kill the `java FakeRegistry.java` process by its PID,
+- [x] **Step 8: stop the fake registry.** Kill the `java FakeRegistry.java` process by its PID,
   captured with `echo $!` right after the start in step 1 and again after the restart in step 4.
 
-- [ ] **Step 9: record the outcome.** Add §6, "Probe results", to this spec: each probe's exit
+- [x] **Step 9: record the outcome.** Add §6, "Probe results", to this spec: each probe's exit
   code and the relevant `fake-registry.log` lines. Commit:
 
   ```bash
@@ -375,3 +375,43 @@ A dry run deploys nothing, so it cannot show a retry. Probe A carries that claim
 - `project-stage.yml`, `project-staging.yml` and `deploy.yml` (§2.1).
 - Any POM change, and any change to `<arguments>`.
 - Recovering automatically from a release that has already failed halfway (§2.4).
+
+## 6. Probe results
+
+Run on 2026-10-03, Maven 3.9.16 and JDK 17.0.20.1, in a scratch directory outside the repository.
+
+**Probe A (AC001).** Red exit 1, with the 0.3.1 failure reproduced word for word:
+`Could not transfer artifact probe:probe-a:pom:1.0 from/to fake (http://127.0.0.1:8099/repo):
+status code: 500, reason phrase: Internal Server Error (500)`. The registry saw one PUT of the
+`.pom`:
+
+```text
+PUT /repo/probe/probe-a/1.0/probe-a-1.0.pom -> 500
+```
+
+Green exit 0 (`BUILD SUCCESS`). The same `.pom` was retried, and the rest of the deploy followed:
+
+```text
+PUT /repo/probe/probe-a/1.0/probe-a-1.0.pom -> 500
+PUT /repo/probe/probe-a/1.0/probe-a-1.0.pom -> 201
+PUT /repo/probe/probe-a/1.0/probe-a-1.0.pom.sha1 -> 201
+PUT /repo/probe/probe-a/1.0/probe-a-1.0.pom.md5 -> 201
+GET /repo/probe/probe-a/maven-metadata.xml -> 404
+PUT /repo/probe/probe-a/maven-metadata.xml -> 201
+PUT /repo/probe/probe-a/maven-metadata.xml.sha1 -> 201
+PUT /repo/probe/probe-a/maven-metadata.xml.md5 -> 201
+```
+
+**Probe B (AC002).** Each run logged `Executing goals 'validate'...`, so the rule ran in the fork.
+
+| Run | Exit | Fork result |
+|---|---|---|
+| red, nothing set | 1 | `Property "probe" is required for this build.` |
+| control, `-Dprobe=x` on the outer `mvn` | 1 | `Property "probe" is required for this build.` |
+| green, `MAVEN_ARGS='-Dprobe=x'` | 0 | `BUILD SUCCESS` |
+
+The control failing confirms §1.5: a `-D` on the outer command line does not reach the fork, and
+`MAVEN_ARGS` does.
+
+**Probe C (AC003).** `same`: with and without the setting, the capture printed exactly
+`3.11.0-SNAPSHOT`.
