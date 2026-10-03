@@ -337,3 +337,18 @@ On 2026-10-03, on DSH's throwaway branch `proof-parent-poms-106`, deleted afterw
   group `dsh-site`") is shown only on the run page. The REST API reports a waiting job as
   `pending`, with no reason. The timing above is the evidence instead. Task 1 already showed the
   group name in the cancellation message.
+
+### 7.4 Review
+
+- **Local review, before the PR**, on `4dee01a6..26cf9f9f`. No critical or important finding.
+  Three minor ones were fixed:
+  - Spec 65 still said release and hotfix use different groups (`0d47b723`).
+  - The deadlock warning named only a caller's workflow-level group; a job-level one deadlocks
+    too (`be0312f9`).
+  - `CLAUDE.md` said no run is cancelled, where only this group cancels none; a caller's own
+    group still can (`be0312f9`).
+- **Copilot, round 1** on [#107](https://github.com/MRISS-Projects/parent-poms/pull/107), at
+  `be0312f9`, effort Balanced, requested. One finding in six threads: the three workflow
+  comments, `CLAUDE.md`, and the spec's goal and §2.2 promised an unbounded queue. Valid. GitHub
+  caps `queue: max` at 100 pending runs and cancels any beyond that, as §1 fact 3 already said.
+  Fixed in `f1d88ef1`. The PR description is corrected to match.
