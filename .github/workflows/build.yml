@@ -168,16 +168,23 @@ jobs:
       # #98: a release's deploy must retry a transient 5xx from GitHub Packages. The retry
       # lives in one MAVEN_ARGS line per release workflow (see
       # specs/98-retry-transient-registry-errors.md §2.1), and nothing else would notice it was
-      # gone until the next 500 split a release in half.
+      # gone until the next 500 split a release in half. Each flag must be a whole line of
+      # its own, the way the folded MAVEN_ARGS value writes it: a substring match would also
+      # accept a flag left in a comment, count=50, or a -D on one mvn command, which never
+      # reaches release:perform's fork.
       - name: Check the release workflows retry transient registry errors
         run: |
           set -euo pipefail
           status=0
           for f in .github/workflows/project-release.yml .github/workflows/project-hotfix.yml; do
+            if ! grep -qE '^[[:space:]]+MAVEN_ARGS:' "$f"; then
+              echo "::error file=$f::$f does not set MAVEN_ARGS (see #98)."
+              status=1
+            fi
             for want in \
                 '-Daether.connector.http.retryHandler.serviceUnavailable=429,500,502,503,504' \
                 '-Daether.connector.http.retryHandler.count=5'; do
-              if ! grep -qF -- "$want" "$f"; then
+              if ! grep -qxE -- "[[:space:]]+${want//./[.]}" "$f"; then
                 echo "::error file=$f::$f does not set $want in MAVEN_ARGS (see #98)."
                 status=1
               fi
