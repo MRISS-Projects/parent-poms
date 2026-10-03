@@ -158,7 +158,7 @@ cancelled. Then:
 
 ### Task 1: the probe
 
-- [ ] **Step 1.** Create `.github/workflows/probe-106-called.yml`. The job sleeps 60 seconds, so the
+- [x] **Step 1.** Create `.github/workflows/probe-106-called.yml`. The job sleeps 60 seconds, so the
   other calls have to wait on it.
 
   ```yaml
@@ -191,7 +191,7 @@ cancelled. Then:
             echo "end $LABEL $(date -u +%T)"
   ```
 
-- [ ] **Step 2.** Create two callers with different workflow names, so that `github.workflow`
+- [x] **Step 2.** Create two callers with different workflow names, so that `github.workflow`
   differs between them. `probe-106-a.yml`:
 
   ```yaml
@@ -219,10 +219,10 @@ cancelled. Then:
   `probe-106-b.yml` is identical except `name: Probe 106 B`, with a single job `b1` and
   `label: b1`.
 
-- [ ] **Step 3.** Commit (`test(#106): probe job-level queue: max in a called workflow`) and push.
+- [x] **Step 3.** Commit (`test(#106): probe job-level queue: max in a called workflow`) and push.
   The single push starts both callers, so three `hold` jobs contend for group `probe-site`.
 
-- [ ] **Step 4.** Read the result:
+- [x] **Step 4.** Read the result:
 
   ```bash
   gh run list -R MRISS-Projects/parent-poms -b issue-106-site-concurrency-group --limit 5 \
@@ -239,7 +239,7 @@ cancelled. Then:
   **Fail:** a validation error naming `queue`, or any `hold` job `cancelled`. On a fail, follow §2.4
   from here on.
 
-- [ ] **Step 5.** Record the result in §7.1, with run links.
+- [x] **Step 5.** Record the result in §7.1, with run links.
 
 ### Task 2: the change
 
@@ -291,7 +291,26 @@ cancelled. Then:
 
 ### 7.1 The probe
 
-Not yet run.
+On 2026-10-03. Two pushes, so the probe was first seen to fail:
+
+- **Red, without `queue`** (`0cf481c2`).
+  [Probe 106 A run 37125181065](https://github.com/MRISS-Projects/parent-poms/actions/runs/37125181065)
+  ended `cancelled`: `a1 / hold` was cancelled while waiting, with "Canceling since a higher priority
+  waiting request for probe-site exists". `b1` and `a2` ran one after the other, so the group already
+  spans the two caller names. §1 fact 3 is confirmed: the default drops a pending run.
+- **Green, with `queue: max`** (`1109b802`).
+  [Probe 106 A run 37125328048](https://github.com/MRISS-Projects/parent-poms/actions/runs/37125328048)
+  and [Probe 106 B run 37125328074](https://github.com/MRISS-Projects/parent-poms/actions/runs/37125328074)
+  are both `success`, with no validation error. Job-level `queue: max` is accepted in a called
+  workflow (§1 fact 4). The three `hold` jobs ran in sequence, none cancelled:
+
+  | Job | Started | Ended |
+  |---|---|---|
+  | `a2 / hold` | 13:11:16Z | 13:12:19Z |
+  | `a1 / hold` | 13:12:21Z | 13:13:24Z |
+  | `b1 / hold` | 13:13:26Z | 13:14:28Z |
+
+Task 1 passes, so §2.4's fallback does not apply.
 
 ### 7.2 CI
 
