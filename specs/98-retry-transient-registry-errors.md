@@ -67,10 +67,11 @@ Both jobs get the same variable, next to `DEPLOY_TOKEN`:
       # #98: GitHub Packages answered one PUT of DSH 0.3.1's release:perform with a transient
       # 500, and the release stopped with its tag pushed and 12 of 13 modules published. The
       # resolver retries a failed request on its own, but by default only on 429 and 503. This
-      # adds 500, 502 and 504, and allows five attempts. It is MAVEN_ARGS, not a -D on a
-      # command: Maven's mvn script adds it to every invocation, ahead of the command's own
-      # arguments, so a -D for the same key on one command still wins. release:perform's
-      # forked deploy inherits the environment, which a -D on the outer mvn never reaches.
+      # adds 500, 502 and 504, and allows five retries, six attempts in all. It is
+      # MAVEN_ARGS, not a -D on a command: Maven's mvn script adds it to every invocation,
+      # ahead of the command's own arguments, so a -D for the same key on one command still
+      # wins. release:perform's forked deploy inherits the environment, which a -D on the
+      # outer mvn never reaches.
       MAVEN_ARGS: >-
         -Daether.connector.http.retryHandler.serviceUnavailable=429,500,502,503,504
         -Daether.connector.http.retryHandler.count=5
@@ -79,7 +80,9 @@ Both jobs get the same variable, next to `DEPLOY_TOKEN`:
 - **The status codes** are the transient ones: rate limited, internal error, bad gateway,
   unavailable, gateway timeout. A 4xx other than 429 is never retried. It is an answer, not an
   outage.
-- **The count** goes from 3 to 5. The interval stays at its default. With the resolver's backoff
+- **The count** goes from 3 to 5. It counts retries after the first request, so a request gets
+  up to six attempts: the strategy retries while `executionCount <= retryCount`. The interval
+  stays at its default. With the resolver's backoff
   that covers about a minute or two of registry trouble per request.
 - **Only these two workflows.** `project-stage.yml`, `project-staging.yml` and `deploy.yml` also
   upload to GitHub Packages, but a failed snapshot or RC deploy is simply re-run. Only a release

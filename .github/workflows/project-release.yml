@@ -78,10 +78,11 @@ jobs:
       # #98: GitHub Packages answered one PUT of DSH 0.3.1's release:perform with a transient
       # 500, and the release stopped with its tag pushed and 12 of 13 modules published. The
       # resolver retries a failed request on its own, but by default only on 429 and 503. This
-      # adds 500, 502 and 504, and allows five attempts. It is MAVEN_ARGS, not a -D on a
-      # command: Maven's mvn script adds it to every invocation, ahead of the command's own
-      # arguments, so a -D for the same key on one command still wins. release:perform's
-      # forked deploy inherits the environment, which a -D on the outer mvn never reaches.
+      # adds 500, 502 and 504, and allows five retries, six attempts in all. It is
+      # MAVEN_ARGS, not a -D on a command: Maven's mvn script adds it to every invocation,
+      # ahead of the command's own arguments, so a -D for the same key on one command still
+      # wins. release:perform's forked deploy inherits the environment, which a -D on the
+      # outer mvn never reaches.
       MAVEN_ARGS: >-
         -Daether.connector.http.retryHandler.serviceUnavailable=429,500,502,503,504
         -Daether.connector.http.retryHandler.count=5
