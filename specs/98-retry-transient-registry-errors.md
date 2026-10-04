@@ -98,8 +98,11 @@ Both jobs get the same variable, next to `DEPLOY_TOKEN`:
 
 A new `build.yml` step fails the build if either workflow loses the setting. It sits next to
 `Check the reusable workflows declare no service containers` and follows that check's shape. It
-requires a `MAVEN_ARGS:` key, and each flag as a whole line of its own, so a flag left behind in
-a comment, a near miss like `count=50`, or a flag moved onto one `mvn` command does not pass.
+reads the value of the `MAVEN_ARGS` key itself: the key's own text plus the more-indented lines
+that fold into it, joined with spaces. It requires exactly one such key per file, holding exactly
+the two flags. So none of these pass: a flag left behind in a comment, a near miss like
+`count=50`, a flag moved onto one `mvn` command, the flags under another key while `MAVEN_ARGS`
+is emptied, or a second `MAVEN_ARGS`.
 
 ### 2.4 Known limit
 
@@ -309,27 +312,39 @@ Evidence before the change. Nothing in this task is committed except the record 
       # #98: a release's deploy must retry a transient 5xx from GitHub Packages. The retry
       # lives in one MAVEN_ARGS line per release workflow (see
       # specs/98-retry-transient-registry-errors.md §2.1), and nothing else would notice it was
-      # gone until the next 500 split a release in half. Each flag must be a whole line of
-      # its own, the way the folded MAVEN_ARGS value writes it: a substring match would also
-      # accept a flag left in a comment, count=50, or a -D on one mvn command, which never
-      # reaches release:perform's fork.
+      # gone until the next 500 split a release in half. The check reads the VALUE of the
+      # MAVEN_ARGS key - its own text plus the more-indented lines that fold into it, joined
+      # with spaces - and requires exactly one such key per file, holding exactly the flags.
+      # Searching for the flags anywhere in the file would also accept them left in a
+      # comment, as count=50, on one mvn command (which never reaches release:perform's fork),
+      # or under another key while MAVEN_ARGS is emptied.
       - name: Check the release workflows retry transient registry errors
         run: |
           set -euo pipefail
+          want='-Daether.connector.http.retryHandler.serviceUnavailable=429,500,502,503,504 -Daether.connector.http.retryHandler.count=5'
           status=0
           for f in .github/workflows/project-release.yml .github/workflows/project-hotfix.yml; do
-            if ! grep -qE '^[[:space:]]+MAVEN_ARGS:' "$f"; then
-              echo "::error file=$f::$f does not set MAVEN_ARGS (see #98)."
+            values=$(awk '
+              function flush() { if (inv) print v; inv = 0 }
+              inv {
+                match($0, /^[[:space:]]*/)
+                if (RLENGTH > ind && $0 ~ /[^[:space:]]/) {
+                  l = substr($0, RLENGTH + 1); v = (v == "" ? l : v " " l); next
+                }
+                flush()
+              }
+              /^[[:space:]]+MAVEN_ARGS:/ {
+                match($0, /^[[:space:]]*/); ind = RLENGTH
+                v = $0; sub(/^[[:space:]]+MAVEN_ARGS:[[:space:]]*/, "", v)
+                if (v == ">-") v = ""
+                inv = 1
+              }
+              END { flush() }' "$f")
+            if [ "$values" != "$want" ]; then
+              found=${values//$'\n'/ | }
+              echo "::error file=$f::$f must set MAVEN_ARGS exactly once, to: $want (see #98). Found: ${found:-no MAVEN_ARGS}"
               status=1
             fi
-            for want in \
-                '-Daether.connector.http.retryHandler.serviceUnavailable=429,500,502,503,504' \
-                '-Daether.connector.http.retryHandler.count=5'; do
-              if ! grep -qxE -- "[[:space:]]+${want//./[.]}" "$f"; then
-                echo "::error file=$f::$f does not set $want in MAVEN_ARGS (see #98)."
-                status=1
-              fi
-            done
           done
           [ "$status" -eq 0 ] && echo "Both release workflows retry transient registry errors."
           exit "$status"
@@ -338,10 +353,17 @@ Evidence before the change. Nothing in this task is committed except the record 
 - [x] **Step 2: run it locally, red.** Extract the `run:` body to a scratch script and run it
   from the repository root. Expected: `::error` lines for both files, and exit 1.
 
-  Review round 1 hardened the guard from a substring match to the whole-line match above. Its
-  red was three scratch copies of the two workflows: the flags only in a comment, `count=50`,
-  and the flags on a single `mvn` command line instead of `MAVEN_ARGS`. The substring guard
-  passed all three. The whole-line guard fails all three, and passes the real workflows.
+  The guard above is its third version. Each change started from a failing case: scratch copies
+  of the two workflows that the guard of the day passed.
+
+  - **The local review, before the PR**, replaced the first version's substring match with
+    whole-line matches. The substring guard passed three copies: the flags only in a comment,
+    `count=50`, and the flags on a single `mvn` command line instead of `MAVEN_ARGS`.
+  - **Copilot's round 1 on PR #108** (Balanced effort, at `62f460df`) found that the whole-line
+    guard searched for the key and the flags separately. It passed a copy with
+    `MAVEN_ARGS: ""` and the flags under an `UNUSED_ARGS: >-` key. The guard now reads the
+    value of `MAVEN_ARGS` itself. It fails all four copies, and a fifth with a second
+    `MAVEN_ARGS`, under `gawk` and `gawk --posix` alike, and passes the real workflows.
 
 - [x] **Step 3: commit the red guard.**
 
