@@ -403,22 +403,23 @@ Evidence before the change. Nothing in this task is committed except the record 
   git commit -m "fix(#98): retry transient registry errors during release and hotfix"
   ```
 
-- [ ] **Step 6: push and open the PR into `master`.** `build.yml` runs the guard on the PR.
+- [x] **Step 6: push and open the PR into `master`.** `build.yml` runs the guard on the PR.
 
 ### Task 4: rehearsal after the merge (AC006)
 
 Consumers call the workflows at `@master`, so a rehearsal before the merge would exercise the old
 version. This task runs after the PR is merged.
 
-- [ ] **Step 1:** dispatch DSH's `release.yml` with `dry_run: true`, using the inputs of its last
+- [x] **Step 1:** dispatch DSH's `release.yml` with `dry_run: true`, using the inputs of its last
   rehearsal. Expected: green. In a rehearsal `release:perform` does not fork, because
   `-DdryRun=true` creates no `target/checkout` (see the comment above `Rehearsal tag bridge` in
   `project-release.yml`). The forks that run are `release:prepare`'s, in the `Maven Release`
   step, and the `rehearsal-tag` action's build. Both inherit `MAVEN_ARGS`, so a bad flag would
   surface there. `MAVEN_ARGS` is environment, so it never shows in a logged command line.
-- [ ] **Step 2:** comment the run URL on `#98`.
+- [x] **Step 2:** comment the run URL on `#98`.
 
-A dry run deploys nothing, so it cannot show a retry. Probe A carries that claim.
+A dry run deploys nothing, so it cannot show a retry. Probe A carries that claim. §7 records the
+runs.
 
 ## 5. Out of scope
 
@@ -465,3 +466,28 @@ The control failing confirms §1.5: a `-D` on the outer command line does not re
 
 **Probe C (AC003).** `same`: with and without the setting, the capture printed exactly
 `3.11.0-SNAPSHOT`.
+
+## 7. The rehearsal after the merge
+
+On 2026-10-04, after PR #108 merged as `251c3ff7`. DSH's wrappers called both workflows at `@master`.
+The release ran on a throwaway branch, `rehearsal-98`, cut from DSH `DEVELOP` at `68337f3e` and
+deleted afterwards. DSH had no RC branch to rehearse on. Its inputs were `current_version=0.4.0`,
+`next_development_version=0.5.0-SNAPSHOT`, `hotfix_branch=0.4.x` and
+`initial_hotfix_version=0.4.1-SNAPSHOT`. The hotfix rehearsal, on `0.3.x`, was added to cover the
+second workflow.
+
+| Run | Branch | Job started | Job ended | Result |
+|---|---|---|---|---|
+| [Hotfix 37201685895](https://github.com/MRISS-Projects/dsh/actions/runs/37201685895), dry run | `0.3.x` | 12:19:10Z | 12:33:08Z | `success` |
+| [Release 37201688263](https://github.com/MRISS-Projects/dsh/actions/runs/37201688263), dry run | `rehearsal-98` | 12:33:10Z | 12:46:58Z | `success` |
+
+- **AC006.** Both runs ended `success`. In each, every step's environment lists
+  `MAVEN_ARGS: -Daether.connector.http.retryHandler.serviceUnavailable=429,500,502,503,504 -Daether.connector.http.retryHandler.count=5`,
+  and `release:prepare`'s forked `clean install` ended `BUILD SUCCESS`. Neither log reports a
+  problem with the flags.
+- **A side result for `#106`.** The release run was dispatched two seconds after the hotfix run.
+  Its job waited in the `dsh-site` group for the whole hotfix job and started two seconds after it
+  ended. This was the shared group's first exercise on the release path.
+
+The run URLs are commented on
+[`#98`](https://github.com/MRISS-Projects/parent-poms/issues/98#issuecomment-5980088468).
