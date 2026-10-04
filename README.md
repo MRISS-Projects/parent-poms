@@ -4,7 +4,7 @@
 
 ## Version
 
-3.10.0
+3.11.0
 
 ## Build from Sources
 
@@ -29,6 +29,13 @@ Snapshot: https://mriss-projects.github.io/parent-poms/snapshots
 Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
+
+### Version 3.11.0
+
+| # | Type | Summary | Assignee | Reporter | Updated |
+| --- | ---- | ------- | -------- | -------- | ------- |
+| [98](https://github.com/MRISS-Projects/parent-poms/issues/98) | bug | release:perform fails the whole release on a transient GitHub Packages 500, with no retry | null | mriss | 10/4/26 |
+| [106](https://github.com/MRISS-Projects/parent-poms/issues/106) | enhancement | project-staging.yml has no concurrency group, unlike project-release.yml and project-hotfix.yml | null | mriss | 10/3/26 |
 
 ### Version 3.10.0
 
@@ -59,7 +66,7 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 | # | Type | Summary | Assignee | Reporter | Updated |
 | --- | ---- | ------- | -------- | -------- | ------- |
 | [70](https://github.com/MRISS-Projects/parent-poms/issues/70) | task | Convert the remaining APT site pages to Markdown | null | mriss | 9/27/26 |
-| [71](https://github.com/MRISS-Projects/parent-poms/issues/71) | task | commit-readme-md runs three times per staging run, and one commit contains an unresolved 20261003-000042 | null | mriss | 9/27/26 |
+| [71](https://github.com/MRISS-Projects/parent-poms/issues/71) | task | commit-readme-md runs three times per staging run, and one commit contains an unresolved 20261004-144501 | null | mriss | 9/27/26 |
 | [69](https://github.com/MRISS-Projects/parent-poms/issues/69) | task | project-release.yml sets the hotfix version on the root POM only | null | mriss | 9/27/26 |
 | [65](https://github.com/MRISS-Projects/parent-poms/issues/65) | task | Merge release tag back into DEVELOP after project-release.yml / project-hotfix.yml | null | mriss | 9/27/26 |
 | [59](https://github.com/MRISS-Projects/parent-poms/issues/59) | task | Update Maven pinned version from 3.9.9 to 3.9.16 in documentation and GitHub Actions | null | mriss | 9/26/26 |
