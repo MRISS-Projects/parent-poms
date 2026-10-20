@@ -16,7 +16,7 @@
     <parent>
         <groupId>com.mriss</groupId>
         <artifactId>mriss-parent</artifactId>
-        <version>3.12.0-SNAPSHOT</version>
+        <version>3.11.1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <dependencyManagement>
@@ -116,6 +116,35 @@
                     <configuration>
                         <mainClass>${start-class}</mainClass>
                     </configuration>
+                </plugin>
+                <!-- Classpath resources are filtered with @...@ only, as spring-boot-starter-parent does:
+                     ${...} is Spring's placeholder syntax, and Maven must leave it for Spring to resolve
+                     at run time. Only the two lifecycle executions are configured, so a copy-resources
+                     execution, such as the ones that filter site Markdown with ${...}, keeps both
+                     delimiters. A product turns filtering on per resource; this sets only what is replaced. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>default-resources</id>
+                            <configuration>
+                                <useDefaultDelimiters>false</useDefaultDelimiters>
+                                <delimiters>
+                                    <delimiter>@</delimiter>
+                                </delimiters>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>default-testResources</id>
+                            <configuration>
+                                <useDefaultDelimiters>false</useDefaultDelimiters>
+                                <delimiters>
+                                    <delimiter>@</delimiter>
+                                </delimiters>
+                            </configuration>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
