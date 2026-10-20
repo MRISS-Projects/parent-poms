@@ -109,10 +109,10 @@ Releasing with `deploy.yml` (`release_type: releases`) advances `master` to `3.1
 
 ### Task 1: the re-version and the rule (AC004)
 
-- [ ] **Step 1:** re-version the eight POMs to `3.11.1-SNAPSHOT` (§2.3). `git grep -n
+- [x] **Step 1:** re-version the eight POMs to `3.11.1-SNAPSHOT` (§2.3). `git grep -n
   '3.12.0-SNAPSHOT' -- '*pom.xml'` finds nothing. Commit `build(#110): re-version master to
   3.11.1-SNAPSHOT for the hotfix line`.
-- [ ] **Step 2:** add the entry of §2.1 to `products/pom.xml`, then `mvn -B clean install`.
+- [x] **Step 2:** add the entry of §2.1 to `products/pom.xml`, then `mvn -B clean install`.
   Expected: exit 0, and `products/3.11.1-SNAPSHOT` in the local repository. Commit
   `build(#110): filter classpath resources with @...@ only`.
 
@@ -123,9 +123,9 @@ check and its site and README comparison. The results are recorded in DSH's spec
 
 ### Task 3: the release (AC005)
 
-- [ ] **Step 1:** after the pull request is merged, dispatch `deploy.yml` with
+- [x] **Step 1:** after the pull request is merged, dispatch `deploy.yml` with
   `release_type: snapshots`, so DSH's CI resolves `3.11.1-SNAPSHOT`.
-- [ ] **Step 2:** after DSH's check passes in CI and the owner closes `#110`, dispatch `deploy.yml`
+- [x] **Step 2:** after DSH's check passes in CI and the owner closes `#110`, dispatch `deploy.yml`
   with `release_type: releases`. Check that tag `mriss-parent-3.11.1` exists and that `master` is
   at `3.12.0-SNAPSHOT`.
 
@@ -134,3 +134,17 @@ check and its site and README comparison. The results are recorded in DSH's spec
 - Turning filtering on or off in any product: that is each product's `<resources>`. DSH does it in
   `#158`.
 - `resource.delimiter` as a property. Nothing here reads it.
+
+## 6. Results
+
+- **Task 1.** `efe85b4e` re-versioned the eight POMs, and `c4a9931f` added the rule. `mvn -B clean
+  install` exited 0.
+- **Task 2.** Against the `SNAPSHOT`, installed locally, DSH's test failed on 3.10.0 and passed on
+  `3.11.1-SNAPSHOT` with DSH's own POMs still unchanged. The effective POM put the `@` delimiter on
+  the two lifecycle executions only, and DSH's site trees and README matched byte for byte apart
+  from a timestamp. DSH's spec, §7, has the record.
+- **Task 3.** PR `#111` merged as `becc1602`. The snapshot deploy was run 39439724416. The release
+  went out before DSH's pull request, on the owner's call, so the DSH check behind it is the local
+  one of Task 2, not CI. The release was run 39443436995, which made tag `mriss-parent-3.11.1`
+  and moved `master` back to `3.12.0-SNAPSHOT`. DSH's `mvn -B clean install` then passed against
+  the published `products-3.11.1.pom`.
