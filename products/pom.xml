@@ -117,6 +117,35 @@
                         <mainClass>${start-class}</mainClass>
                     </configuration>
                 </plugin>
+                <!-- Classpath resources are filtered with @...@ only, as spring-boot-starter-parent does:
+                     ${...} is Spring's placeholder syntax, and Maven must leave it for Spring to resolve
+                     at run time. Only the two lifecycle executions are configured, so a copy-resources
+                     execution, such as the ones that filter site Markdown with ${...}, keeps both
+                     delimiters. A product turns filtering on per resource; this sets only what is replaced. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>default-resources</id>
+                            <configuration>
+                                <useDefaultDelimiters>false</useDefaultDelimiters>
+                                <delimiters>
+                                    <delimiter>@</delimiter>
+                                </delimiters>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>default-testResources</id>
+                            <configuration>
+                                <useDefaultDelimiters>false</useDefaultDelimiters>
+                                <delimiters>
+                                    <delimiter>@</delimiter>
+                                </delimiters>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
             </plugins>
         </pluginManagement>
         <!-- FR005: override maven-release-plugin <arguments> at products level to include
