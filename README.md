@@ -30,12 +30,11 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
 
-### Version 3.11.1-SNAPSHOT
+### Version 3.11.1
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | --- | ---- | ------- | -------- | -------- | ------- |
 | [110](https://github.com/MRISS-Projects/parent-poms/issues/110) | enhancement | Filter classpath resources with `@…@` only, as spring-boot-starter-parent does | null | mriss | 10/20/26 |
-| [111](https://github.com/MRISS-Projects/parent-poms/issues/111) | enhancement | Filter classpath resources with `@…@` only, as spring-boot-starter-parent does | null | mriss | 10/20/26 |
 
 ### Version 3.11.0
 
