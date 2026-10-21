@@ -4,7 +4,7 @@
 
 ## Version
 
-3.11.1
+3.11.2-SNAPSHOT - 44 - 20261021-135810
 
 ## Build from Sources
 
@@ -29,6 +29,12 @@ Snapshot: https://mriss-projects.github.io/parent-poms/snapshots
 Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
+
+### Version 3.11.2-SNAPSHOT
+
+| # | Type | Summary | Assignee | Reporter | Updated |
+| --- | ---- | ------- | -------- | -------- | ------- |
+| [113](https://github.com/MRISS-Projects/parent-poms/issues/113) | n/a | Manage mockito-junit-jupiter at mockito-core's version (#112) | null | mriss | 10/21/26 |
 
 ### Version 3.11.1
 
@@ -72,7 +78,7 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 | # | Type | Summary | Assignee | Reporter | Updated |
 | --- | ---- | ------- | -------- | -------- | ------- |
 | [70](https://github.com/MRISS-Projects/parent-poms/issues/70) | task | Convert the remaining APT site pages to Markdown | null | mriss | 9/27/26 |
-| [71](https://github.com/MRISS-Projects/parent-poms/issues/71) | task | commit-readme-md runs three times per staging run, and one commit contains an unresolved 20261020-145507 | null | mriss | 9/27/26 |
+| [71](https://github.com/MRISS-Projects/parent-poms/issues/71) | task | commit-readme-md runs three times per staging run, and one commit contains an unresolved 20261021-135810 | null | mriss | 9/27/26 |
 | [69](https://github.com/MRISS-Projects/parent-poms/issues/69) | task | project-release.yml sets the hotfix version on the root POM only | null | mriss | 9/27/26 |
 | [65](https://github.com/MRISS-Projects/parent-poms/issues/65) | task | Merge release tag back into DEVELOP after project-release.yml / project-hotfix.yml | null | mriss | 9/27/26 |
 | [59](https://github.com/MRISS-Projects/parent-poms/issues/59) | task | Update Maven pinned version from 3.9.9 to 3.9.16 in documentation and GitHub Actions | null | mriss | 9/26/26 |
