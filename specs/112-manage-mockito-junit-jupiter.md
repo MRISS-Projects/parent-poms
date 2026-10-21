@@ -73,10 +73,10 @@ issue; that release advances `master` to `3.12.0-SNAPSHOT` again.
 
 ### Task 1: the re-version and the entry (AC003)
 
-- [ ] **Step 1:** re-version the eight POMs to `3.11.2-SNAPSHOT` (§2.3). `git grep -n
+- [x] **Step 1:** re-version the eight POMs to `3.11.2-SNAPSHOT` (§2.3). `git grep -n
   '3.12.0-SNAPSHOT' -- '*pom.xml'` finds nothing. Commit `build(#112): re-version master to
   3.11.2-SNAPSHOT for the hotfix line`.
-- [ ] **Step 2:** add the entry of §2.1, then `mvn -B clean install`. Expected: exit 0, and
+- [x] **Step 2:** add the entry of §2.1, then `mvn -B clean install`. Expected: exit 0, and
   `products/3.11.2-SNAPSHOT` in the local repository. Commit
   `build(#112): manage mockito-junit-jupiter at mockito-core's version`.
 
@@ -99,4 +99,6 @@ runs its gates with every test on `MockitoExtension`. The results are recorded i
 
 ## 6. Results
 
-Filled in by the tasks.
+- **Task 1.** `4e0aa3b3` re-versioned the eight POMs, 8 lines each way, and `6073d6ce` added the
+  entry. `mvn -B clean install` exited 0, and the installed
+  `mriss-parent-3.11.2-SNAPSHOT.pom` carries `mockito-junit-jupiter` at `${mockito.version}`.
