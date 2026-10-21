@@ -55,6 +55,14 @@
                 <version>${mockito.version}</version>
                 <scope>test</scope>
             </dependency>
+            <!-- #112: the JUnit 5 extension at mockito-core's version. Otherwise Spring Boot's BOM,
+                 imported by products, supplies its own and the two come from different Mockito lines. -->
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-junit-jupiter</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
             <dependency>
                 <groupId>javax.mail</groupId>
                 <artifactId>mail</artifactId>
