@@ -91,7 +91,7 @@ after DSH `#120`'s local review. That release tags `mriss-parent-3.11.2` and mov
 
 ### Task 1: the change (AC001)
 
-- [ ] **Step 1:** make §2.2's change, then `mvn -B install`. Expected: exit 0, and the installed POM
+- [x] **Step 1:** make §2.2's change, then `mvn -B install`. Expected: exit 0, and the installed POM
   as AC001 says. Commit `build(#114): move products to Spring Boot 4.1.1 and manage springdoc`.
 
 ### Task 2: verified in DSH (AC002)
@@ -108,4 +108,9 @@ recorded in DSH's spec, §7.
 
 ## 6. Results
 
-Filled in as the tasks run.
+- **Task 1.** `98d2c84b`, 9 lines in and 48 out. `mvn -B install` exited 0, and the installed
+  `products-3.11.2-SNAPSHOT.pom` holds `spring-boot.version` 4.1.1, `springdoc.version` 3.1.1 and
+  both `springdoc` entries, and none of the removed names.
+- **Task 2.** DSH `#120` on 2026-10-28, against the installed `SNAPSHOT`: gate 1 and gate 3 exited
+  0, 66 `org.springframework.boot` artifacts all at 4.1.1, no `io.springfox` and no
+  `spring-data-solr`. Recorded in DSH's spec, §7.4.
