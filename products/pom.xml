@@ -21,19 +21,6 @@
     </parent>
     <dependencyManagement>
         <dependencies>
-            <!-- Override byte-buddy to 1.14.x: Mockito 4.8.x references ClassFileVersion.JAVA_V21
-                 which was added in byte-buddy 1.14.0. Spring Boot 2.7.x bundles 1.12.x causing
-                 NoSuchFieldError: JAVA_V21 on Java 17 at test runtime. Must appear BEFORE the BOM import. -->
-            <dependency>
-                <groupId>net.bytebuddy</groupId>
-                <artifactId>byte-buddy</artifactId>
-                <version>${byte-buddy.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.bytebuddy</groupId>
-                <artifactId>byte-buddy-agent</artifactId>
-                <version>${byte-buddy.version}</version>
-            </dependency>
             <dependency>
                 <!-- Import dependency management from Spring Boot -->
                 <groupId>org.springframework.boot</groupId>
@@ -43,32 +30,14 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>io.springfox</groupId>
-                <artifactId>springfox-swagger2</artifactId>
-                <version>${spring-fox.version}</version>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+                <version>${springdoc.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.springfox</groupId>
-                <artifactId>springfox-swagger-ui</artifactId>
-                <version>${spring-fox.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.swagger</groupId>
-                <artifactId>swagger-annotations</artifactId>
-                <version>${swagger-annotations.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <!-- FR006: jaxb-api centralised here so DSH modules need not declare a version -->
-            <dependency>
-                <groupId>javax.xml.bind</groupId>
-                <artifactId>jaxb-api</artifactId>
-                <version>${jaxb-api.version}</version>
-            </dependency>
-            <!-- spring-boot-starter-data-solr removed in Spring Boot 2.6; managed here for DSH modules -->
-            <dependency>
-                <groupId>org.springframework.data</groupId>
-                <artifactId>spring-data-solr</artifactId>
-                <version>${spring-data-solr.version}</version>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -76,17 +45,9 @@
     <!-- </modules> -->
     <properties>
         <!-- FR008: jenkins.view removed – CI/CD now uses GitHub Actions -->
-        <!-- FR005: Spring Boot bumped to 2.7.18 (Java 17 compatible, last 2.x LTS release) -->
-        <spring-boot.version>2.7.18</spring-boot.version>
-        <spring-fox.version>3.0.0</spring-fox.version>
-        <swagger-annotations.version>1.6.14</swagger-annotations.version>
-        <jaxb-api.version>2.4.0-b180830.0359</jaxb-api.version>
-        <!-- spring-boot-starter-data-solr removed in Spring Boot 2.6; use spring-data-solr directly -->
-        <spring-data-solr.version>4.3.15</spring-data-solr.version>
-        <!-- byte-buddy 1.12.x (bundled with Spring Boot 2.7.x) lacks ClassFileVersion.JAVA_V21,
-             causing NoSuchFieldError when Mockito's inline mock maker runs on Java 17+.
-             Override to 1.14.x which adds JAVA_V21 and is fully compatible. -->
-        <byte-buddy.version>1.14.5</byte-buddy.version>
+        <!-- #114: Spring Boot 4.1.1, open-source support to 2027-07-31 (Spring Cloud GCP 8.x) -->
+        <spring-boot.version>4.1.1</spring-boot.version>
+        <springdoc.version>3.1.1</springdoc.version>
         <!-- #95: what the release plugin's forked builds do about tests. release:prepare's fork
              keeps this default and is the release's only test run, integration tests included,
              before anything is committed or tagged. release:perform overrides it with -DskipTests,
