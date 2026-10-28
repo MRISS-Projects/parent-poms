@@ -4,7 +4,7 @@
 
 ## Version
 
-3.11.2-SNAPSHOT - 44 - 20261021-135810
+3.11.2
 
 ## Build from Sources
 
@@ -30,10 +30,13 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 
 ## Release Notes
 
-### Version 3.11.2-SNAPSHOT
+### Version 3.11.2
 
 | # | Type | Summary | Assignee | Reporter | Updated |
 | --- | ---- | ------- | -------- | -------- | ------- |
+| [114](https://github.com/MRISS-Projects/parent-poms/issues/114) | task | Move products to Spring Boot 4.1.1 and drop what Boot 4 leaves dead | null | mriss | 10/28/26 |
+| [115](https://github.com/MRISS-Projects/parent-poms/issues/115) | task | Move products to Spring Boot 4.1.1 and drop what Boot 4 leaves dead | null | mriss | 10/28/26 |
+| [112](https://github.com/MRISS-Projects/parent-poms/issues/112) | task | Manage mockito-junit-jupiter at mockito-core's version | null | mriss | 10/21/26 |
 | [113](https://github.com/MRISS-Projects/parent-poms/issues/113) | n/a | Manage mockito-junit-jupiter at mockito-core's version (#112) | null | mriss | 10/21/26 |
 
 ### Version 3.11.1
@@ -78,7 +81,7 @@ Release: https://mriss-projects.github.io/parent-poms/releases
 | # | Type | Summary | Assignee | Reporter | Updated |
 | --- | ---- | ------- | -------- | -------- | ------- |
 | [70](https://github.com/MRISS-Projects/parent-poms/issues/70) | task | Convert the remaining APT site pages to Markdown | null | mriss | 9/27/26 |
-| [71](https://github.com/MRISS-Projects/parent-poms/issues/71) | task | commit-readme-md runs three times per staging run, and one commit contains an unresolved 20261021-135810 | null | mriss | 9/27/26 |
+| [71](https://github.com/MRISS-Projects/parent-poms/issues/71) | task | commit-readme-md runs three times per staging run, and one commit contains an unresolved 20261028-135626 | null | mriss | 9/27/26 |
 | [69](https://github.com/MRISS-Projects/parent-poms/issues/69) | task | project-release.yml sets the hotfix version on the root POM only | null | mriss | 9/27/26 |
 | [65](https://github.com/MRISS-Projects/parent-poms/issues/65) | task | Merge release tag back into DEVELOP after project-release.yml / project-hotfix.yml | null | mriss | 9/27/26 |
 | [59](https://github.com/MRISS-Projects/parent-poms/issues/59) | task | Update Maven pinned version from 3.9.9 to 3.9.16 in documentation and GitHub Actions | null | mriss | 9/26/26 |
